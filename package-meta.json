@@ -1,0 +1,14 @@
+{
+  "$comment": "Source unique des métadonnées communes de TOUS les packages du repo (root, manager/, design/, examples/). Appliquée aux package.json par `pnpm meta:sync` (scripts/sync-package-meta.mjs), vérifiée par `pnpm meta:check` (gate chaînée dans `pnpm lint`). Changer la version ICI puis lancer `pnpm meta:sync`.",
+  "version": "3.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT"
+}

@@ -1,0 +1,46 @@
+{
+  "name": "@formivue/reactive-vue",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "description": "Vue 3 binding for @formivue/reactive (observer)",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "^2.6.0",
+    "vue": "^3.5.46"
+  },
+  "dependencies": {
+    "@formivue/reactive": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "manager/reactive-vue"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

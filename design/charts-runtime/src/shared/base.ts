@@ -1,0 +1,122 @@
+import {
+  computed,
+  defineComponent,
+  inject,
+  type ExtractPropTypes,
+  type PropType,
+  type VNode,
+} from 'vue'
+import { appearanceProps, chartAppearance, type ChartName } from './appearance'
+import type { ChartSeries } from './categorical-data'
+import {
+  ChartLocaleKey,
+  chartLabels,
+  chartLanguageIndex,
+  chartTitles,
+} from './locale'
+
+const palette = ['#2563eb', '#0d9488', '#d97706', '#9333ea', '#db2777']
+const chartColor = (index: number) => {
+  const slot = index % palette.length
+  return `var(--chart-${slot + 1}, ${palette[slot]})`
+}
+const numberStyles = {
+  decimal: { style: 'decimal' },
+  euro: { style: 'currency', currency: 'EUR' },
+  percent: { style: 'percent' },
+} satisfies Record<string, Intl.NumberFormatOptions>
+
+const chartProps = {
+  rows: {
+    type: Array as PropType<Record<string, unknown>[]>,
+    default: () => [],
+  },
+  xKey: { type: String, default: '' },
+  series: { type: Array as PropType<ChartSeries[]>, default: () => [] },
+  groupKey: { type: String, default: '' },
+  valueKey: { type: String, default: '' },
+  sourceKey: { type: String, default: '' },
+  targetKey: { type: String, default: '' },
+  startKey: { type: String, default: '' },
+  endKey: { type: String, default: '' },
+  latitudeKey: { type: String, default: '' },
+  longitudeKey: { type: String, default: '' },
+  destinationLatitudeKey: { type: String, default: '' },
+  destinationLongitudeKey: { type: String, default: '' },
+  aggregation: { type: String as PropType<'sum' | 'mean'>, default: 'sum' },
+  categoryOrder: {
+    type: String as PropType<'source' | 'ascending' | 'descending'>,
+    default: 'source',
+  },
+  valueFormat: {
+    type: String as PropType<'auto' | keyof typeof numberStyles>,
+    default: 'auto',
+  },
+  decimalPlaces: { type: Number, default: 2 },
+  height: { type: Number, default: 240 },
+  label: String,
+  dataLabel: String,
+  emptyText: String,
+  locale: String,
+}
+
+export type ChartOptions = ExtractPropTypes<typeof chartProps> &
+  Partial<ExtractPropTypes<typeof appearanceProps>> & {
+    valueLabel: (value?: number) => string
+    formatAxis: boolean
+    color: (index: number) => string
+  }
+
+export function createChart(
+  name: ChartName,
+  render: (options: ChartOptions) => VNode,
+) {
+  return defineComponent({
+    name,
+    props: {
+      ...chartProps,
+      ...(Object.fromEntries(
+        chartAppearance[name].map((key) => [key, appearanceProps[key]]),
+      ) as Partial<typeof appearanceProps>),
+    },
+    setup(props) {
+      const inheritedLocale = inject(ChartLocaleKey, undefined)
+      const numberFormatter = computed(() => {
+        const mode = props.valueFormat
+        if (mode !== 'decimal' && mode !== 'euro' && mode !== 'percent') return
+        const digits = Number.isFinite(props.decimalPlaces)
+          ? Math.min(20, Math.max(0, Math.trunc(props.decimalPlaces)))
+          : 2
+        return new Intl.NumberFormat(undefined, {
+          ...numberStyles[mode],
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        })
+      })
+      return () => {
+        const format = numberFormatter.value
+        const valueLabel = (value: number | undefined) =>
+          value === undefined
+            ? '–'
+            : (format?.format(value) ?? value.toString())
+        const height = Math.max(80, Number(props.height) || 240)
+        const language = chartLanguageIndex(
+          props.locale ??
+            inheritedLocale?.value ??
+            globalThis.navigator?.language,
+        )
+        return render({
+          ...props,
+          rows: Array.isArray(props.rows) ? props.rows : [],
+          height,
+          label: props.label || chartTitles[name][language],
+          dataLabel: props.dataLabel || chartLabels.dataLabel[language],
+          emptyText: props.emptyText || chartLabels.emptyText[language],
+          valueLabel,
+          formatAxis: !!format,
+          color: chartColor,
+        })
+      }
+    },
+  })
+}

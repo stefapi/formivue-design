@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.lib.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "paths": {
+      "@formivue-design/*": ["./design/*/src"]
+    }
+  },
+  "include": ["design/*/src/**/*"],
+  "exclude": ["**/__tests__/**"]
+}

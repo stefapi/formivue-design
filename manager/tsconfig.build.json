@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "useDefineForClassFields": false,
+    "allowJs": false,
+    "strict": false,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["*/src/**/*"],
+  "exclude": ["**/__tests__/**"]
+}

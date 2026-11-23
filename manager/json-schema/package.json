@@ -1,0 +1,42 @@
+{
+  "name": "@formivue/json-schema",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "description": "JSON Schema driver for formivue — schema to field props, x-reactions and expressions",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "@formivue/core": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/shared": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "manager/json-schema"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

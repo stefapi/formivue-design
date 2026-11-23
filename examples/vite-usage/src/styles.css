@@ -1,0 +1,99 @@
+@import 'tailwindcss';
+@source '../node_modules/@formivue-design/formivue-vue/dist';
+@source '../../../design/vue-ui/dist';
+
+@theme inline {
+  --color-background: var(--color-white);
+  --color-foreground: var(--color-slate-900);
+  --color-card: var(--color-white);
+  --color-card-foreground: var(--color-slate-900);
+  --color-popover: var(--color-white);
+  --color-popover-foreground: var(--color-slate-900);
+  --color-primary: var(--color-slate-900);
+  --color-primary-foreground: var(--color-white);
+  --color-secondary: var(--color-slate-100);
+  --color-secondary-foreground: var(--color-slate-900);
+  --color-muted: var(--color-slate-100);
+  --color-muted-foreground: var(--color-slate-600);
+  --color-accent: var(--color-slate-100);
+  --color-accent-foreground: var(--color-slate-900);
+  --color-destructive: var(--color-rose-600);
+  --color-border: var(--color-slate-200);
+  --color-input: var(--color-slate-300);
+  --color-ring: var(--color-indigo-500);
+}
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgb(15 23 42 / 0.05) 1px,
+      transparent 0
+    );
+    background-size: 22px 22px;
+  }
+}
+
+@layer components {
+  /* Champs du playground (Tailwind 4, pas de préprocesseur — A6) */
+  .fld-input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+      text-slate-900 shadow-xs transition
+      placeholder:text-slate-400
+      hover:border-slate-400
+      focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 focus:outline-none
+      disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500
+      read-only:bg-slate-50 read-only:focus:ring-0;
+  }
+  .fi--error .fld-input {
+    @apply border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/15;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm;
+  }
+  .api-chip {
+    @apply rounded-md bg-white px-2 py-0.5 font-mono text-[11px] text-indigo-700
+      ring-1 ring-indigo-100 shadow-xs;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2
+      text-sm font-semibold text-white shadow-sm transition
+      hover:bg-indigo-500
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600
+      active:bg-indigo-700 disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white
+      px-3 py-2 text-sm font-medium text-slate-700 shadow-xs transition
+      hover:border-slate-400 hover:text-slate-900
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400
+      active:bg-slate-50;
+  }
+  .btn-icon {
+    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-500
+      transition hover:bg-white hover:text-slate-900 hover:shadow-xs
+      focus-visible:outline-2 focus-visible:outline-indigo-600
+      disabled:pointer-events-none disabled:opacity-30;
+  }
+  .seg {
+    @apply inline-flex rounded-lg bg-slate-100 p-1 ring-1 ring-slate-200;
+  }
+  .seg > button {
+    @apply rounded-md px-2.5 py-1 font-mono text-[11px] font-medium text-slate-500 transition
+      hover:text-slate-900
+      focus-visible:outline-2 focus-visible:outline-indigo-600;
+  }
+  .seg > button[aria-pressed='true'] {
+    @apply bg-white text-indigo-700 shadow-sm;
+  }
+}

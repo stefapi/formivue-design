@@ -1,0 +1,22 @@
+/* Tailwind without preflight: keep the VitePress default theme styles intact */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* content sources for the demo components (relative to this stylesheet) */
+@source '../../../demos/**/*.vue';
+@source '../../../ui/**/*.vue';
+@source '../**/*.vue';
+
+/* previewer container */
+.preview-stage {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.preview-source pre {
+  margin: 0;
+  max-height: 24rem;
+  overflow: auto;
+}

@@ -1,0 +1,51 @@
+{
+  "name": "@formivue-design/shadcn-advanced-designer",
+  "description": "Advanced Formivue designer palette and property editors",
+  "version": "3.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/shadcn-advanced-designer"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "dependencies": {
+    "@formivue-design/shadcn-advanced-runtime": "workspace:*",
+    "@formivue-design/formivue-vue": "workspace:*",
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/vue": "workspace:*",
+    "@formivue/json-schema": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@lucide/vue": "^1.77.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.46"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

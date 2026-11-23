@@ -1,0 +1,44 @@
+{
+  "name": "@formivue/reactive",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "description": "Reactive observable system powering formivue (observable, autorun, batch)",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx",
+    "benchmark": "tsx ./benchmark"
+  },
+  "devDependencies": {
+    "@vue/reactivity": "^3.5.46",
+    "benny": "^3.7.1",
+    "lodash": "^4.18.1",
+    "mobx": "^7.1.7"
+  },
+  "dependencies": {},
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "manager/reactive"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

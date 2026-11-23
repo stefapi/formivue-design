@@ -1,0 +1,38 @@
+{
+  "name": "@formivue-design/multi-workspace-example",
+  "version": "3.0.3",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/vue": "workspace:*",
+    "@formivue-design/vue-settings-form": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "@formivue/core": "workspace:*",
+    "@formivue/json-schema": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "vue": "^3.5.46"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "examples/multi-workspace"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

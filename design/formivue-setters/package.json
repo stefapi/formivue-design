@@ -1,0 +1,68 @@
+{
+  "name": "@formivue-design/formivue-setters",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/formivue-setters"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "devDependencies": {
+    "@formivue/core": "workspace:*",
+    "@monaco-editor/loader": "^1.7.0",
+    "@formivue/json-schema": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "@vue/test-utils": "^2.6.0",
+    "axe-core": "^4.14.1",
+    "vue": "^3.5.46"
+  },
+  "peerDependencies": {
+    "@formivue/core": "^3.0.3",
+    "@formivue/json-schema": "^3.0.3",
+    "@formivue/reactive": "^3.0.3",
+    "@formivue/reactive-vue": "^3.0.3",
+    "@formivue/shared": "^3.0.3",
+    "@formivue/vue": "^3.0.3",
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/formivue-vue": "workspace:*",
+    "@formivue-design/vue": "workspace:*",
+    "@formivue-design/vue-settings-form": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "classnames": "^2.5.1",
+    "@lucide/vue": "^1.77.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "./src/locales/**",
+    "./dist/index.mjs"
+  ],
+  "files": [
+    "dist"
+  ],
+  "author": "Stefapi"
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@formivue-design/formivue-transformer",
+  "version": "3.0.3",
+  "license": "MIT",
+  "main": "./dist/index.mjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/formivue-transformer"
+  },
+  "types": "./dist/index.d.mts",
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@formivue/core": "workspace:*",
+    "@formivue/json-schema": "workspace:*"
+  },
+  "peerDependencies": {
+    "@formivue/core": "^3.0.3",
+    "@formivue/json-schema": "^3.0.3"
+  },
+  "dependencies": {
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/shared": "workspace:*"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "author": "Stefapi"
+}

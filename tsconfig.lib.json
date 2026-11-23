@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "allowJs": false,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "useDefineForClassFields": false,
+    "declaration": true,
+    "skipLibCheck": true,
+    "sourceMap": false,
+    "preserveConstEnums": true,
+    "experimentalDecorators": true,
+    "strict": false,
+    "types": ["node"],
+    "forceConsistentCasingInFileNames": true
+  }
+}

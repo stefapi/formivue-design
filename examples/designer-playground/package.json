@@ -1,0 +1,44 @@
+{
+  "name": "@formivue-design/designer-playground-example",
+  "private": true,
+  "type": "module",
+  "version": "3.0.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "examples/designer-playground"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@formivue-design/vue": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/vue-settings-form": "workspace:*",
+    "@formivue-design/formivue-setters": "workspace:*",
+    "@formivue-design/formivue-transformer": "workspace:*",
+    "@formivue-design/formivue-vue": "workspace:*",
+    "@formivue/core": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "@formivue-design/shadcn-advanced-runtime": "workspace:*",
+    "@formivue-design/shadcn-advanced-designer": "workspace:*",
+    "vue": "^3.5.46",
+    "@formivue-design/charts-runtime": "workspace:*",
+    "@formivue-design/charts-designer": "workspace:*"
+  },
+  "devDependencies": {
+    "axe-core": "^4.14.1",
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8"
+  }
+}

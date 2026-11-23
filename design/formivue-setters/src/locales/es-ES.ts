@@ -1,0 +1,112 @@
+const ValidatorFormats = [
+  { label: 'URL', value: 'url' },
+  { label: 'Correo electrónico', value: 'email' },
+  { label: 'Número', value: 'number' },
+  { label: 'Entero', value: 'integer' },
+  { label: 'Documento de identidad', value: 'idcard' },
+  { label: 'Número de teléfono', value: 'phone' },
+  { label: 'Moneda', value: 'money' },
+  { label: 'Chino', value: 'zh' },
+  { label: 'Fecha', value: 'date' },
+  { label: 'Código postal', value: 'zip' },
+]
+
+export default {
+  'es-ES': {
+    settings: {
+      'x-validator': {
+        title: 'Validador',
+        addValidatorRules: 'Añadir reglas de validación',
+        drawer: 'Editar reglas',
+        triggerType: {
+          title: 'Tipo de activación',
+          placeholder: 'Seleccione',
+          dataSource: ['onInput', 'onFocus', 'onBlur'],
+        },
+        format: {
+          title: 'Formato',
+          placeholder: 'Seleccione',
+          dataSource: ValidatorFormats,
+        },
+        validator: {
+          title: 'Validador personalizado',
+          tooltip: 'Formato: function (value){ return "Mensaje de error" }',
+        },
+        pattern: 'RegExp',
+        len: 'Límite de longitud',
+        max: 'Longitud/Valor ≤',
+        min: 'Longitud/Valor ≥',
+        exclusiveMaximum: 'Longitud/Valor <',
+        exclusiveMinimum: 'Longitud/Valor >',
+        whitespace: 'Sin espacios en blanco',
+        required: 'Obligatorio',
+        message: {
+          title: 'Mensaje de error',
+          tooltip:
+            'El mensaje de error solo es efectivo para una regla integrada del conjunto de reglas actual. Si necesita personalizar el mensaje de error de diferentes reglas integradas, divídalo en varias reglas',
+        },
+      },
+    },
+    SettingComponents: {
+      Common: {
+        cancel: 'Cancelar',
+        ok: 'OK',
+      },
+      DataSourceSetter: {
+        moveUp: 'Subir',
+        moveDown: 'Bajar',
+        remove: 'Eliminar',
+        nodeProperty: 'Propiedad del nodo',
+        pleaseSelectNode: 'seleccione un nodo del árbol de la izquierda',
+        addKeyValuePair: 'Añadir par clave/valor',
+        configureDataSource: 'Configurar',
+        dataSource: 'Opciones',
+        defaultTitle: 'Título predeterminado',
+        dataSourceTree: 'Árbol de opciones',
+        addNode: 'Añadir nodo',
+        addChild: 'Añadir subopción',
+        label: 'etiqueta',
+        value: 'valor',
+        item: 'Elemento',
+      },
+      ReactionsSetter: {
+        fieldProperties: 'Propiedades del campo',
+        configureReactions: 'Configurar',
+        relationsFields: 'Campos asociados',
+        variableName: 'Nombre de la variable',
+        variableNameValidateMessage:
+          'Este no es un nombre de variable estándar',
+        pleaseInput: 'Introduzca un valor',
+        sourceField: 'Campo de origen',
+        sourceProperty: 'Propiedad del campo',
+        variableType: 'Tipo de variable',
+        operations: 'Operaciones',
+        addRelationField: 'Añadir campo asociado',
+        propertyReactions:
+          'Reacciones de propiedad (solo expresiones JavaScript)',
+        actionReactions:
+          'Reacciones de acción (opcional, sentencias JavaScript)',
+        visible: 'Mostrar/Ninguno',
+        hidden: 'Mostrar/Oculto (UI)',
+        display: 'Visualización',
+        pattern: 'Modo',
+        title: 'Título',
+        description: 'Descripción',
+        value: 'Valor',
+        initialValue: 'Valor inicial',
+        dataSource: 'Opciones',
+        required: 'Obligatorio',
+        component: 'Componente',
+        componentProps: 'Props del componente',
+        decorator: 'Decorador',
+        decoratorProps: 'Props del decorador',
+        pleaseSelect: 'Seleccione',
+        expressionValueTypeIs: 'El tipo de valor de la expresión es',
+      },
+      ValidatorSetter: {
+        pleaseSelect: 'Seleccione',
+        formats: ValidatorFormats,
+      },
+    },
+  },
+}

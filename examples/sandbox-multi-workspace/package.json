@@ -1,0 +1,41 @@
+{
+  "name": "@formivue-design/sandbox-multi-workspace-example",
+  "version": "3.0.3",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "pnpm run build:sandbox && vite",
+    "build": "pnpm run build:sandbox && vite build",
+    "preview": "vite preview",
+    "build:sandbox": "vite build --config vite.sandbox.config.mts && rm -f public/*.css"
+  },
+  "dependencies": {
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/vue": "workspace:*",
+    "@formivue-design/vue-sandbox": "workspace:*",
+    "@formivue-design/vue-settings-form": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "@formivue/core": "workspace:*",
+    "@formivue/json-schema": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "vue": "^3.5.46"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.11",
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "examples/sandbox-multi-workspace"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

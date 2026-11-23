@@ -1,0 +1,55 @@
+{
+  "name": "@formivue-design/vue",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/vue"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "devDependencies": {
+    "@types/dateformat": "^5.0.3"
+  },
+  "peerDependencies": {
+    "@formivue/reactive": "^3.0.3",
+    "@formivue/reactive-vue": "^3.0.3",
+    "@formivue/vue": "^3.0.3",
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@formivue-design/core": "workspace:*",
+    "@formivue-design/shared": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "@lucide/vue": "^1.77.0",
+    "classnames": "^2.5.1",
+    "dateformat": "^5.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "./src/locales/**",
+    "./dist/index.mjs"
+  ],
+  "files": [
+    "dist"
+  ],
+  "author": "Stefapi"
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@formivue/core",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "description": "Headless form engine — observable form/field models, validation, lifecycle effects",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "@formivue/reactive": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/validator": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "manager/core"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

@@ -1,0 +1,57 @@
+{
+  "name": "@formivue/vue",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "description": "Vue 3 binding layer for @formivue/core — fields, schema fields and hooks",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "start": "vitepress dev docs",
+    "build": "tsdown --config-loader tsx",
+    "build:docs": "vitepress build docs"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@vue/runtime-core": "^3.5.46",
+    "@vue/test-utils": "^2.6.0",
+    "reka-ui": "^2.11.0",
+    "tailwindcss": "^4.3.5",
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.46"
+  },
+  "dependencies": {
+    "@formivue/core": "workspace:*",
+    "@formivue/json-schema": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "manager/vue"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

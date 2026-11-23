@@ -1,0 +1,21 @@
+# Core Architecture
+
+## Domain Model
+
+Formivue's kernel architecture is very complicated, because it is necessary to solve a domain-level problem, rather than a single point of specific problem, first go to the architecture diagram:
+
+```text
+Vue bindings → Form / Field models → @formivue/reactive
+                          ↑                     │
+                          └──── reactions ─────┘
+```
+
+## Description
+
+From the above figure, we can see that the Formivue kernel is actually a @formivue/reactive domain model.
+
+The actual consumption domain model mainly relies on the @formivue/reactive responder mechanism for dependency tracking to consume.
+
+We can consume any attribute in the Form/Field/ArrayField/ObjectField/VoidField model in the responder (Reactions). When the dependent attribute changes, the responder will execute repeatedly.
+
+So as to realize the Reactive programming model at the form level.

@@ -1,0 +1,47 @@
+{
+  "name": "@formivue/validator",
+  "version": "3.0.3",
+  "license": "MIT",
+  "type": "module",
+  "description": "Validation framework for formivue — rules, formats, locales, zod bridge",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json",
+    "./zod": {
+      "types": "./dist/zod.d.mts",
+      "import": "./dist/zod.mjs"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "@formivue/shared": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "zod": "^3 || ^4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "manager/validator"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi"
+}

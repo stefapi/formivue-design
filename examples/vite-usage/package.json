@@ -1,0 +1,50 @@
+{
+  "name": "@formivue/example-vite-usage",
+  "version": "3.0.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:a11y": "vitest run src/playground.spec.ts"
+  },
+  "dependencies": {
+    "@formivue-design/formivue-vue": "workspace:*",
+    "@formivue/core": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/validator": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "@tailwindcss/vite": "^4.3.5",
+    "@vee-validate/zod": "^4.15.1",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "@vue/test-utils": "^2.6.0",
+    "axe-core": "^4.14.1",
+    "jsdom": "^31.0.1",
+    "reka-ui": "^2.11.0",
+    "tailwindcss": "^4.3.5",
+    "vitest": "^5.1.1",
+    "vue": "^3.5.46",
+    "vue-tsc": "^3.3.14",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vite": "^8.3.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "examples/vite-usage"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT"
+}

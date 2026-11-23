@@ -1,0 +1,169 @@
+/* ---------------------------------------------------------------------------
+ * Phase 7.1 — entrée Tailwind du playground Vue (V6 : le consommateur fournit
+ * le thème). Remplace les 4 CSS d'ère (antd.css + 3 × ./style.css) :
+ *   1. `@source` scanne les dist des packages @formivue-design/* (les classes
+ *      utilitaires vivent dans leurs bundles — recette vue-ui README) ;
+ *   2. tokens shadcn `new-york-v4` (registry new-york, variante zinc) :
+ *      --background/--foreground/--card/--popover/--primary/--secondary/
+ *      --muted/--accent/--destructive/--border/--input/--ring, mappés par
+ *      `@theme inline` — le seul contrat de thème exigé par la pile headless.
+ * ------------------------------------------------------------------------- */
+
+@import 'tailwindcss';
+
+@source '../node_modules/@formivue-design/vue-ui/dist';
+@source '../node_modules/@formivue-design/vue/dist';
+@source '../node_modules/@formivue-design/vue-settings-form/dist';
+@source '../node_modules/@formivue-design/formivue-vue/dist';
+@source '../node_modules/@formivue-design/shadcn-advanced-runtime/dist';
+@source '../node_modules/@formivue-design/shadcn-advanced-designer/dist';
+@source '../node_modules/@formivue-design/charts-runtime/dist';
+@source '../node_modules/@formivue-design/charts-designer/dist';
+@source '../node_modules/@formivue-design/formivue-setters/dist';
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* couche base shadcn-vue (new-york-v4) : Tailwind v4 colore `border` en
+   currentColor par défaut — sans elle, cartes/panneaux/séparateurs sont
+   bordés de noir au lieu du token --border. */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+/* accent bleu du designer (brand d'ère #1890ff) limité aux surcouches du
+   canvas — sélection, survol, voile de dépôt, ligne d'insertion, barre
+   d'actions, fantôme de drag — sans toucher au thème zinc du reste de l'UI. */
+.dn-auxtool,
+.dn-ghost,
+.dn-outline-tree-insertion {
+  --primary: oklch(0.62 0.19 254);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+@media (width < 64rem) {
+  [data-advanced-pane] .dn-main-panel-header {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  [data-advanced-pane] .dn-main-panel {
+    display: grid;
+    grid-template: auto minmax(0, 1fr) / minmax(0, 1fr);
+  }
+
+  [data-advanced-pane] .advanced-pane-navigation {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  [data-advanced-pane]
+    .dn-main-panel
+    > :is(
+      .dn-composite-panel,
+      .dn-workspace-panel,
+      .dn-settings-panel,
+      .dn-settings-panel-opener
+    ) {
+    grid-area: 2 / 1;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  [data-advanced-pane='workspace']
+    :is(.dn-composite-panel, .dn-settings-panel, .dn-settings-panel-opener),
+  [data-advanced-pane='palette']
+    :is(.dn-workspace-panel, .dn-settings-panel, .dn-settings-panel-opener),
+  [data-advanced-pane='settings']
+    :is(.dn-workspace-panel, .dn-composite-panel) {
+    display: none;
+  }
+
+  [data-advanced-pane]
+    :is(.dn-composite-panel-tabs-content, .dn-settings-panel) {
+    position: relative;
+    inset: auto;
+    box-sizing: border-box;
+    width: auto;
+    flex: 1;
+  }
+
+  [data-advanced-pane]
+    :is(
+      .dn-composite-panel-tabs-header-pin,
+      .dn-composite-panel-tabs-header-pin-filled,
+      .dn-settings-panel-header-pin,
+      .dn-settings-panel-pin-filled
+    ) {
+    display: none;
+  }
+
+  [data-advanced-pane='settings'] .dn-settings-panel-opener {
+    position: relative;
+    inset: auto;
+    align-self: center;
+    justify-self: center;
+    transform: none;
+  }
+
+  [data-advanced-pane]
+    :is(
+      .dn-workspace-panel > .dn-workspace-panel-item:first-child,
+      .dn-designer-tools
+    ) {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  [data-advanced-pane] .dn-designer-tools > div {
+    margin-inline-end: 0.25rem;
+  }
+}

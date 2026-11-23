@@ -1,0 +1,40 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@formivue-design/charts-designer",
+      "@formivue-design/charts-runtime",
+      "@formivue-design/core",
+      "@formivue-design/formivue-setters",
+      "@formivue-design/formivue-transformer",
+      "@formivue-design/formivue-vue",
+      "@formivue-design/shadcn-advanced-designer",
+      "@formivue-design/shadcn-advanced-runtime",
+      "@formivue-design/shared",
+      "@formivue-design/vue",
+      "@formivue-design/vue-sandbox",
+      "@formivue-design/vue-settings-form",
+      "@formivue-design/vue-ui",
+      "@formivue/core",
+      "@formivue/flow",
+      "@formivue/grid",
+      "@formivue/json-schema",
+      "@formivue/path",
+      "@formivue/reactive",
+      "@formivue/reactive-vue",
+      "@formivue/shared",
+      "@formivue/validator",
+      "@formivue/vue"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  }
+}

@@ -1,0 +1,15 @@
+packages:
+  - manager/*
+  - design/*
+  - examples/*
+
+overrides:
+  '@formivue/core': 'workspace:*'
+  '@formivue/grid': 'workspace:*'
+  '@formivue/json-schema': 'workspace:*'
+  '@formivue/path': 'workspace:*'
+  '@formivue/reactive': 'workspace:*'
+  '@formivue/shared': 'workspace:*'
+  '@formivue/validator': 'workspace:*'
+  '@formivue/vue': 'workspace:*'
+  '@formivue/reactive-vue': 'workspace:*'

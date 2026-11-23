@@ -1,0 +1,38 @@
+{
+  "name": "@formivue-design/shared",
+  "version": "3.0.3",
+  "license": "MIT",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/shared"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "requestidlecallback": "^0.3.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "author": "Stefapi"
+}

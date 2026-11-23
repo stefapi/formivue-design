@@ -1,0 +1,400 @@
+# Changelog
+
+## v2.0.0-beta.0 (2026-11-21) — generation 2: formivue v3 + Vue 3 port
+
+> Unpublished — line driven by changesets (`.changeset/`, fixed group
+> `@formivue-design/*`, `beta` pre mode). Entry: `.changeset/generation-2.md`
+> — **single grouped major**: the 2.0.0-beta absorbs the ESM migration
+> **and** the Vue port (V4).
+
+### :fire: Breaking changes
+
+1. **Pure ESM (B4)** — the `@formivue-design/*` packages switch to `"type": "module"` with `exports` (`.d.mts` types); the era's CJS/UMD outputs disappear.
+
+2. **Vue 3.5 port (V1/V2)** — the UI layer moves from React 17 to **Vue 3.5**: headless stack **reka-ui + shadcn-vue (`@formivue-design/vue-ui`) + Tailwind 4**, `@formivue/vue` + `@formivue/reactive-vue` bindings **from the formivue v3 fork** (peers `^3.0.0-beta.0` + `vue ^3.5`). The `@formivue-design/{core,shared,transformer}` engine (framework-agnostic) survives intact; **name-for-name** API parity (hooks → composables, React types → `DefineComponent`/`VueComponentProps`) — API diff = ∅).
+
+3. **React stack archived (V4/V5)** — `@formivue-design/{react,react-sandbox,react-settings-form}` and `@formivue-design/formivue-antd` leave the workspace (`archive/`): **renames `react*` → `vue*`** (`@formivue-design/vue`, `@formivue-design/vue-sandbox`, `@formivue-design/vue-settings-form`) and `@formivue-design/formivue-antd` → `@formivue-design/formivue-vue` (new package `@formivue-design/vue-ui`). The local bindings `@formivue/{react,reactive-react,antd}` (`formivue-v3/*`) leave with them — the fork natively provides the Vue bindings. `react`, `react-dom`, `antd`, `@ant-design/icons`, `@dnd-kit/*`, `moment` and the less pipelines leave the repo.
+
+4. **Theme = Tailwind 4 CSS tokens (V6)** — no more `./style.css` entry per package (nor `theme.less`/`variables.less`): utility classes live in the components, the **consumer** provides the Tailwind entry (shadcn tokens + `@source` on the packages' dist — recipe in `README.md`).
+
+5. **Trimmed materials scope (V3)** — `Cascader`, `Rate`, `Transfer`, `TreeSelect`, `Upload` (material component) postponed to the backlog; the setters that used them switch to the in-house Select/Tree.
+
+6. **`formivue-next` archived (B7, previous era)** — `@formivue-design/formivue-next` had already left the workspace (`archive/`); `@formivue/next`/`@alifd/next` are neither wired nor ported.
+
+7. **Tooling** — Node `>=24 <25` + pnpm 10 (`packageManager`) replace yarn 1 + lerna 4; TypeScript ~5.9 (`moduleResolution: bundler`) replaces 4.1.5; ESLint 9 flat + Prettier 3; Vitest replaces jest; Vite 7 examples/playground replace webpack 4 (unusable on Node 24).
+
+8. **Additive `@formivue-design/core` exports (rule 3)** — `TransformHelper`, `ITransformHelperProps`, `TransformHelperType`, `ResizeDirection`, `ITransformHelperDragStartProps` become public (the era emitted them through a deep import into the internals, refused by rolldown-dts; no export removed — API diff = ∅).
+
+### :tada: Enhancements
+
+1. **a11y = 0 axe-core violation (V8)** — target reached across the whole stack (`@formivue-design/vue-ui` kitchen-sink 17 components, settings panel, 3 setters, playground FORMIVUEDESIGN + PREVIEW views) and held as a vitest gate — the era tolerated an internal antd@4 residual.
+
+### :beetle: Fixes
+
+1. `ViewportResizeDriver`: `@juggle/resize-observer` replaced by the native `ResizeObserver` behind an SSR guard.
+
+## v1.0.0-beta.44(2022-02-16)
+
+### :tada: Enhancements
+
+1. [feat: add hasChildren parameter for DroppableWidget (#219)](https://github.com/stefapi/formivue-design/commit/d04cf3a) :point_right: ( [JuFeng Zhang](https://github.com/JuFeng Zhang) )
+
+1. [feat: add ssr support (#186)](https://github.com/stefapi/formivue-design/commit/6851c71) :point_right: ( [月落音阑](https://github.com/月落音阑) )
+
+1. [feat(core/react/playground): add freelayout feature. add custom source icon feature (#184)](https://github.com/stefapi/formivue-design/commit/171c64f) :point_right: ( [jinphic](https://github.com/jinphic) )
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix IconWidget side errors(#205)](https://github.com/stefapi/formivue-design/commit/29df2e2) :point_right: ( [yun zhou](https://github.com/yun zhou) )
+
+1. [fix(core): fix web components compatibility in KeyboardDriver (#213)](https://github.com/stefapi/formivue-design/commit/ba7dc10) :point_right: ( [febugcoder](https://github.com/febugcoder) )
+
+1. [fix(core/react): some bug fix about viewport (#198)](https://github.com/stefapi/formivue-design/commit/40abbc2) :point_right: ( [coder-byte](https://github.com/coder-byte) )
+
+1. [fix(playground): fix browser compatibility (#192)](https://github.com/stefapi/formivue-design/commit/57036b9) :point_right: ( [翁立鑫](https://github.com/翁立鑫) )
+
+1. [fix(formivue-antd): fix form-grid stuck with repeat key](https://github.com/stefapi/formivue-design/commit/1f9a758) :point_right: ( [yuanxiaoyu](https://github.com/yuanxiaoyu) )
+
+1. [fix(shared/event): fix call subscribeWith infinite recursion (#178)](https://github.com/stefapi/formivue-design/commit/dd06bfa) :point_right: ( [QYW](https://github.com/QYW) )
+
+### :memo: Documents Changes
+
+1. [docs: update package readme](https://github.com/stefapi/formivue-design/commit/118205c) :point_right: ( [Janry](https://github.com/Janry) )
+
+### :blush: Other Changes
+
+1. [chore: reset selected to top tree when redo](https://github.com/stefapi/formivue-design/commit/3b3f5c3) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [chore: update schema configs](https://github.com/stefapi/formivue-design/commit/432a89f) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [chore: add translate example code](https://github.com/stefapi/formivue-design/commit/c45fea6) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.43(2021-12-23)
+
+### :tada: Enhancements
+
+1. [feat(react): add some icons](https://github.com/stefapi/formivue-design/commit/341422b) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.42(2021-12-20)
+
+### :tada: Enhancements
+
+1. [feat: support setNpmCDNRegistry](https://github.com/stefapi/formivue-design/commit/4c38484) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.41(2021-12-16)
+
+### :beetle: Bug Fixes
+
+1. [fix: fix isBehavior](https://github.com/stefapi/formivue-design/commit/fc88f3b) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [fix(formivue): set default language (#163)](https://github.com/stefapi/formivue-design/commit/b7668b4) :point_right: ( [Minfee](https://github.com/Minfee) )
+
+1. [fix(react): remove the cleanup of ShadowSVG's effect (#162)](https://github.com/stefapi/formivue-design/commit/b982a2e) :point_right: ( [JuFeng Zhang](https://github.com/JuFeng Zhang) )
+
+## v1.0.0-beta.40(2021-12-08)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix NodePathWidget style](https://github.com/stefapi/formivue-design/commit/814e5e6) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [fix(react): fix prettier cdn version](https://github.com/stefapi/formivue-design/commit/e6e0180) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore: add sandbox example](https://github.com/stefapi/formivue-design/commit/624076f) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.39(2021-12-06)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): create attach-shadow repeatedly (#161)](https://github.com/stefapi/formivue-design/commit/f8cbc7a) :point_right: ( [WhiteSJ](https://github.com/WhiteSJ) )
+
+## v1.0.0-beta.38(2021-12-03)
+
+### :tada: Enhancements
+
+1. [feat: support resizable to designerProps](https://github.com/stefapi/formivue-design/commit/0215c27) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix position props in StudioPanel (#155)](https://github.com/stefapi/formivue-design/commit/30aa824) :point_right: ( [vimvinter](https://github.com/vimvinter) )
+
+1. [fix(react): fix component-tree styles](https://github.com/stefapi/formivue-design/commit/a9943dd) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore: improve node reisze](https://github.com/stefapi/formivue-design/commit/f71a1f4) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.37(2021-12-01)
+
+### :tada: Enhancements
+
+1. [refactor: remove focusNode feature](https://github.com/stefapi/formivue-design/commit/2d46b94) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [feat(react): add position in layout (#145)](https://github.com/stefapi/formivue-design/commit/baba792) :point_right: ( [programmerwy](https://github.com/programmerwy) )
+
+### :beetle: Bug Fixes
+
+1. [fix(setter): initial bug (#140)](https://github.com/stefapi/formivue-design/commit/4b72dfe) :point_right: ( [Sun HaoWei](https://github.com/Sun HaoWei) )
+
+1. [fix(antd/next): fix locales](https://github.com/stefapi/formivue-design/commit/0bcb178) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :rose: Improve code quality
+
+1. [refactor: remove focusNode feature](https://github.com/stefapi/formivue-design/commit/2d46b94) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore: improve code](https://github.com/stefapi/formivue-design/commit/bd28ce6) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [chore(antd/next): update text component output (#147)](https://github.com/stefapi/formivue-design/commit/fa48a6e) :point_right: ( [WhiteSJ](https://github.com/WhiteSJ) )
+
+## v1.0.0-beta.36(2021-11-26)
+
+### :beetle: Bug Fixes
+
+1. [fix(react-settings-form): fix typings](https://github.com/stefapi/formivue-design/commit/2a837fe) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore: update formivue to 2.0.2](https://github.com/stefapi/formivue-design/commit/89a1725) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.35(2021-11-26)
+
+### :tada: Enhancements
+
+1. [feat(react-settings-form): add exclude inherit in BoxStyleSetter/BoxShadowStyleSetter (#133)](https://github.com/stefapi/formivue-design/commit/d717ebe) :point_right: ( [programmerwy](https://github.com/programmerwy) )
+
+1. [feat(react-settings-form): update sizeinput (#131)](https://github.com/stefapi/formivue-design/commit/a66bace) :point_right: ( [programmerwy](https://github.com/programmerwy) )
+
+1. [feat(language): add Korean translation (#129)](https://github.com/stefapi/formivue-design/commit/9f5cec9) :point_right: ( [2jun0](https://github.com/2jun0) )
+
+### :beetle: Bug Fixes
+
+1. [fix: fix createVoidSchema](https://github.com/stefapi/formivue-design/commit/b3ada9f) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [fix(formivue-setters): fix duplicate key warn in ReactionSetter (#132)](https://github.com/stefapi/formivue-design/commit/0f316ea) :point_right: ( [vimvinter](https://github.com/vimvinter) )
+
+### :blush: Other Changes
+
+1. [chore: improve playground code](https://github.com/stefapi/formivue-design/commit/6df7210) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.34(2021-11-13)
+
+### :tada: Enhancements
+
+1. [feat(react): support config css variables](https://github.com/stefapi/formivue-design/commit/e954d86) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :beetle: Bug Fixes
+
+1. [fix(formivue): fix reactionSetters and playground](https://github.com/stefapi/formivue-design/commit/87971f4) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [fix(react): fix missing record props in ArrayBase.Item (#125)](https://github.com/stefapi/formivue-design/commit/c041167) :point_right: ( [haloworld](https://github.com/haloworld) )
+
+## v1.0.0-beta.33(2021-11-09)
+
+### :tada: Enhancements
+
+1. [feat(settings-form): add DrawerSetter's trigger props (#122)](https://github.com/stefapi/formivue-design/commit/003de57) :point_right: ( [nekic](https://github.com/nekic) )
+
+1. [feat(formivue-setters): add config to DataSourceSetter (#121)](https://github.com/stefapi/formivue-design/commit/6fdf887) :point_right: ( [Sun HaoWei](https://github.com/Sun HaoWei) )
+
+### :beetle: Bug Fixes
+
+1. [fix(settings-form): fix styles](https://github.com/stefapi/formivue-design/commit/6583cf9) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore(formivue-setters): remove ip/qq format](https://github.com/stefapi/formivue-design/commit/460782d) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.32(2021-10-29)
+
+### :tada: Enhancements
+
+1. [feat(core): support fromUser for SelectionEvent](https://github.com/stefapi/formivue-design/commit/c97de88) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.31(2021-10-29)
+
+### :tada: Enhancements
+
+1. [feat(core): support fromUser for SelectionEvent](https://github.com/stefapi/formivue-design/commit/d3aeda7) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.30(2021-10-27)
+
+### :tada: Enhancements
+
+1. [feat: add source icons](https://github.com/stefapi/formivue-design/commit/56321bc) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.29(2021-10-25)
+
+### :tada: Enhancements
+
+1. [feat(formivue-transformer): remove formivue-design core code dependency](https://github.com/stefapi/formivue-design/commit/be8b182) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.28(2021-10-24)
+
+### :tada: Enhancements
+
+1. [feat(react-settings-form): support to expression](https://github.com/stefapi/formivue-design/commit/7290811) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.27(2021-10-23)
+
+### :tada: Enhancements
+
+1. [feat(react): support placeholder to DroppableWidget](https://github.com/stefapi/formivue-design/commit/79ae6d1) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.26(2021-10-23)
+
+### :tada: Enhancements
+
+1. [feat(core): add takeSnapshot to content editable](https://github.com/stefapi/formivue-design/commit/ec82636) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [feat(react): support placeholder to DroppableWidget](https://github.com/stefapi/formivue-design/commit/19e61ad) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.25(2021-10-18)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): add source icons](https://github.com/stefapi/formivue-design/commit/8cb04ec) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.24(2021-10-18)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel styles](https://github.com/stefapi/formivue-design/commit/7e2d15f) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [fix(react): fix conflict of registerDesignerBehaviors](https://github.com/stefapi/formivue-design/commit/a88611a) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.23(2021-10-15)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel onChange](https://github.com/stefapi/formivue-design/commit/d928b69) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.22(2021-10-14)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel](https://github.com/stefapi/formivue-design/commit/a364532) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.21(2021-10-14)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel](https://github.com/stefapi/formivue-design/commit/bf4ba3f) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.20(2021-10-08)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel](https://github.com/stefapi/formivue-design/commit/84e8dfb) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.19(2021-10-08)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel](https://github.com/stefapi/formivue-design/commit/3708613) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.18(2021-10-08)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix CompositePanel](https://github.com/stefapi/formivue-design/commit/03eb84d) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.17(2021-10-06)
+
+### :tada: Enhancements
+
+1. [feat(react): add source icons](https://github.com/stefapi/formivue-design/commit/de56564) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore(shared): improve element layout calculator](https://github.com/stefapi/formivue-design/commit/f29ec8a) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [chore(core): improve remove](https://github.com/stefapi/formivue-design/commit/8eeed0a) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.16(2021-10-06)
+
+### :blush: Other Changes
+
+1. [chore(core): improve dnd](https://github.com/stefapi/formivue-design/commit/f59b65e) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.15(2021-10-04)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix styles](https://github.com/stefapi/formivue-design/commit/19df7b2) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.14(2021-10-04)
+
+### :blush: Other Changes
+
+1. [chore(react): improve theme styles](https://github.com/stefapi/formivue-design/commit/51a0fde) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.13(2021-10-04)
+
+### :blush: Other Changes
+
+1. [chore(react): improve theme styles](https://github.com/stefapi/formivue-design/commit/f45572d) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.12(2021-09-30)
+
+### :tada: Enhancements
+
+1. [feat(react): add more source icons](https://github.com/stefapi/formivue-design/commit/75963da) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.11(2021-09-29)
+
+### :tada: Enhancements
+
+1. [feat(react): support normalize DroppableWidget](https://github.com/stefapi/formivue-design/commit/729410a) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :beetle: Bug Fixes
+
+1. [fix: fix controlled props can not update](https://github.com/stefapi/formivue-design/commit/dcffdeb) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.10(2021-09-27)
+
+### :beetle: Bug Fixes
+
+1. [fix(shared): fix batch add event conflict with multi engine](https://github.com/stefapi/formivue-design/commit/a92f56b) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.9(2021-09-27)
+
+### :beetle: Bug Fixes
+
+1. [fix(core): fix event driver conflict](https://github.com/stefapi/formivue-design/commit/af41004) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+1. [fix(formivue): fix FormLayout locales](https://github.com/stefapi/formivue-design/commit/ea2648a) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.8(2021-09-22)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix Workspace will throw error when designer is undefined](https://github.com/stefapi/formivue-design/commit/611e9e6) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :rose: Improve code quality
+
+1. [refactor(core): change defaultComponentTree type ITreeNode[] to ITreeNode](https://github.com/stefapi/formivue-design/commit/40b2af7) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.7(2021-09-22)
+
+### :beetle: Bug Fixes
+
+1. [fix(react): fix ui can not refresh with top rerender](https://github.com/stefapi/formivue-design/commit/cf63e82) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.6(2021-09-22)
+
+### :blush: Other Changes
+
+1. [chore(project): move formivue deps to peerDeps](https://github.com/stefapi/formivue-design/commit/ee19f25) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+## v1.0.0-beta.5(2021-09-22)
+
+### :beetle: Bug Fixes
+
+1. [fix(formivue-antd): fix DatePicker settings](https://github.com/stefapi/formivue-design/commit/2e7e9d2) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )
+
+### :blush: Other Changes
+
+1. [chore(react): update NodePathWidget dependencies](https://github.com/stefapi/formivue-design/commit/87d801e) :point_right: ( [zhili.wzl](https://github.com/zhili.wzl) )

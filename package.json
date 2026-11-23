@@ -1,0 +1,88 @@
+{
+  "name": "root",
+  "version": "3.0.3",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "changeset": "changeset",
+    "changeset:publish": "changeset publish",
+    "changeset:version": "changeset version",
+    "check:formivue": "vitest run scripts/__tests__/wiring.spec.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "harness": "node scripts/harness.mjs",
+    "lint": "pnpm meta:check && eslint .",
+    "meta:check": "node scripts/sync-package-meta.mjs --check",
+    "meta:sync": "node scripts/sync-package-meta.mjs",
+    "start:basic": "pnpm --filter @formivue-design/basic-example start",
+    "start:multi-workspace": "pnpm --filter @formivue-design/multi-workspace-example start",
+    "start:playground": "pnpm --filter @formivue-design/designer-playground-example start",
+    "start:sandbox": "pnpm --filter @formivue-design/sandbox-example start",
+    "start:sandbox-multi-workspace": "pnpm --filter @formivue-design/sandbox-multi-workspace-example start",
+    "demo": "bash scripts/launch-demos.sh",
+    "demo:playground": "bash scripts/launch-demos.sh playground",
+    "demo:docs": "bash scripts/launch-demos.sh docs",
+    "demo:all": "bash scripts/launch-demos.sh all",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --project manager/tsconfig.build.json --noEmit && tsc --project design/shared/tsconfig.build.json --noEmit && tsc --project design/core/tsconfig.build.json --noEmit && tsc --project design/formivue-transformer/tsconfig.build.json --noEmit && tsc --project design/vue-ui/tsconfig.build.json --noEmit && tsc --project design/vue/tsconfig.build.json --noEmit && tsc --project design/vue-sandbox/tsconfig.build.json --noEmit && tsc --project design/vue-settings-form/tsconfig.build.json --noEmit && tsc --project design/formivue-vue/tsconfig.build.json --noEmit && tsc --project design/formivue-setters/tsconfig.build.json --noEmit && tsc --project examples/basic/tsconfig.json --noEmit && tsc --project examples/multi-workspace/tsconfig.json --noEmit && tsc --project examples/sandbox/tsconfig.json --noEmit && tsc --project examples/sandbox-multi-workspace/tsconfig.json --noEmit && tsc --project design/shadcn-advanced-runtime/tsconfig.build.json --noEmit && tsc --project design/shadcn-advanced-designer/tsconfig.build.json --noEmit && tsc --project design/charts-runtime/tsconfig.build.json --noEmit && tsc --project design/charts-designer/tsconfig.build.json --noEmit && tsc --project examples/designer-playground/tsconfig.json --noEmit && pnpm --filter @formivue/example-vite-usage exec vue-tsc --noEmit",
+    "knip": "knip"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "@eslint/js": "^10.0.1",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "@tailwindcss/vite": "^4.3.5",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^8.0.0",
+    "@testing-library/vue": "^8.1.0",
+    "@types/node": "^24.19.2",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "@vue/test-utils": "^2.6.0",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.12.1",
+    "globals": "^17.14.0",
+    "immutable": "^5.2.1",
+    "jsdom": "^31.0.1",
+    "knip": "6.47.0",
+    "lint-staged": "^17.6.1",
+    "moment": "^2.31.0",
+    "prettier": "^3.10.1",
+    "simple-git-hooks": "^2.14.0",
+    "tsdown": "^0.23.7",
+    "tsx": "4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1",
+    "vue": "^3.5.46"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,cts,js,mjs,cjs,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{md,json,jsonc,yaml,yml,css}": [
+      "prettier --write"
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT"
+}
