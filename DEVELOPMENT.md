@@ -124,11 +124,11 @@ the Vite server re-reads the dist.
 
 ### Data model in the designer playground
 
-Start with `pnpm start:playground` and open **Data model** from the workspace
-toolbar. The **Variants demo** link opens `?demo=variants` in a separate local
-workspace. It includes two variants with renamed JSON keys, validation rules
-and a read-only field. Add `mode=advanced` to enable the chart and advanced
-component contracts in the same editor.
+Start with `pnpm start:playground` and open **Data model** from the left sidebar
+or the panel navigation on a small screen. The **Variants demo** link opens
+`?demo=variants` in a separate local workspace. It includes two variants with
+renamed JSON keys, validation rules and a read-only field. Add `mode=advanced`
+to enable the chart and advanced component contracts in the same editor.
 
 Generate from the canvas, choose or create a variant, and edit its schema or
 test values. JSON edits and graphical edits share a locally persisted draft.

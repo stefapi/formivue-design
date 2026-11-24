@@ -100,7 +100,7 @@
 
   [data-playground-pane] .advanced-pane-navigation {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.25rem;
     padding: 0.25rem;
     border-bottom: 1px solid var(--border);

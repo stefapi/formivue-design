@@ -100,6 +100,44 @@ describe('playground formivue-vue — a11y (V8)', () => {
     document.body.appendChild(root)
   })
 
+  test('the sidebar opens the data model in place of the component palette', async () => {
+    const wrapper = mount(App, { attachTo: document.body })
+    mounted.push({ wrapper, engine: (globalThis as any).engine })
+    const modelTab = wrapper.get('button[role="tab"]:last-child')
+    expect(modelTab.text()).toBe('Data model')
+    expect(wrapper.find('[data-designer-source-id]').exists()).toBe(true)
+
+    await modelTab.trigger('click')
+    await vi.waitFor(() =>
+      expect(wrapper.find('.data-model-view').exists()).toBe(true),
+    )
+    expect(modelTab.attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('.dn-composite-panel-tabs-content').exists()).toBe(
+      false,
+    )
+
+    const workspaceButton = (label: string) =>
+      wrapper
+        .findAll('.dn-workspace-panel button')
+        .find((button) => button.text() === label)!
+    await workspaceButton('JSON documents').trigger('click')
+    await vi.waitFor(() =>
+      expect(workspaceButton('Back to data model')).toBeDefined(),
+    )
+    await workspaceButton('Back to data model').trigger('click')
+    await vi.waitFor(() =>
+      expect(wrapper.find('.data-model-view').exists()).toBe(true),
+    )
+    expect(modelTab.attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('[data-designer-source-id]').exists()).toBe(false)
+
+    await modelTab.trigger('click')
+    await wrapper.get('button[role="tab"]:first-child').trigger('click')
+    expect(wrapper.find('.data-model-view').exists()).toBe(false)
+    expect(wrapper.find('.dn-viewport').exists()).toBe(true)
+    expect(wrapper.find('[data-designer-source-id]').exists()).toBe(true)
+  })
+
   test('vue FORMIVUEDESIGN : studio complet + champs déposés + panneau rempli = 0 violation', async () => {
     const wrapper = mount(App, { attachTo: document.body })
     mounted.push({ wrapper })

@@ -36,11 +36,8 @@ import {
   SettingsPanel,
   ComponentTreeWidget,
   TextWidget,
-  useWorkbench,
 } from '@formivue-design/vue'
-import { observer } from '@formivue/reactive-vue'
-import { Button } from '@formivue-design/vue-ui'
-import { message } from '../../shared/language'
+import { useObserver } from '@formivue/reactive-vue'
 import {
   createFormDocument,
   type DocumentContractRegistry,
@@ -137,6 +134,7 @@ GlobalRegistry.registerDesignerLocales({
     advancedPanes: {
       workspace: 'Workspace',
       palette: 'Components',
+      dataModel: 'Data model',
       settings: 'Properties',
       label: 'Designer panels',
     },
@@ -158,6 +156,7 @@ GlobalRegistry.registerDesignerLocales({
     advancedPanes: {
       workspace: 'Espace de travail',
       palette: 'Composants',
+      dataModel: 'Modèle de données',
       settings: 'Propriétés',
       label: 'Panneaux du designer',
     },
@@ -179,6 +178,7 @@ GlobalRegistry.registerDesignerLocales({
     advancedPanes: {
       workspace: 'Área de trabajo',
       palette: 'Componentes',
+      dataModel: 'Modelo de datos',
       settings: 'Propiedades',
       label: 'Paneles del diseñador',
     },
@@ -230,30 +230,13 @@ const components = {
   ObjectContainer,
 } as any
 
-const DataModelViewButton = observer(
-  defineComponent({
-    setup() {
-      const workbench = useWorkbench()
-      return () =>
-        h(
-          Button,
-          {
-            size: 'small',
-            disabled: workbench.type === 'DATAMODEL',
-            onClick: () => workbench.setWorkbenchType('DATAMODEL'),
-          },
-          () => message(['Data model', 'Modèle de données', 'Modelo de datos']),
-        )
-    },
-  }),
-)
-
 export const App = defineComponent({
   name: 'FormivueDesignPlayground',
   props: {
     advanced: Object as PropType<AdvancedPlayground>,
   },
   setup(props) {
+    useObserver()
     const registry = { ...components, ...props.advanced?.components }
     const materials = { ...Materials, ...props.advanced?.materials }
     const documentOptions = {
@@ -299,8 +282,9 @@ export const App = defineComponent({
       documentOptions,
       applyDocument,
     )
-    const panes = ['workspace', 'palette', 'settings'] as const
-    const activePane = ref<(typeof panes)[number]>('workspace')
+    const panes = ['workspace', 'palette', 'dataModel', 'settings'] as const
+    const activePane = ref<'workspace' | 'palette' | 'settings'>('workspace')
+    const sidebarTab = ref('components')
     // useMemo(() => createDesigner(...), []) d'ère → création au setup
     const engine = createDesigner({
       shortcuts: [
@@ -316,6 +300,10 @@ export const App = defineComponent({
       ],
       rootComponentName: 'Form',
     })
+    const openDataModel = () => {
+      activePane.value = 'workspace'
+      engine.workbench.setWorkbenchType('DATAMODEL')
+    }
     const openArchive = (archive: DocumentProjectArchive) => {
       const next = archive.state.applied
         ? createFormDocument(archive.state.applied, documentOptions)
@@ -347,7 +335,7 @@ export const App = defineComponent({
       }
       model.restoreReconciliation(engine.getCurrentTree())
       model.restorePreview()
-      if (demo) engine.workbench.setWorkbenchType('DATAMODEL')
+      if (demo) openDataModel()
     })
     const navigateToCanvas = async (id?: string) => {
       engine.workbench.setWorkbenchType('FORMIVUEDESIGN')
@@ -371,8 +359,21 @@ export const App = defineComponent({
     }
     // hook de debug d'ère (exemples) — inspection du moteur depuis la console
     ;(window as any).engine = engine
-    return () =>
-      h(
+    return () => {
+      const viewingDataModel = engine.workbench.type === 'DATAMODEL'
+      const sidebarProps = {
+        activeKey: viewingDataModel ? 'dataModel' : sidebarTab.value,
+        onChange: (key: string) => {
+          if (key === 'dataModel') {
+            openDataModel()
+            return
+          }
+          sidebarTab.value = key
+          if (viewingDataModel)
+            engine.workbench.setWorkbenchType('FORMIVUEDESIGN')
+        },
+      }
+      return h(
         Designer,
         {
           engine,
@@ -399,12 +400,18 @@ export const App = defineComponent({
                       {
                         key: pane,
                         type: 'button',
-                        'aria-pressed': activePane.value === pane,
+                        'aria-pressed':
+                          pane ===
+                          (viewingDataModel ? 'dataModel' : activePane.value),
                         class:
                           'min-w-0 rounded-md px-2 py-2 text-sm font-medium wrap-anywhere aria-pressed:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
                         onClick: () => {
+                          if (pane === 'dataModel') {
+                            openDataModel()
+                            return
+                          }
                           activePane.value = pane
-                          if (pane !== 'workspace')
+                          if (pane !== 'workspace' || viewingDataModel)
                             engine.workbench.setWorkbenchType('FORMIVUEDESIGN')
                         },
                       },
@@ -412,11 +419,15 @@ export const App = defineComponent({
                     ),
                   ),
                 ),
-                h(CompositePanel, null, {
+                h(CompositePanel, sidebarProps, {
                   default: () => [
                     h(
                       CompositePanel.Item,
-                      { title: 'panels.Component', icon: 'Component' },
+                      {
+                        key: 'components',
+                        title: 'panels.Component',
+                        icon: 'Component',
+                      },
                       {
                         default: () => [
                           h(ResourceWidget, {
@@ -507,14 +518,27 @@ export const App = defineComponent({
                     ),
                     h(
                       CompositePanel.Item,
-                      { title: 'panels.OutlinedTree', icon: 'Outline' },
+                      {
+                        key: 'outline',
+                        title: 'panels.OutlinedTree',
+                        icon: 'Outline',
+                      },
                       { default: () => h(OutlineTreeWidget) },
                     ),
                     h(
                       CompositePanel.Item,
-                      { title: 'panels.History', icon: 'History' },
+                      {
+                        key: 'history',
+                        title: 'panels.History',
+                        icon: 'History',
+                      },
                       { default: () => h(HistoryWidget) },
                     ),
+                    h(CompositePanel.Item, {
+                      key: 'dataModel',
+                      title: 'advancedPanes.dataModel',
+                      icon: 'DataTableSource',
+                    }),
                   ],
                 }),
                 h(
@@ -535,7 +559,6 @@ export const App = defineComponent({
                                   'PREVIEW',
                                 ],
                               }),
-                              h(DataModelViewButton),
                             ],
                           }),
                           h(
@@ -610,10 +633,7 @@ export const App = defineComponent({
                                           previewDocument.value?.exportDocuments(),
                                         draft: model.files.value,
                                         onDraft: model.edit,
-                                        onModel: () =>
-                                          engine.workbench.setWorkbenchType(
-                                            'DATAMODEL',
-                                          ),
+                                        onModel: openDataModel,
                                         onReload: model.project.value
                                           ? model.resetDraft
                                           : undefined,
@@ -674,5 +694,6 @@ export const App = defineComponent({
             }),
         },
       )
+    }
   },
 })

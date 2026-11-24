@@ -53,11 +53,7 @@ const parseItems = (children: any[]) => {
       items.push({
         key: (child.key as any) ?? index,
         ...(child.props as any),
-        content: isFnChild(itemChildren)
-          ? itemChildren
-          : itemChildren?.default
-            ? itemChildren.default
-            : () => [],
+        content: isFnChild(itemChildren) ? itemChildren : itemChildren?.default,
       })
     }
   })
@@ -249,7 +245,7 @@ export const CompositePanel = defineComponent({
               ),
               role: 'tablist',
             },
-            items.value.map((item, index) => {
+            items.value.map((item) => {
               const takeTab = () => {
                 if (item.href) {
                   return h('a', { href: item.href }, [item.icon])
@@ -266,7 +262,12 @@ export const CompositePanel = defineComponent({
                 })
               }
               const shape = item.shape ?? 'tab'
-              const Comp = shape === 'link' ? 'a' : 'div'
+              const Comp =
+                shape === 'link'
+                  ? 'a'
+                  : shape === 'tab' && !item.href
+                    ? 'button'
+                    : 'div'
               return h(
                 Comp as any,
                 {
@@ -278,6 +279,7 @@ export const CompositePanel = defineComponent({
                   class: cls(
                     prefix + '-tabs-pane',
                     'flex min-h-12 min-w-12 cursor-pointer select-none flex-col items-center justify-center p-2.5 relative text-xl',
+                    'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                     currentActiveKey.value === item.key
                       ? 'text-primary'
                       : 'text-muted-foreground hover:text-primary',
@@ -289,8 +291,9 @@ export const CompositePanel = defineComponent({
                       active: currentActiveKey.value === item.key,
                     },
                   ),
-                  key: index,
+                  key: item.key,
                   href: item.href,
+                  type: Comp === 'button' ? 'button' : undefined,
                   role: shape === 'tab' ? 'tab' : undefined,
                   'aria-selected':
                     shape === 'tab'
@@ -298,10 +301,9 @@ export const CompositePanel = defineComponent({
                       : undefined,
                   onClick: (e: any) => {
                     if (shape === 'tab') {
-                      if (currentActiveKey.value === item.key) {
-                        visible.value = !visible.value
-                      } else {
-                        visible.value = true
+                      if (item.content) {
+                        visible.value =
+                          currentActiveKey.value !== item.key || !visible.value
                       }
                       if (!props?.activeKey || !props?.onChange)
                         activeKey.value = item.key
