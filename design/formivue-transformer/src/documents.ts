@@ -1,6 +1,7 @@
 import {
   copyJson,
   createDataDocument,
+  type DataSchemaValidationOptions,
   DocumentValidationError,
   isJsonObject,
   jsonPointer,
@@ -63,6 +64,7 @@ export interface FormDocuments {
 
 export interface CompileFormDocumentOptions extends DocumentContractOptions {
   hasComponent?: (component: string) => boolean
+  schemaValidation?: DataSchemaValidationOptions
 }
 
 export function compileFormDocuments(
@@ -70,6 +72,7 @@ export function compileFormDocuments(
   {
     contracts = standardDocumentContracts,
     hasComponent,
+    schemaValidation,
   }: CompileFormDocumentOptions = {},
 ) {
   if (
@@ -95,7 +98,7 @@ export function compileFormDocuments(
         message: 'Expected a JSON Schema object',
       },
     ])
-  const lookup = schemaLookup(dataSchema)
+  const lookup = schemaLookup(dataSchema, schemaValidation?.resources)
   const describeSchema = (
     schema: DataSchema,
   ): DocumentSchemaDescription | undefined =>
@@ -597,8 +600,8 @@ export function compileFormDocuments(
           'number')
         : node.kind
     const field: ISchema & { 'x-designable-id'?: string } = {
-      ...(node.kind === 'void' ? {} : metadata),
       ...node.field,
+      ...(node.kind === 'void' ? {} : metadata),
       type,
       'x-designable-id': node.id,
       'x-compile-omitted': [
@@ -775,6 +778,7 @@ export function createFormDocument(
     data: documents.data,
     revision: options.revision,
     rowKeys: compiled.rowKeys,
+    schemaValidation: options.schemaValidation,
     validateBindings: compiled.validateBindings,
   })
   return Object.assign(data, {

@@ -1,5 +1,11 @@
 import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
+import { dialectValidator, needsDialectEvaluation } from './document-dialect'
+import {
+  dataSchemaLocations,
+  type JsonDataSchema,
+  type DataSchemaRegistry,
+} from './document-schema-resources'
 
 export type JsonValue =
   null | boolean | number | string | JsonObject | JsonValue[]
@@ -118,31 +124,80 @@ export function copyJson(value: unknown, omitUndefined = false): JsonValue {
   return copy(value, [])
 }
 
-export function compileDataValidator(schema: object) {
+export interface DataSchemaValidationOptions {
+  /** External schema resources are explicitly registered by the application. */
+  resources?: DataSchemaRegistry
+  /** The document manager asserts registered formats by default. */
+  format?: 'assert' | 'annotate'
+}
+
+export function compileDataValidator(
+  schema: JsonDataSchema,
+  { resources = {}, format = 'assert' }: DataSchemaValidationOptions = {},
+) {
   const ajv = new Ajv2020({
     allErrors: true,
+    strictSchema: false,
     strictTypes: false,
     strictRequired: false,
     strictTuples: false,
+    validateFormats: format === 'assert',
     multipleOfPrecision: 12,
     ownProperties: true,
   })
   addFormats(ajv)
   try {
+    for (const [uri, resource] of Object.entries(resources))
+      ajv.addSchema(resource, uri)
+    for (const document of [schema, ...Object.values(resources)]) {
+      if (!ajv.validateSchema(document))
+        throw new DocumentValidationError(
+          ajv.errors.map(({ instancePath, keyword, message }) => ({
+            path: instancePath,
+            code: 'invalid_schema_keyword',
+            message: message ?? keyword,
+          })),
+        )
+      for (const path of dataSchemaLocations(document)) {
+        const node = valueAt(document, path)
+        if (!path.length || !isJsonObject(node) || typeof node.$id === 'string')
+          continue
+        for (const keyword of ['$schema', '$vocabulary'])
+          if (node[keyword] !== undefined)
+            throw new DocumentValidationError([
+              {
+                path: jsonPointer([...path, keyword]),
+                code: 'invalid_schema_keyword',
+                message: `${keyword} belongs at a schema resource root`,
+              },
+            ])
+      }
+    }
+    if (needsDialectEvaluation(schema, resources))
+      return dialectValidator(schema, resources, format === 'assert')
     const validate = ajv.compile(schema)
     return (value: unknown): DocumentIssue[] => {
       if (validate(value)) return []
       return validate.errors.map(
-        ({ instancePath, message, keyword, params }) => ({
-          path:
-            keyword === 'required'
-              ? instancePath + jsonPointer([params.missingProperty])
-              : instancePath,
-          message: message ?? keyword,
-        }),
+        ({ instancePath, message, keyword, params, propertyName }) => {
+          const field =
+            propertyName ??
+            params.missingProperty ??
+            params.additionalProperty ??
+            params.unevaluatedProperty ??
+            params.propertyName
+          return {
+            path:
+              typeof field === 'string'
+                ? instancePath + jsonPointer([field])
+                : instancePath,
+            message: message ?? keyword,
+          }
+        },
       )
     }
   } catch (error) {
+    if (error instanceof DocumentValidationError) throw error
     throw new DocumentValidationError([{ path: '', message: String(error) }])
   }
 }

@@ -1,5 +1,6 @@
 import {
   applyJsonPatch,
+  dataSchemaResources,
   isJsonObject,
   jsonPointer,
   valueAt,
@@ -13,29 +14,27 @@ import { computed, defineComponent, h, ref, watch, type PropType } from 'vue'
 function valuePaths(
   value: unknown,
   schema: unknown,
-  root: FormDocuments['dataSchema'],
+  registry: ReturnType<typeof dataSchemaResources>,
   path: string[] = [],
-): string[][] {
+): { path: string[]; schema: Record<string, unknown> }[] {
   let shape = isJsonObject(schema) ? schema : {}
-  if (typeof shape.$ref === 'string' && shape.$ref.startsWith('#/')) {
-    const definition = valueAt(
-      root,
-      shape.$ref
-        .slice(2)
-        .split('/')
-        .map((part) => part.replace(/~1/gu, '/').replace(/~0/gu, '~')),
-    )
-    if (isJsonObject(definition)) shape = { ...definition, ...shape }
+  if (isJsonObject(schema)) {
+    const reference = registry.resolve(
+      schema,
+      schema.$ref ?? schema.$dynamicRef,
+    )?.schema
+    if (isJsonObject(reference)) shape = { ...reference, ...shape }
   }
+  const here = { path, schema: shape }
   if (Array.isArray(value)) {
     return [
-      path,
+      here,
       ...value.flatMap((item, index) =>
         valuePaths(
           item,
           (Array.isArray(shape.prefixItems) && shape.prefixItems[index]) ||
             shape.items,
-          root,
+          registry,
           [...path, String(index)],
         ),
       ),
@@ -45,12 +44,17 @@ function valuePaths(
   const fields = isJsonObject(value) ? value : {}
   const keys = new Set([...Object.keys(fields), ...Object.keys(properties)])
   return [
-    path,
+    here,
     ...[...keys].flatMap((key) => {
       const child = [...path, key]
       return Object.prototype.hasOwnProperty.call(fields, key)
-        ? valuePaths(fields[key], properties[key], root, child)
-        : [child]
+        ? valuePaths(fields[key], properties[key], registry, child)
+        : [
+            {
+              path: child,
+              schema: isJsonObject(properties[key]) ? properties[key] : {},
+            },
+          ]
     }),
   ]
 }
@@ -76,11 +80,15 @@ export const DataValuesEditor = defineComponent({
         : props.locale.startsWith('es')
           ? es
           : en
+    const registry = computed(() => dataSchemaResources(props.schema))
     const locations = computed(() =>
-      valuePaths(props.modelValue, props.schema, props.schema).map((path) => ({
-        path,
-        pointer: jsonPointer(path),
-      })),
+      valuePaths(props.modelValue, props.schema, registry.value).map(
+        ({ path, schema }) => ({
+          path,
+          schema,
+          pointer: jsonPointer(path),
+        }),
+      ),
     )
     const selected = computed(
       () =>
@@ -98,10 +106,14 @@ export const DataValuesEditor = defineComponent({
       { immediate: true },
     )
 
-    function change(remove = false) {
+    function change(remove = false, example?: JsonValue) {
       try {
         const { pointer } = selected.value
-        const next = remove ? undefined : (JSON.parse(input.value) as JsonValue)
+        const next = remove
+          ? undefined
+          : example !== undefined
+            ? example
+            : (JSON.parse(input.value) as JsonValue)
         if (!pointer) {
           if (!isJsonObject(next)) throw new Error()
           emit('update:modelValue', next)
@@ -169,6 +181,51 @@ export const DataValuesEditor = defineComponent({
               'Introduce un valor JSON válido',
             ),
           ),
+        Array.isArray(selected.value.schema.examples) &&
+        selected.value.schema.examples.length
+          ? h(
+              'select',
+              {
+                class: 'min-w-0 rounded border bg-background p-2 text-sm',
+                'aria-label': t(
+                  'Use a schema example',
+                  'Utiliser un exemple du schéma',
+                  'Usar un ejemplo del esquema',
+                ),
+                value: '',
+                onChange(event: Event) {
+                  const target = event.target as HTMLSelectElement
+                  if (!target.value) return
+                  change(
+                    false,
+                    (selected.value.schema.examples as JsonValue[])[
+                      Number(target.value)
+                    ],
+                  )
+                  target.value = ''
+                },
+              },
+              [
+                h(
+                  'option',
+                  { value: '' },
+                  t(
+                    'Use a schema example',
+                    'Utiliser un exemple du schéma',
+                    'Usar un ejemplo del esquema',
+                  ),
+                ),
+                ...(selected.value.schema.examples as JsonValue[]).map(
+                  (example, index) =>
+                    h(
+                      'option',
+                      { value: String(index) },
+                      JSON.stringify(example),
+                    ),
+                ),
+              ],
+            )
+          : null,
         h('div', { class: 'flex flex-wrap gap-2' }, [
           h(Button, { size: 'small', onClick: () => change() }, () =>
             t(

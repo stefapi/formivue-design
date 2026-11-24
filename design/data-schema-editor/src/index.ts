@@ -7,9 +7,10 @@ import type {
 import {
   compileDataValidator,
   copyJson,
+  dataSchemaLocations,
+  dataSchemaResources,
   isJsonObject,
   jsonPointer,
-  pointerSegments,
   valueAt,
   type JsonValue,
 } from '@formivue/json-schema'
@@ -22,10 +23,11 @@ import {
   type PropType,
   type VNodeChild,
 } from 'vue'
+import { draft2020, labels, resources, type Message } from './keywords'
+import { createRuleControls, replaceSubschema } from './schema-rules'
 export { DataValuesEditor } from './values'
 
 type Model = FormDocuments['dataSchema']
-type Message = readonly [string, string, string]
 const types = [
   'object',
   'array',
@@ -60,6 +62,8 @@ const numeric: Record<string, Message> = {
   multipleOf: ['Multiple of', 'Multiple de', 'Múltiplo de'],
   minLength: ['Minimum length', 'Longueur minimale', 'Longitud mínima'],
   maxLength: ['Maximum length', 'Longueur maximale', 'Longitud máxima'],
+  minContains: labels.minContains,
+  maxContains: labels.maxContains,
   minItems: [
     'Minimum items',
     'Nombre minimal d’éléments',
@@ -86,11 +90,6 @@ const booleans: Record<string, Message> = {
   writeOnly: ['Write only', 'Écriture seule', 'Solo escritura'],
   deprecated: ['Deprecated', 'Déprécié', 'Obsoleto'],
   uniqueItems: ['Unique items', 'Éléments uniques', 'Elementos únicos'],
-  additionalProperties: [
-    'Additional properties',
-    'Propriétés supplémentaires',
-    'Propiedades adicionales',
-  ],
 }
 const families = {
   types: ['Types and values', 'Types et valeurs', 'Tipos y valores'],
@@ -98,6 +97,17 @@ const families = {
   strings: ['Strings', 'Chaînes', 'Cadenas'],
   objects: ['Objects', 'Objets', 'Objetos'],
   arrays: ['Arrays', 'Listes', 'Listas'],
+  combinations: [
+    'Combinations and conditions',
+    'Combinaisons et conditions',
+    'Combinaciones y condiciones',
+  ],
+  content: ['Content', 'Contenu', 'Contenido'],
+  resources: [
+    'Resources and references',
+    'Ressources et références',
+    'Recursos y referencias',
+  ],
   annotations: ['Annotations', 'Annotations', 'Anotaciones'],
 } satisfies Record<string, Message>
 type Family = keyof typeof families
@@ -119,36 +129,6 @@ const initialValue = (type: string): JsonValue =>
 const valueType = (value: JsonValue) =>
   Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value
 
-function schemaLocations(schema: DataSchema, path: string[] = []): string[][] {
-  if (!isJsonObject(schema)) return [path]
-  const children = ['$defs', 'properties'].flatMap((key) => {
-    const map = schema[key]
-    return isJsonObject(map)
-      ? Object.entries(map).flatMap(([name, child]) =>
-          schemaLocations(child as DataSchema, [...path, key, name]),
-        )
-      : []
-  })
-  if (schema.items !== undefined)
-    children.push(
-      ...schemaLocations(schema.items as DataSchema, [...path, 'items']),
-    )
-  for (const keyword of ['allOf', 'anyOf', 'oneOf', 'prefixItems']) {
-    const branches = schema[keyword]
-    if (Array.isArray(branches))
-      branches.forEach((child, index) =>
-        children.push(
-          ...schemaLocations(child as DataSchema, [
-            ...path,
-            keyword,
-            String(index),
-          ]),
-        ),
-      )
-  }
-  return [path, ...children]
-}
-
 function dataPath(path: string[]) {
   if (path[0] === '$defs') return
   const result: (string | null)[] = []
@@ -163,20 +143,12 @@ function dataPath(path: string[]) {
   return result
 }
 
-function localReference(ref: unknown) {
-  try {
-    if (typeof ref === 'string' && (ref === '#' || ref.startsWith('#/')))
-      return pointerSegments(decodeURIComponent(ref.slice(1)))
-  } catch {
-    // The inspector still shows the reference location when the URI is incomplete.
-  }
-}
-
 function schemaUsages(
   model: Model,
   dependencies: readonly DocumentDependency[],
 ) {
   const usages = new Map<string, DocumentDependency[]>()
+  const registry = dataSchemaResources(model)
   for (const dependency of dependencies) {
     const seen = new Map<string, Set<number>>()
     const visit = (path: string[], depth: number) => {
@@ -200,8 +172,15 @@ function schemaUsages(
         usages.set(pointer, entries)
       }
       if (!isJsonObject(schema)) return
-      const reference = localReference(schema.$ref)
-      if (reference) visit(reference, depth)
+      for (const key of ['$ref', '$dynamicRef']) {
+        const target = registry.resolve(schema, schema[key])
+        if (target?.document === model) visit(target.path, depth)
+      }
+      for (const key of ['then', 'else'])
+        if (schema.if !== undefined) visit([...path, key], depth)
+      if (isJsonObject(schema.dependentSchemas))
+        for (const key of Object.keys(schema.dependentSchemas))
+          visit([...path, 'dependentSchemas', key], depth)
       for (const keyword of ['allOf', 'anyOf', 'oneOf']) {
         const branches = schema[keyword]
         if (Array.isArray(branches))
@@ -211,11 +190,31 @@ function schemaUsages(
       }
       if (depth === dependency.path.length) return
       const step = dependency.path[depth]
-      if (step === null) visit([...path, 'items'], depth + 1)
-      else {
+      if (step === null) {
+        visit([...path, 'items'], depth + 1)
+        if (Array.isArray(schema.prefixItems))
+          schema.prefixItems.forEach((_, index) =>
+            visit([...path, 'prefixItems', String(index)], depth + 1),
+          )
+      } else {
         visit([...path, 'properties', step], depth + 1)
         if (/^(0|[1-9]\d*)$/u.test(step))
           visit([...path, 'prefixItems', step], depth + 1)
+        let named = Object.prototype.hasOwnProperty.call(
+          schema.properties ?? {},
+          step,
+        )
+        if (isJsonObject(schema.patternProperties))
+          for (const pattern of Object.keys(schema.patternProperties)) {
+            try {
+              if (!new RegExp(pattern, 'u').test(step)) continue
+              named = true
+              visit([...path, 'patternProperties', pattern], depth + 1)
+            } catch {
+              // The draft inspector also displays incomplete patterns.
+            }
+          }
+        if (!named) visit([...path, 'additionalProperties'], depth + 1)
       }
     }
     visit([], 0)
@@ -243,11 +242,10 @@ export const DataSchemaEditor = defineComponent({
     const selected = ref('')
     const inspecting = ref(false)
     const example = ref('')
-    const propertyName = ref('')
     const localError = ref('')
     const id = useId()
     const locations = computed(() =>
-      schemaLocations(props.modelValue).map((path) => ({
+      [...dataSchemaLocations(props.modelValue)].map((path) => ({
         path,
         pointer: jsonPointer(path),
         data: dataPath(path),
@@ -389,6 +387,7 @@ export const DataSchemaEditor = defineComponent({
         t(labels),
         h(key === 'description' ? 'textarea' : 'input', {
           class: control,
+          'data-schema-keyword': key,
           value: schema.value[key] ?? '',
           onInput: (event: Event) => edit(key, valueFrom(event) || undefined),
         }),
@@ -403,6 +402,7 @@ export const DataSchemaEditor = defineComponent({
             h('input', {
               type: 'number',
               class: control,
+              'data-schema-keyword': key,
               step:
                 key.endsWith('Length') ||
                 key.endsWith('Items') ||
@@ -428,6 +428,7 @@ export const DataSchemaEditor = defineComponent({
           {
             class: control,
             'aria-label': t(booleans[key]),
+            'data-schema-keyword': key,
             value:
               typeof schema.value[key] === 'boolean'
                 ? String(schema.value[key])
@@ -544,9 +545,20 @@ export const DataSchemaEditor = defineComponent({
         ])
       }
     })
-    const reference = computed(() => {
-      const path = localReference(schema.value.$ref)
-      return path && jsonPointer(path)
+    const registry = computed(() => dataSchemaResources(props.modelValue))
+    const reference = (keyword: '$ref' | '$dynamicRef') => {
+      const target = registry.value.resolve(schema.value, schema.value[keyword])
+      return target?.document === props.modelValue
+        ? jsonPointer(target.path)
+        : undefined
+    }
+    const rules = createRuleControls({
+      current: () => schema.value,
+      path: () => location.value.path,
+      edit,
+      select,
+      t,
+      control,
     })
     const usages = computed(() =>
       schemaUsages(props.modelValue, props.dependencies),
@@ -555,7 +567,6 @@ export const DataSchemaEditor = defineComponent({
       selected.value = pointer
       inspecting.value = true
       example.value = ''
-      propertyName.value = ''
       localError.value = ''
     }
 
@@ -575,10 +586,14 @@ export const DataSchemaEditor = defineComponent({
         objects: relevant('object'),
         arrays: relevant('array'),
         annotations: true,
+        combinations: true,
+        content: true,
+        resources: true,
       }
-      const refTarget = reference.value
-      const properties = current.properties ?? {}
-      const candidate = propertyName.value.trim()
+      const refTarget = reference('$ref')
+      const dynamicTarget = reference('$dynamicRef')
+      const resourceRoot =
+        !location.value.path.length || typeof current.$id === 'string'
       const inspector = h(
         'div',
         {
@@ -638,6 +653,16 @@ export const DataSchemaEditor = defineComponent({
                     ),
                   ),
                 ),
+            dynamicTarget !== undefined
+              ? button(
+                  [
+                    'Open dynamic reference',
+                    'Ouvrir la référence dynamique',
+                    'Abrir referencia dinámica',
+                  ],
+                  () => select(dynamicTarget),
+                )
+              : null,
             refTarget !== undefined &&
             locations.value.some(({ pointer }) => pointer === refTarget)
               ? button(
@@ -687,6 +712,58 @@ export const DataSchemaEditor = defineComponent({
                 pointer: location.value.pointer,
               }),
             ]),
+          location.value.path.length
+            ? label(
+                t(['Schema form', 'Forme du schéma', 'Forma del esquema']),
+                h(
+                  'select',
+                  {
+                    'aria-label': t([
+                      'Schema form',
+                      'Forme du schéma',
+                      'Forma del esquema',
+                    ]),
+                    class: control,
+                    value:
+                      typeof node.value === 'boolean'
+                        ? String(node.value)
+                        : 'object',
+                    onChange: (event: Event) => {
+                      const next = valueFrom(event)
+                      emit(
+                        'update:modelValue',
+                        replaceSubschema(
+                          props.modelValue,
+                          location.value.path,
+                          next === 'object' ? {} : next === 'true',
+                        ) as Model,
+                      )
+                    },
+                  },
+                  [
+                    h('option', { value: 'object' }, t(typeNames.object)),
+                    h(
+                      'option',
+                      { value: 'true' },
+                      t([
+                        'True · accepts every value',
+                        'Vrai · accepte toute valeur',
+                        'Verdadero · acepta cualquier valor',
+                      ]),
+                    ),
+                    h(
+                      'option',
+                      { value: 'false' },
+                      t([
+                        'False · rejects every value',
+                        'Faux · refuse toute valeur',
+                        'Falso · rechaza cualquier valor',
+                      ]),
+                    ),
+                  ],
+                ),
+              )
+            : null,
           props.tree &&
             isJsonObject(node.value) &&
             h(
@@ -788,6 +865,15 @@ export const DataSchemaEditor = defineComponent({
                         'Expresión regular',
                       ]),
                       annotation('format', ['Format', 'Format', 'Formato']),
+                      h(
+                        'p',
+                        { class: 'text-sm text-muted-foreground' },
+                        t([
+                          'Format describes a string. Formivue validates registered formats by default.',
+                          'Le format décrit une chaîne. Formivue valide les formats enregistrés par défaut.',
+                          'El formato describe una cadena. Formivue valida por defecto los formatos registrados.',
+                        ]),
+                      ),
                       typeof current.pattern === 'string'
                         ? label(
                             t([
@@ -822,109 +908,61 @@ export const DataSchemaEditor = defineComponent({
                 enabledFamilies.objects
                   ? group('objects', [
                       numberControls(['minProperties', 'maxProperties']),
-                      flag('additionalProperties'),
-                      ...Object.keys(properties).map((name) =>
-                        h(
-                          'div',
-                          { key: name, class: 'flex items-center gap-2' },
-                          [
-                            h(
-                              'label',
-                              { class: 'flex items-center gap-2 text-sm' },
-                              [
-                                h('input', {
-                                  type: 'checkbox',
-                                  checked: current.required?.includes(name),
-                                  onChange: (event: Event) => {
-                                    const all = current.required ?? []
-                                    const next = (
-                                      event.target as HTMLInputElement
-                                    ).checked
-                                      ? [...all, name]
-                                      : all.filter((key) => key !== name)
-                                    edit(
-                                      'required',
-                                      next.length ? next : undefined,
-                                    )
-                                  },
-                                }),
-                                t(['Required', 'Obligatoire', 'Obligatorio']) +
-                                  ' · ' +
-                                  name,
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      h('div', { class: 'flex flex-wrap items-end gap-2' }, [
-                        label(
-                          t([
-                            'Property name',
-                            'Nom de propriété',
-                            'Nombre de propiedad',
-                          ]),
-                          h('input', {
-                            class: control,
-                            value: propertyName.value,
-                            onInput: (event: Event) => {
-                              propertyName.value = valueFrom(event)
-                            },
-                          }),
-                        ),
-                        button(
-                          [
-                            'Add property',
-                            'Ajouter une propriété',
-                            'Añadir propiedad',
-                          ],
-                          () => {
-                            edit('properties', {
-                              ...properties,
-                              [candidate]: {},
-                            })
-                            select(
-                              jsonPointer([
-                                ...location.value.path,
-                                'properties',
-                                candidate,
-                              ]),
-                            )
-                          },
-                          !candidate ||
-                            own(properties, candidate) ||
-                            ['__proto__', 'constructor', 'prototype'].includes(
-                              candidate,
-                            ),
-                        ),
-                      ]),
+                      rules.named('properties'),
+                      rules.required(),
+                      rules.named('patternProperties'),
+                      rules.child('additionalProperties'),
+                      rules.child('propertyNames'),
+                      rules.dependencies(),
+                      rules.named('dependentSchemas'),
+                      rules.child('unevaluatedProperties'),
                     ])
                   : null,
                 enabledFamilies.arrays
                   ? group('arrays', [
                       numberControls(['minItems', 'maxItems']),
                       flag('uniqueItems'),
-                      current.items === undefined
-                        ? h('div', [
-                            button(
-                              [
-                                'Add item schema',
-                                'Ajouter le schéma des éléments',
-                                'Añadir esquema de elementos',
-                              ],
-                              () => {
-                                edit('items', {})
-                                select(
-                                  jsonPointer([
-                                    ...location.value.path,
-                                    'items',
-                                  ]),
-                                )
-                              },
-                            ),
-                          ])
-                        : null,
+                      rules.child('items'),
+                      rules.branches('prefixItems'),
+                      rules.child('contains'),
+                      numberControls(['minContains', 'maxContains']),
+                      rules.child('unevaluatedItems'),
                     ])
                   : null,
+                group('combinations', [
+                  ...['allOf', 'anyOf', 'oneOf'].map(rules.branches),
+                  ...['not', 'if', 'then', 'else'].map(rules.child),
+                ]),
+                group('content', [
+                  annotation('contentEncoding', labels.contentEncoding),
+                  annotation('contentMediaType', labels.contentMediaType),
+                  rules.child('contentSchema'),
+                  h(
+                    'p',
+                    { class: 'text-sm text-muted-foreground' },
+                    t([
+                      'Content keywords describe embedded data. Content validation requires a configured checker.',
+                      'Ces mots-clés décrivent les données intégrées. Leur validation nécessite un contrôle configuré.',
+                      'Estas palabras clave describen los datos integrados. Validarlos requiere un verificador configurado.',
+                    ]),
+                  ),
+                ]),
+                group('resources', [
+                  ...resources
+                    .filter((keyword) => keyword !== '$schema' || resourceRoot)
+                    .map((keyword) => annotation(keyword, labels[keyword])),
+                  resourceRoot &&
+                    button(
+                      [
+                        'Use 2020-12 dialect',
+                        'Utiliser le dialecte 2020-12',
+                        'Usar el dialecto 2020-12',
+                      ],
+                      () => edit('$schema', draft2020),
+                    ),
+                  rules.named('$defs'),
+                  resourceRoot && rules.vocabulary(),
+                ]),
                 group('annotations', [
                   annotation('title', ['Title', 'Titre', 'Título']),
                   annotation('description', [
@@ -1008,6 +1046,3 @@ export const DataSchemaEditor = defineComponent({
     }
   },
 })
-
-const own = (object: object, key: string) =>
-  Object.prototype.hasOwnProperty.call(object, key)

@@ -18,14 +18,16 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsdown --config-loader tsx"
+    "build": "tsdown --config-loader tsx",
+    "test:2020": "node scripts/conformance-2020.mjs"
   },
   "dependencies": {
     "@formivue/core": "workspace:*",
     "@formivue/reactive": "workspace:*",
     "@formivue/shared": "workspace:*",
     "ajv": "8.20.0",
-    "ajv-formats": "3.0.1"
+    "ajv-formats": "3.0.1",
+    "json-schema-library": "11.6.16"
   },
   "publishConfig": {
     "access": "public"

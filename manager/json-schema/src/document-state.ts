@@ -9,6 +9,7 @@ import { batch, observable } from '@formivue/reactive'
 import { isEqual } from '@formivue/shared'
 import {
   compileDataValidator,
+  type DataSchemaValidationOptions,
   copyJson,
   DocumentValidationError,
   isJsonObject,
@@ -33,6 +34,7 @@ export interface DataDocumentOptions {
   rowKeys?: readonly DocumentRowKey[]
   revision?: number
   validateBindings?: (data: JsonObject) => DocumentIssue[]
+  schemaValidation?: DataSchemaValidationOptions
 }
 
 const editing = Symbol('Active field draft')
@@ -267,7 +269,10 @@ function makeReconciler(rowKeys: readonly DocumentRowKey[]) {
 }
 
 export function createDataDocument(options: DataDocumentOptions) {
-  const validateSchema = compileDataValidator(options.schema)
+  const validateSchema = compileDataValidator(
+    options.schema,
+    options.schemaValidation,
+  )
   const reconcile = makeReconciler(options.rowKeys ?? [])
   const validate = (value: unknown): JsonObject => {
     const data = copyJson(value)

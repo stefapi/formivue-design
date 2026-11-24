@@ -220,7 +220,12 @@ export const DataModelWidget = defineComponent({
     )
     const validation = computed(() =>
       schema.value.value
-        ? parsed(() => compileDataValidator(schema.value.value))
+        ? parsed(() =>
+            compileDataValidator(
+              schema.value.value,
+              props.options.schemaValidation,
+            ),
+          )
         : { error: schema.value.error, value: undefined },
     )
     const compiled = computed(() =>
@@ -236,10 +241,14 @@ export const DataModelWidget = defineComponent({
     const dataIssues = computed(() => {
       if (data.value.error) return data.value.error
       const candidate = data.value.value
-      const issues = validation.value.value?.(candidate) ?? []
-      if (!issues.length && compiled.value.value)
-        issues.push(...compiled.value.value.validateBindings(candidate))
-      return issues.length ? new DocumentValidationError(issues) : undefined
+      try {
+        const issues = validation.value.value?.(candidate) ?? []
+        if (!issues.length && compiled.value.value)
+          issues.push(...compiled.value.value.validateBindings(candidate))
+        return issues.length ? new DocumentValidationError(issues) : undefined
+      } catch (cause) {
+        return cause
+      }
     })
     const blocked = computed(() => !compiled.value.value || !!dataIssues.value)
     const run = (work: () => void) => {
