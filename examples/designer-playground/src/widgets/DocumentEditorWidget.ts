@@ -1,4 +1,4 @@
-import { defineComponent, h, ref, type PropType } from 'vue'
+import { computed, defineComponent, h, ref, type PropType } from 'vue'
 import type { ITreeNode, TreeNode } from '@formivue-design/core'
 import {
   createFormDocument,
@@ -10,7 +10,8 @@ import {
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
 import { Button } from '@formivue-design/vue-ui'
-import { message } from '../../../shared/language'
+import { DataSchemaEditor } from '@formivue-design/data-schema-editor'
+import { exampleLocale, message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
 import { SchemaEditorWidget } from './SchemaEditorWidget'
 
@@ -38,6 +39,16 @@ export const DocumentEditorWidget = defineComponent({
   setup(props) {
     const part = ref<keyof FormDocuments | 'legacy'>('ui')
     const contents = ref<FormDocumentJson>({ ui: '', dataSchema: '', data: '' })
+    const visualSchema = ref(true)
+    const schema = computed<FormDocuments['dataSchema']>(() => {
+      try {
+        const value = JSON.parse(contents.value.dataSchema)
+        if (value && typeof value === 'object' && !Array.isArray(value))
+          return value
+      } catch {
+        // The JSON editor remains available while the source is incomplete.
+      }
+    })
     const error = ref('')
     const canvasDocuments = () =>
       transformToFormDocuments(props.tree, undefined, {
@@ -103,6 +114,30 @@ export const DocumentEditorWidget = defineComponent({
               ),
             ],
           ),
+          selected === 'dataSchema' && schema.value
+            ? h(
+                Button,
+                {
+                  size: 'small',
+                  variant: 'outline',
+                  onClick: () => {
+                    visualSchema.value = !visualSchema.value
+                  },
+                },
+                () =>
+                  visualSchema.value
+                    ? message([
+                        'Edit JSON source',
+                        'Éditer le JSON',
+                        'Editar JSON',
+                      ])
+                    : message([
+                        'Visual editor',
+                        'Éditeur graphique',
+                        'Editor visual',
+                      ]),
+              )
+            : null,
           ...(selected === 'legacy'
             ? []
             : [
@@ -221,19 +256,28 @@ export const DocumentEditorWidget = defineComponent({
                 onChange: props.onChange,
               }),
             )
-          : h('textarea', {
-              key: selected,
-              'aria-label': files[selected],
-              spellcheck: false,
-              value: contents.value[selected],
-              class:
-                'min-h-0 flex-1 resize-none rounded border border-input bg-background p-3 font-mono text-sm',
-              onInput: (event: Event) => {
-                contents.value[selected] = (
-                  event.target as HTMLTextAreaElement
-                ).value
-              },
-            }),
+          : selected === 'dataSchema' && visualSchema.value && schema.value
+            ? h(DataSchemaEditor, {
+                modelValue: schema.value,
+                locale: exampleLocale.value,
+                'onUpdate:modelValue': (value) => {
+                  contents.value.dataSchema = JSON.stringify(value, null, 2)
+                  error.value = ''
+                },
+              })
+            : h('textarea', {
+                key: selected,
+                'aria-label': files[selected],
+                spellcheck: false,
+                value: contents.value[selected],
+                class:
+                  'min-h-0 flex-1 resize-none rounded border border-input bg-background p-3 font-mono text-sm',
+                onInput: (event: Event) => {
+                  contents.value[selected] = (
+                    event.target as HTMLTextAreaElement
+                  ).value
+                },
+              }),
       ])
     }
   },

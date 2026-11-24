@@ -137,6 +137,18 @@ before a new project is returned. `reconcileFormDocumentProject` checks a
 new canvas export against all saved variants and reports changes to
 bound fields by component ID.
 
+### Project constraints onto the form
+
+The document compiler projects numeric ranges, integer input, increments,
+choices and collection limits onto compatible controls. The data document
+validates the original JSON Schema and reports errors by field path, including
+patterns and Unicode string lengths. Existing values keep their original
+types. A schema default on an array item can initialize a newly added row.
+
+The playground exposes the visual editor on the `data.schema.json` document
+tab. It edits the same draft as the JSON source view and uses the same
+validation when applying or downloading the three documents.
+
 The application supplies the transport. A patch applies to the last accepted
 remote revision and publishes only if its entire result is valid. Display
 bindings read the latest valid data. Editors keep their draft and track

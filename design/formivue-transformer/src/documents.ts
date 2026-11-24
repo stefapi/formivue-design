@@ -20,6 +20,7 @@ import {
   type DocumentRowsContract,
 } from './document-contracts'
 import { schemaLookup, type DataSchema } from './document-schema'
+import { projectDocumentConstraints } from './document-projection'
 
 export interface DataBinding {
   path: string
@@ -537,34 +538,38 @@ export function compileFormDocuments(
     }
 
     const constraints = lookup.constraints(target)
-    const {
-      items,
-      enum: choices,
-      title,
-      description,
-      readOnly,
-      writeOnly,
-    } = constraints
+    const { items, title, description, readOnly, writeOnly, deprecated } =
+      constraints
+    const types = lookup.possible(target)
+    const { choices } =
+      node.kind === 'void'
+        ? {}
+        : projectDocumentConstraints({
+            node,
+            constraints,
+            types,
+            props,
+            itemConstraints: lookup.constraints(lookup.child(target, null)),
+            report: (message, code, property) =>
+              fail(node, pathName, message, code, property),
+          })
     const metadata = Object.fromEntries(
       Object.entries({
         enum: choices,
         title,
         description,
         readOnly,
-        writeOnly,
       }).filter(([, value]) => value !== undefined),
     )
     const type =
       node.kind === 'field'
-        ? (lookup
-            .possible(target)
-            .find((type) => type !== 'null' && type !== 'integer') ?? 'number')
+        ? (types.find((type) => type !== 'null' && type !== 'integer') ??
+          'number')
         : node.kind
     const field: ISchema & { 'x-designable-id'?: string } = {
       ...(node.kind === 'void' ? {} : metadata),
       ...node.field,
       type,
-      ...(node.options ? { enum: node.options } : {}),
       'x-designable-id': node.id,
       'x-compile-omitted': [
         ...new Set([
@@ -578,6 +583,24 @@ export function compileFormDocuments(
     // Render metadata never seeds or replaces the validated data document.
     delete field.default
     delete field['x-value']
+    if (
+      readOnly === true &&
+      !['disabled', 'readPretty'].includes(field['x-pattern'])
+    )
+      field['x-pattern'] = 'readOnly'
+    if (writeOnly === true)
+      field['x-data'] = { ...field['x-data'], documentWriteOnly: true }
+    if (deprecated === true) {
+      props['data-deprecated'] = true
+      if (field['x-decorator'] === 'FormItem')
+        field.description = [field.description, 'Deprecated']
+          .filter(Boolean)
+          .join(' · ')
+    }
+    if (node.kind === 'array') {
+      const defaults = newItemDefaults(lookup.child(target, null))
+      if (defaults !== undefined) props.itemDefault = defaults
+    }
     if (node.component) field['x-component'] = node.component
     if (Object.keys(props).length) field['x-component-props'] = props
     const required = lookup.constraints(lookup.at(path.slice(0, -1))).required
@@ -603,6 +626,23 @@ export function compileFormDocuments(
       field.items = items as ISchema
     }
     return { path: bind.length ? bind : [node.key], field }
+  }
+
+  function newItemDefaults(
+    target: DataSchema,
+    visited = new Set<DataSchema>(),
+  ): JsonObject[string] | undefined {
+    if (target === undefined || visited.has(target)) return
+    const { default: value, properties } = lookup.constraints(target)
+    if (value !== undefined) return value as JsonObject[string]
+    if (!isJsonObject(properties)) return
+    const seen = new Set(visited).add(target)
+    const result: JsonObject = {}
+    for (const [key, schema] of Object.entries(properties)) {
+      const value = newItemDefaults(schema as DataSchema, seen)
+      if (value !== undefined) result[key] = value
+    }
+    if (Object.keys(result).length) return result
   }
 
   function compileChildren(nodes: UiDocumentNode[], parent: (string | null)[]) {

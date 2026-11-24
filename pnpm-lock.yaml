@@ -194,6 +194,22 @@ importers:
         specifier: workspace:*
         version: link:../formivue-transformer
 
+  design/data-schema-editor:
+    dependencies:
+      '@formivue-design/formivue-transformer':
+        specifier: workspace:*
+        version: link:../formivue-transformer
+      '@formivue-design/vue-ui':
+        specifier: workspace:*
+        version: link:../vue-ui
+      '@formivue/json-schema':
+        specifier: workspace:*
+        version: link:../../manager/json-schema
+    devDependencies:
+      vue:
+        specifier: ^3.5.46
+        version: 3.5.46(typescript@6.0.3)
+
   design/formivue-setters:
     dependencies:
       '@formivue-design/core':
@@ -632,6 +648,9 @@ importers:
       '@formivue-design/data-schema-charts':
         specifier: workspace:*
         version: link:../../design/data-schema-charts
+      '@formivue-design/data-schema-editor':
+        specifier: workspace:*
+        version: link:../../design/data-schema-editor
       '@formivue-design/formivue-setters':
         specifier: workspace:*
         version: link:../../design/formivue-setters

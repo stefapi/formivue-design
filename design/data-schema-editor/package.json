@@ -1,0 +1,47 @@
+{
+  "name": "@formivue-design/data-schema-editor",
+  "version": "3.0.3",
+  "description": "Visual JSON Schema editor for Formivue data documents",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "dependencies": {
+    "@formivue-design/formivue-transformer": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "@formivue/json-schema": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/data-schema-editor"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.46"
+  }
+}

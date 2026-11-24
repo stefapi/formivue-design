@@ -63,6 +63,7 @@ export const Select = defineComponent({
     multiple: { type: Boolean, default: false },
     placeholder: { type: String, default: undefined },
     disabled: { type: Boolean, default: false },
+    readOnly: { type: Boolean, default: false },
   },
   emits: ['update:value'],
   setup(props, { attrs, emit }) {
@@ -86,7 +87,7 @@ export const Select = defineComponent({
         SelectRoot,
         {
           multiple: props.multiple,
-          disabled: props.disabled,
+          disabled: props.disabled || props.readOnly,
           modelValue: Array.isArray(current())
             ? (current() as (string | number)[]).map((x) => toRekaValue(x))
             : toRekaValue(current() as string | number),

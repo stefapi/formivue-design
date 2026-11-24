@@ -38,6 +38,7 @@ export const NumberPicker = defineComponent({
     placeholder: String,
     locale: String,
     disabled: { type: Boolean, default: false },
+    readOnly: { type: Boolean, default: false },
   },
   emits: ['update:value'],
   setup(props, { attrs, emit }) {
@@ -60,6 +61,7 @@ export const NumberPicker = defineComponent({
             minimumFractionDigits: props.precision,
           },
           disabled: props.disabled,
+          readonly: props.readOnly,
           'onUpdate:modelValue': (v: number | undefined) => {
             emit('update:value', v ?? null)
             props.onChange?.(v ?? null)

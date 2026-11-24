@@ -131,7 +131,10 @@ export default observer({
       if (!field) {
         return slots.default?.()
       }
-      if (field.display !== 'visible') {
+      if (
+        field.display !== 'visible' ||
+        (field.data?.documentWriteOnly === true && field.pattern !== 'editable')
+      ) {
         return h('template', {}, {})
       }
 

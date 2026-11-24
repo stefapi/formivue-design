@@ -12,7 +12,7 @@ import {
 import type { ArrayField } from '@formivue/core'
 import { observer } from '@formivue/reactive-vue'
 import { Schema, useField, useFieldSchema } from '@formivue/vue'
-import { clone, isUndef } from '@formivue/shared'
+import { clone, isPlainObj, isUndef } from '@formivue/shared'
 import {
   Plus,
   Trash2 as Delete,
@@ -50,6 +50,9 @@ export interface IArrayBaseItemProps {
 
 export interface IArrayBaseProps {
   disabled?: boolean
+  minItems?: number
+  maxItems?: number
+  itemDefault?: unknown
   addLabel?: string
   onAdd?: (index: number) => void
   onCopy?: (index: number) => void
@@ -146,6 +149,8 @@ const ArrayOperation = (
             array.props.value.disabled ||
             attrs.disabled === true ||
             !isItemIndex(items, rowIndex) ||
+            (name === 'Copy' && items.length >= array.props.value.maxItems) ||
+            (name === 'Remove' && items.length <= array.props.value.minItems) ||
             (name === 'MoveUp' && rowIndex === 0) ||
             (name === 'MoveDown' && rowIndex === items.length - 1)
           return h(
@@ -195,6 +200,12 @@ export const ArrayBase = defineComponent({
   inheritAttrs: false,
   props: {
     disabled: { type: Boolean, default: undefined },
+    minItems: Number,
+    maxItems: Number,
+    itemDefault: {
+      type: null as unknown as PropType<unknown>,
+      default: undefined,
+    },
     addLabel: { type: String, default: undefined },
     onAdd: { type: Function, default: undefined },
     onCopy: { type: Function, default: undefined },
@@ -261,7 +272,11 @@ ArrayBase.Addition = observer(
           selfRef.value?.title ||
           array.props.value.addLabel ||
           'Add'
-        const disabled = array.props.value.disabled || pattern === 'disabled'
+        const size = array.field.value?.value?.length ?? 0
+        const disabled =
+          array.props.value.disabled ||
+          pattern === 'disabled' ||
+          size >= array.props.value.maxItems
         return h(
           Button,
           {
@@ -281,10 +296,17 @@ ArrayBase.Addition = observer(
                 ;(attrs as any).onClick(e)
                 if (e.defaultPrevented) return
               }
-              const defaultValue = getDefaultValue(
-                props.defaultValue,
-                array.schema.value,
-              )
+              const schemaDefault = array.props.value.itemDefault
+              const defaultValue =
+                props.defaultValue === undefined && schemaDefault !== undefined
+                  ? clone(schemaDefault)
+                  : getDefaultValue(
+                      isPlainObj(schemaDefault) &&
+                        isPlainObj(props.defaultValue)
+                        ? { ...schemaDefault, ...props.defaultValue }
+                        : props.defaultValue,
+                      array.schema.value,
+                    )
               if (props.method === 'unshift') {
                 array.field.value?.unshift?.(defaultValue)
                 array.props.value?.onAdd?.(0)

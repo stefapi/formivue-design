@@ -124,6 +124,7 @@ export function compileDataValidator(schema: object) {
     strictTypes: false,
     strictRequired: false,
     strictTuples: false,
+    multipleOfPrecision: 12,
     ownProperties: true,
   })
   addFormats(ajv)

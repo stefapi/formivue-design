@@ -313,16 +313,34 @@ export function createDataDocument(options: DataDocumentOptions) {
     },
   }
 
+  function updateIssues(issues: DocumentIssue[]) {
+    if (!isEqual(state.issues, issues)) state.issues = issues
+    const messagesByPath = new Map<string, string[]>()
+    for (const issue of issues) {
+      const messages = messagesByPath.get(issue.path) ?? []
+      messages.push(issue.message)
+      messagesByPath.set(issue.path, messages)
+    }
+    for (const field of Object.values(form.fields)) {
+      if (!isDataField(field)) continue
+      field.setFeedback({
+        type: 'error',
+        code: 'DocumentSchemaError',
+        messages: messagesByPath.get(jsonPointer(field.path.segments)) ?? [],
+      })
+    }
+  }
+
   function publishDraft() {
     try {
       const data = validate(draftData())
       batch(() => {
-        if (state.issues.length) state.issues = []
+        if (state.issues.length) updateIssues([])
         if (!state.conflicts.length) reconcile.sync(state.data, data)
       })
     } catch (error) {
       if (!(error instanceof DocumentValidationError)) throw error
-      if (!isEqual(state.issues, error.issues)) state.issues = [...error.issues]
+      updateIssues([...error.issues])
     }
   }
 
@@ -426,7 +444,14 @@ export function createDataDocument(options: DataDocumentOptions) {
       callback
         ? () => callback(requireSubmission())
         : async () => requireSubmission() as unknown as T,
-    )
+    ).catch((error) => {
+      if (
+        Array.isArray(error) &&
+        error.some((issue) => issue.code === 'DocumentSchemaError')
+      )
+        requireSubmission()
+      throw error
+    })
 
   return {
     form,
