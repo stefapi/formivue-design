@@ -421,17 +421,18 @@ Full reference:
 
 ## Playgrounds & demos
 
-| Command                              | Content                                   | URL                                        |
-| ------------------------------------ | ----------------------------------------- | ------------------------------------------ |
-| `pnpm start:playground`              | **full designer** (reference scenario)    | http://127.0.0.1:3004                      |
-| `pnpm start:playground`              | Live documents demo (UI, schema and data) | http://127.0.0.1:3004/?mode=live-documents |
-| `pnpm start:basic`                   | minimal designer                          | http://127.0.0.1:3000                      |
-| `pnpm start:multi-workspace`         | multi-workspace designer                  | http://127.0.0.1:3001                      |
-| `pnpm start:sandbox`                 | iframe sandbox                            | http://127.0.0.1:3002                      |
-| `pnpm start:sandbox-multi-workspace` | multi-workspace sandbox                   | http://127.0.0.1:3003                      |
-| `pnpm demo:playground`               | **engine** playground (Vite)              | http://127.0.0.1:5174                      |
-| `pnpm demo:docs`                     | documentation site (vitepress)            | http://127.0.0.1:5175                      |
-| `pnpm demo:all`                      | both demos at once                        | 5174 + 5175                                |
+| Command                              | Content                                    | URL                                        |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| `pnpm start:playground`              | **full designer** (reference scenario)     | http://127.0.0.1:3004                      |
+| `pnpm start:playground`              | Live documents demo (UI, schema and data)  | http://127.0.0.1:3004/?mode=live-documents |
+| `pnpm start:charts`                  | Chart gallery and editable ArrayTable demo | http://127.0.0.1:3005                      |
+| `pnpm start:basic`                   | minimal designer                           | http://127.0.0.1:3000                      |
+| `pnpm start:multi-workspace`         | multi-workspace designer                   | http://127.0.0.1:3001                      |
+| `pnpm start:sandbox`                 | iframe sandbox                             | http://127.0.0.1:3002                      |
+| `pnpm start:sandbox-multi-workspace` | multi-workspace sandbox                    | http://127.0.0.1:3003                      |
+| `pnpm demo:playground`               | **engine** playground (Vite)               | http://127.0.0.1:5174                      |
+| `pnpm demo:docs`                     | documentation site (vitepress)             | http://127.0.0.1:5175                      |
+| `pnpm demo:all`                      | both demos at once                         | 5174 + 5175                                |
 
 ## Scripts
 

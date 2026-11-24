@@ -26,7 +26,7 @@ export function plot(options: ChartOptions): ChartView {
   const includesTime = data.some(
     ({ start, end }) => start % 86400000 !== 0 || end % 86400000 !== 0,
   )
-  const dates = new Intl.DateTimeFormat(undefined, {
+  const dates = new Intl.DateTimeFormat(options.locale, {
     timeZone: 'UTC',
     dateStyle: 'medium',
     timeStyle: includesTime ? 'short' : undefined,

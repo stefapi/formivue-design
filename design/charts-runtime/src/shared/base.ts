@@ -81,12 +81,17 @@ export function createChart(
     },
     setup(props) {
       const inheritedLocale = inject(ChartLocaleKey, undefined)
-      const locale = computed(
-        () =>
+      const locale = computed(() => {
+        const preferred =
           props.locale ??
           inheritedLocale?.value ??
-          globalThis.navigator?.language,
-      )
+          globalThis.navigator?.language
+        try {
+          return Intl.getCanonicalLocales(preferred)[0]
+        } catch {
+          return undefined
+        }
+      })
       const numberFormatter = computed(() => {
         const mode = props.valueFormat
         if (mode !== 'decimal' && mode !== 'euro' && mode !== 'percent') return
@@ -98,11 +103,7 @@ export function createChart(
           minimumFractionDigits: digits,
           maximumFractionDigits: digits,
         }
-        try {
-          return new Intl.NumberFormat(locale.value, options)
-        } catch {
-          return new Intl.NumberFormat(undefined, options)
-        }
+        return new Intl.NumberFormat(locale.value, options)
       })
       return () => {
         const format = numberFormatter.value
@@ -114,6 +115,7 @@ export function createChart(
         const language = chartLanguageIndex(locale.value)
         return render({
           ...props,
+          locale: locale.value,
           rows: Array.isArray(props.rows) ? props.rows : [],
           height,
           label: props.label || chartTitles[name][language],

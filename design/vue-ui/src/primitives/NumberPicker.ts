@@ -13,6 +13,12 @@ import { ChevronDown, ChevronUp } from '@lucide/vue'
 const STEPPER =
   'static flex h-1/2 w-full translate-y-0 items-center justify-center p-0 text-muted-foreground hover:bg-accent hover:text-foreground'
 
+const stepperLabels: Record<string, readonly [string, string]> = {
+  en: ['increase', 'decrease'],
+  fr: ['Augmenter', 'Diminuer'],
+  es: ['Aumentar', 'Disminuir'],
+}
+
 export const NumberPicker = defineComponent({
   name: 'DNumberPicker',
   inheritAttrs: false,
@@ -30,12 +36,15 @@ export const NumberPicker = defineComponent({
     step: { type: Number, default: 1 },
     precision: { type: Number, default: undefined },
     placeholder: String,
+    locale: String,
     disabled: { type: Boolean, default: false },
   },
   emits: ['update:value'],
   setup(props, { attrs, emit }) {
     return () => {
       const { onFocus, onBlur, ...rootAttrs } = attrs
+      const language = props.locale?.toLowerCase().split('-')[0] ?? 'en'
+      const [increase, decrease] = stepperLabels[language] ?? stepperLabels.en
       return h(
         UiNumberField,
         {
@@ -45,6 +54,7 @@ export const NumberPicker = defineComponent({
           min: props.min,
           max: props.max,
           step: props.step,
+          locale: props.locale,
           formatOptions: {
             maximumFractionDigits: props.precision,
             minimumFractionDigits: props.precision,
@@ -75,13 +85,13 @@ export const NumberPicker = defineComponent({
               [
                 h(
                   UiNumberFieldIncrement,
-                  { 'aria-label': 'increase', class: STEPPER },
+                  { 'aria-label': increase, class: STEPPER },
                   { default: () => h(ChevronUp, { class: 'size-3' }) },
                 ),
                 h(
                   UiNumberFieldDecrement,
                   {
-                    'aria-label': 'decrease',
+                    'aria-label': decrease,
                     class: cn(STEPPER, 'border-t border-input'),
                   },
                   { default: () => h(ChevronDown, { class: 'size-3' }) },

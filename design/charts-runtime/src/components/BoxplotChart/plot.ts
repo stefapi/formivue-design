@@ -8,6 +8,7 @@ import { label, num, read } from '../../shared/row-data'
 import { tip, type ChartView } from '../../shared/special-view'
 import type { ChartOptions } from '../../shared/base'
 import { valueAxis } from '../../shared/value-axis'
+import { chartLanguageIndex } from '../../shared/locale'
 
 export function plot(options: ChartOptions): ChartView {
   const { rows, xKey, valueKey, valueLabel, height, color } = options
@@ -28,6 +29,10 @@ export function plot(options: ChartOptions): ChartView {
     }),
   )
   type Box = (typeof data)[number]
+  const median = ['Median', 'Médiane', 'Mediana'][
+    chartLanguageIndex(options.locale)
+  ]
+  const statistics = ['Min', 'Q1', median, 'Q3', 'Max']
   const values = (box: Box) =>
     [
       box.whiskers[0],
@@ -37,7 +42,7 @@ export function plot(options: ChartOptions): ChartView {
       box.whiskers[1],
     ].map(valueLabel)
   return {
-    headers: [xKey, 'Min', 'Q1', 'Median', 'Q3', 'Max'],
+    headers: [xKey, ...statistics],
     records: data.map((box) => [box.category, ...values(box)]),
     plot: data.length
       ? h(VisXYContainer, { data, height, duration: 0 }, () => [
@@ -61,11 +66,7 @@ export function plot(options: ChartOptions): ChartView {
           h(VisTooltip, {
             triggers: {
               [VisBoxplotSelectors.boxGroup]: (d: Box) =>
-                tip(
-                  d.category,
-                  `Min · Q1 · Median · Q3 · Max`,
-                  values(d).join(' · '),
-                ),
+                tip(d.category, statistics.join(' · '), values(d).join(' · ')),
             },
           }),
         ])
