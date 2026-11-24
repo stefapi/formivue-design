@@ -99,6 +99,44 @@ registered contract generates a warning. Typed bindings can still be checked
 and a renderer registry can reject unrecognized component names. Duplicate
 contracts and unresolved bindings produce errors.
 
+### Generate a model and prepare variants
+
+`generateFormDataSchema(ui, { contracts })` derives a JSON Schema from a
+version 1 UI document. It combines the expectations of the fields and
+display bindings, including columns used only by a table or chart. The same
+registry is used for generation, migration, and compilation.
+
+```ts
+const project = createFormDocumentProject(JSON.parse(uiJson), { contracts })
+const withVariant = createFormDocumentVariant(project, 'Sales API')
+const { project: renamed, impact } = renameFormDocumentProperty(
+  withVariant,
+  'Sales API',
+  { path: ['sales', null, 'amount'], key: 'sales_amount' },
+  { contracts },
+)
+const exported = stringifyFormDocuments(
+  exportFormDocumentVariant(renamed, 'Sales API', { contracts }),
+)
+const imported = createFormDocumentProject(parseFormDocuments(exported), {
+  contracts,
+})
+```
+
+Pass a migrated canvas export or an imported three-document bundle to
+`createFormDocumentProject` to use its existing schema and data. Pass an
+existing variant name as the third argument of `createFormDocumentVariant`
+to duplicate its schema, values and renames.
+
+Use `null` to rename a property in every item of a repeated array.
+`renameFormDocumentProperty` returns the affected component IDs and path
+change after validating the candidate schema, bindings and values. Variants
+share a canonical UI and materialize their bindings when exported.
+Collisions and dependencies that cannot be rewritten report diagnostics
+before a new project is returned. `reconcileFormDocumentProject` checks a
+new canvas export against all saved variants and reports changes to
+bound fields by component ID.
+
 The application supplies the transport. A patch applies to the last accepted
 remote revision and publishes only if its entire result is valid. Display
 bindings read the latest valid data. Editors keep their draft and track

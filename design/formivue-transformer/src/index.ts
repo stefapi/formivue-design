@@ -152,7 +152,20 @@ export {
   type DocumentDataType,
   type DocumentDependency,
   type DocumentRowsContract,
+  type DocumentRenameContext,
 } from './document-contracts'
+export { generateFormDataSchema } from './document-generation'
+export type { DocumentDataPath } from './document-paths'
+export type { DocumentPropertyRename } from './document-rename'
+export {
+  createFormDocumentProject,
+  createFormDocumentVariant,
+  exportFormDocumentVariant,
+  reconcileFormDocumentProject,
+  renameFormDocumentProperty,
+  type FormDocumentProject,
+  type FormDocumentVariant,
+} from './document-variants'
 
 export function transformToFormDocuments(
   tree: ITreeNode,

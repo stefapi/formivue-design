@@ -83,7 +83,7 @@ function infer(values: unknown[]): ObjectSchema {
   return schemas.length > 1 ? { anyOf: schemas } : (schemas[0] ?? {})
 }
 
-function inlineBinding(value: string): string | undefined {
+export function inlineBinding(value: string): string | undefined {
   const path = value.match(
     /^\s*\{\{\s*\$form\.getValuesIn\((\[[\s\S]*\])\)\s*\}\}\s*$/u,
   )?.[1]

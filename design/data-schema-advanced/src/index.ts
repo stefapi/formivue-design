@@ -38,6 +38,19 @@ function branchValueType(value: JsonValue): DocumentDataType | undefined {
 
 const branchStep: DocumentComponentContract = {
   kind: 'void',
+  renameProps(props, { renameBinding }) {
+    if (!Array.isArray(props.branches)) return props
+    let changed = false
+    const branches = props.branches.map((branch) => {
+      if (!isJsonObject(branch) || typeof branch.path !== 'string')
+        return branch
+      const next = renameBinding({ path: branch.path })
+      if (next.path === branch.path) return branch
+      changed = true
+      return { ...branch, path: next.path }
+    })
+    return changed ? { ...props, branches } : props
+  },
   migrateProps(props) {
     if (!Array.isArray(props.branches)) return props
     return {
@@ -117,6 +130,30 @@ export const advancedDocumentContracts: DocumentContractExtension = {
       const columns = Array.isArray(props.columns) ? props.columns : []
       return {
         kind: 'void',
+        renameProps(props, { renameColumn }) {
+          let changed = false
+          const columns = (
+            Array.isArray(props.columns) ? props.columns : []
+          ).map((column) => {
+            if (!isJsonObject(column) || typeof column.key !== 'string')
+              return column
+            const key = renameColumn('rows', column.key)
+            if (key === column.key) return column
+            changed = true
+            return { ...column, key }
+          })
+          const rowKey =
+            typeof props.rowKey === 'string'
+              ? renameColumn('rows', props.rowKey)
+              : undefined
+          return changed || (rowKey !== undefined && rowKey !== props.rowKey)
+            ? {
+                ...props,
+                ...(changed ? { columns } : {}),
+                ...(rowKey === undefined ? {} : { rowKey }),
+              }
+            : props
+        },
         allowsBinding: (property) =>
           property !== 'columns' &&
           property !== 'series' &&

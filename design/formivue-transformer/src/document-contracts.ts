@@ -65,10 +65,19 @@ export interface DocumentComponentContract {
   bindings?: Readonly<Record<string, DocumentBindingContract>>
   allowsBinding?: (property: string) => boolean
   migrateProps?: (props: JsonObject) => JsonObject
+  renameProps?: (
+    props: JsonObject,
+    context: DocumentRenameContext,
+  ) => JsonObject
   compileProps?: (
     props: JsonObject,
     context: DocumentContractContext,
   ) => JsonObject
+}
+
+export interface DocumentRenameContext {
+  renameBinding(binding: DataBinding): DataBinding
+  renameColumn(rowsProperty: string, column: string): string
 }
 
 type ContractFactory = (props: JsonObject) => DocumentComponentContract

@@ -3,6 +3,11 @@ import {
   compileFormDocuments,
   createDocumentContractRegistry,
   createFormDocument,
+  createFormDocumentProject,
+  createFormDocumentVariant,
+  exportFormDocumentVariant,
+  reconcileFormDocumentProject,
+  renameFormDocumentProperty,
   parseFormDocuments,
   stringifyFormDocuments,
   splitFormSchema,
@@ -282,6 +287,278 @@ describe('separate UI, schema and data documents', () => {
         ],
       }),
     )
+  })
+
+  test('generates the schema for objects, editable rows and display-only columns from ui.json', () => {
+    const initial = documents()
+    initial.ui.nodes.push(
+      makeNode('preferences', {
+        kind: 'object',
+        component: 'Object',
+        bind: '/preferences',
+        children: [
+          makeNode('detail', {
+            kind: 'field',
+            component: 'Switch',
+            bind: '/detail',
+            field: { title: 'Show details' },
+          }),
+        ],
+      }),
+    )
+    const uiJson = JSON.stringify(initial.ui)
+    const project = createFormDocumentProject(JSON.parse(uiJson), { contracts })
+    expect(project.base.ui).toEqual(initial.ui)
+    expect(project.base.dataSchema.properties).toMatchObject({
+      preferences: {
+        type: 'object',
+        properties: { detail: { type: 'boolean', title: 'Show details' } },
+      },
+      sales: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: ['string', 'number'] },
+            month: { type: 'string' },
+            amount: { type: 'number' },
+          },
+        },
+      },
+    })
+    const variant = createFormDocumentVariant(project, 'Generated')
+    const exported = exportFormDocumentVariant(variant, 'Generated', {
+      contracts,
+    })
+    expect(parseFormDocuments(stringifyFormDocuments(exported))).toEqual(
+      project.base,
+    )
+  })
+
+  test('round-trips independent variants with renamed columns and row keys', async () => {
+    const measures = {
+      getComputedTextLength: () => 24,
+      getBBox: () => ({ x: 0, y: 0, width: 24, height: 12 }),
+    }
+    for (const [key, value] of Object.entries(measures))
+      Object.defineProperty(SVGElement.prototype, key, {
+        configurable: true,
+        value,
+      })
+
+    const initial = parseFormDocuments(stringifyFormDocuments(documents()))
+    initial.dataSchema.properties.secondary =
+      initial.dataSchema.properties.sales
+    initial.data.secondary = [{ id: 'extra', month: 'March', amount: 99 }]
+    const project = createFormDocumentVariant(
+      createFormDocumentProject(initial, { contracts }),
+      'API',
+    )
+    const renamed = renameFormDocumentProperty(
+      project,
+      'API',
+      {
+        path: ['sales', null, 'month'],
+        key: 'period',
+      },
+      { contracts },
+    )
+    expect(renamed.impact).toEqual({
+      from: '/sales/*/month',
+      to: '/sales/*/period',
+      componentIds: ['month', 'table', 'chart'],
+    })
+    const withId = renameFormDocumentProperty(
+      renamed.project,
+      'API',
+      {
+        path: ['sales', null, 'id'],
+        key: 'sale_id',
+      },
+      { contracts },
+    ).project
+    const duplicated = createFormDocumentVariant(withId, 'Copy', 'API')
+    const withNewAmount = renameFormDocumentProperty(
+      duplicated,
+      'Copy',
+      {
+        path: ['sales', null, 'amount'],
+        key: 'sales_amount',
+      },
+      { contracts },
+    ).project
+    const api = exportFormDocumentVariant(withNewAmount, 'API', { contracts })
+    const copy = exportFormDocumentVariant(withNewAmount, 'Copy', { contracts })
+    expect(exportFormDocumentVariant(project, 'API', { contracts })).toEqual(
+      initial,
+    )
+    expect(api.data.sales[0]).toEqual({
+      sale_id: 'jan',
+      period: 'January',
+      amount: 10,
+    })
+    expect(copy.data.sales[0]).toEqual({
+      sale_id: 'jan',
+      period: 'January',
+      sales_amount: 10,
+    })
+    expect(copy.data.secondary).toEqual(initial.data.secondary)
+    expect(copy.dataSchema.$defs).toEqual(initial.dataSchema.$defs)
+    expect(copy.dataSchema.properties.sales).toMatchObject({
+      items: {
+        allOf: [
+          {
+            required: ['sale_id', 'period', 'sales_amount'],
+            properties: { period: { minLength: 1 } },
+          },
+        ],
+      },
+    })
+    expect(copy.ui.nodes[0].rowKey).toBe('sale_id')
+    expect(copy.ui.nodes[0].item.children[0].children[0]).toMatchObject({
+      id: 'month',
+      key: 'month',
+      bind: '/period',
+    })
+    expect(copy.ui.nodes[2].props).toMatchObject({
+      xKey: 'period',
+      series: [{ key: 'sales_amount' }],
+    })
+
+    const portable = parseFormDocuments(stringifyFormDocuments(copy))
+    const imported = createFormDocumentVariant(
+      createFormDocumentProject(portable, { contracts }),
+      'Imported',
+    )
+    expect(
+      exportFormDocumentVariant(imported, 'Imported', { contracts }),
+    ).toEqual(copy)
+    const document = createDocument(portable)
+    const view = mount(PreviewWidget, {
+      props: { tree: tree(), materials, document },
+    })
+    try {
+      const inputs = () =>
+        view.findAll<HTMLInputElement>('.dn-array-table input')
+      await vi.waitFor(() =>
+        expect(inputs().map(({ element }) => element.value)).toEqual([
+          'January',
+          'February',
+        ]),
+      )
+      const jan = document.form.query(['sales', '0', 'period']).take()
+      expect(view.get('figure tbody').text()).toContain('January10')
+      document.replaceData({
+        ...portable.data,
+        sales: [
+          ...(portable.data.sales as Array<Record<string, string | number>>),
+        ].reverse(),
+      })
+      await vi.waitFor(() => expect(inputs()[1].element.value).toBe('January'))
+      expect(document.form.query(['sales', '1', 'period']).take()).toBe(jan)
+      await inputs()[1].setValue('Edited January')
+      await vi.waitFor(() =>
+        expect(view.get('figure tbody').text()).toContain('Edited January10'),
+      )
+      const published = document.exportData()
+      document.replaceData({
+        ...published,
+        sales: [(published.sales as Array<Record<string, string | number>>)[1]],
+      })
+      await vi.waitFor(() =>
+        expect(inputs().map(({ element }) => element.value)).toEqual([
+          'Edited January',
+        ]),
+      )
+    } finally {
+      view.unmount()
+      document.dispose()
+      for (const key of Object.keys(measures))
+        Reflect.deleteProperty(SVGElement.prototype, key)
+    }
+  })
+
+  test('reports rename collisions and reconciles compatible edits to the canvas', () => {
+    const initial = documents()
+    initial.data.sales[0].code = 'collision'
+    const project = createFormDocumentVariant(
+      createFormDocumentProject(initial, { contracts }),
+      'API',
+    )
+    for (const [key, code] of [
+      ['amount', 'schema_key_collision'],
+      ['code', 'data_key_collision'],
+    ]) {
+      expect(() =>
+        renameFormDocumentProperty(
+          project,
+          'API',
+          { path: ['sales', null, 'month'], key },
+          { contracts },
+        ),
+      ).toThrow(
+        expect.objectContaining({
+          issues: [expect.objectContaining({ code })],
+        }),
+      )
+    }
+    expect(exportFormDocumentVariant(project, 'API', { contracts })).toEqual(
+      initial,
+    )
+    const candidate = renameFormDocumentProperty(
+      project,
+      'API',
+      { path: ['sales', null, 'month'], key: 'period' },
+      { contracts },
+    ).project
+    const revised = structuredClone(initial)
+    revised.ui.nodes[2].props.label = 'Revised chart'
+    const reconciled = reconcileFormDocumentProject(candidate, revised, {
+      contracts,
+    })
+    expect(reconciled.diagnostics).toEqual([])
+    expect(
+      exportFormDocumentVariant(reconciled.project, 'API', { contracts }).ui
+        .nodes[2].props,
+    ).toMatchObject({ label: 'Revised chart', xKey: 'period' })
+
+    const incompatible = structuredClone(revised)
+    incompatible.ui.nodes[0].item.children[0].children[0].bind = '/otherMonth'
+    const definitions = incompatible.dataSchema.$defs as {
+      sale: { properties: Record<string, { type: string }> }
+    }
+    definitions.sale.properties.otherMonth = {
+      type: 'string',
+    }
+    const rejected = reconcileFormDocumentProject(candidate, incompatible, {
+      contracts,
+    })
+    expect(rejected.project).toBe(candidate)
+    expect(rejected.diagnostics).toMatchObject([
+      {
+        variant: 'API',
+        issues: [{ code: 'changed_ui_binding', componentId: 'month' }],
+      },
+    ])
+
+    const rootRename = renameFormDocumentProperty(
+      project,
+      'API',
+      {
+        path: ['heading'],
+        key: 'title',
+      },
+      { contracts },
+    )
+    const rootDocuments = parseFormDocuments(
+      stringifyFormDocuments(
+        exportFormDocumentVariant(rootRename.project, 'API', { contracts }),
+      ),
+    )
+    expect(rootDocuments.data.title).toBe('Sales')
+    expect(rootDocuments.dataSchema.required).toContain('title')
+    expect(rootDocuments.ui.nodes[3].bindings.text.path).toBe('/title')
   })
 
   test('imports, validates and updates the rendered arrays, table and chart without resetting edits', async () => {
