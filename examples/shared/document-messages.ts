@@ -16,6 +16,16 @@ const contractIssues: Record<string, Message> = {
     'La destination de ce champ dans la variante ne peut pas être réappliquée.',
     'No se puede volver a aplicar el destino de este campo en la variante.',
   ],
+  reconciliation_missing_parent: [
+    'The current control’s layout is missing from the canvas.',
+    'Le contrôle actuel a perdu son conteneur sur le canevas.',
+    'El contenedor del control actual no está en el lienzo.',
+  ],
+  reconciliation_schema_parent: [
+    'Declare the destination object or array item directly in the variant schema.',
+    'Déclarez directement l’objet ou l’élément de tableau de destination dans le schéma de la variante.',
+    'Declara el objeto o elemento de destino directamente en el esquema de la variante.',
+  ],
   reconciliation_draft_json: [
     'Correct this draft JSON before migrating it.',
     'Corrigez ce brouillon JSON avant de le migrer.',

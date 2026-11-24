@@ -28,12 +28,12 @@ import {
   type UiDocument,
 } from './documents'
 import {
+  applyCanvasOverrides,
   describeCanvasChanges,
-  planVariantReconciliation,
-  reconcileVariantData,
-  reconcileVariantSchema,
+  migrateCanvasVariant,
   reconciliationIssues,
-  type CanvasRenameChoice,
+  type CanvasNodeOverride,
+  type CanvasReconciliationChoice,
 } from './document-reconciliation'
 
 export interface FormDocumentVariant {
@@ -41,11 +41,14 @@ export interface FormDocumentVariant {
   readonly dataSchema: FormDocuments['dataSchema']
   readonly data: JsonObject
   readonly renames: readonly DocumentPropertyChange[]
+  readonly uiOverrides?: readonly CanvasNodeOverride[]
 }
 
 export interface FormDocumentProject {
   readonly base: FormDocuments
   readonly variants: readonly FormDocumentVariant[]
+  /** The last generated schema, independently of constraints on the base model. */
+  readonly canvasDataSchema?: FormDocuments['dataSchema']
 }
 
 interface ProjectOptions extends CompileFormDocumentOptions {
@@ -121,6 +124,9 @@ export function createFormDocumentVariant(
               : { path: [...change.path], key: change.key },
           )
         : [],
+    ...('uiOverrides' in source && source.uiOverrides?.length
+      ? { uiOverrides: source.uiOverrides }
+      : {}),
   }
   return { ...project, variants: [...project.variants, variant] }
 }
@@ -132,7 +138,7 @@ function materializeUi(
 ) {
   return variant.renames.reduce(
     (ui, rename) => renameDocumentUi(ui, rename, options).ui,
-    project.base.ui,
+    applyCanvasOverrides(project.base.ui, variant.uiOverrides),
   )
 }
 
@@ -347,61 +353,118 @@ export function prepareFormDocumentReconciliation(
   documents: FormDocuments,
   options: CompileFormDocumentOptions = {},
 ) {
-  const base = validateDocuments(documents, options)
-  const changes = describeCanvasChanges(project.base, base, options)
-  const blockers: DocumentIssue[] = changes.flatMap((change) =>
-    change.kind === 'removed' || change.kind === 'incompatible'
-      ? [
-          {
-            path: documentPath(change.to ?? change.from),
-            component: change.component,
-            componentId: change.componentId,
-            code:
-              change.kind === 'removed'
-                ? 'removed_ui_binding'
-                : 'changed_ui_binding',
-            message:
-              change.kind === 'removed'
-                ? 'This canvas field was removed. Resolve its existing bindings before adopting the canvas.'
-                : 'This canvas field changed type, component or object. Restore a compatible binding before adopting the canvas.',
-          },
-        ]
-      : [],
+  const canvas = validateDocuments(documents, options)
+  const previousSchema = project.canvasDataSchema ?? project.base.dataSchema
+  const changes = describeCanvasChanges(
+    { ...project.base, dataSchema: previousSchema },
+    canvas,
+    options,
   )
+  // Display bindings can introduce root data without a bound field on the canvas.
+  const derived = Object.entries(canvas.dataSchema.properties ?? {}).filter(
+    ([key]) =>
+      !Object.prototype.hasOwnProperty.call(
+        previousSchema.properties ?? {},
+        key,
+      ) && !changes.some(({ to }) => to?.[0] === key),
+  )
+  const canonicalChoices = Object.fromEntries(
+    changes.map((change) => [
+      change.componentId,
+      {
+        rename: 'follow',
+        added: 'add',
+        removed: 'detach',
+        type: 'adopt',
+        incompatible: 'adopt',
+      }[change.kind],
+    ]),
+  ) as Record<string, CanvasReconciliationChoice>
+  function migrate(
+    variant: Pick<
+      FormDocumentVariant,
+      'renames' | 'uiOverrides' | 'dataSchema' | 'data'
+    >,
+    choices?: Readonly<Record<string, CanvasReconciliationChoice>>,
+    canonical = false,
+  ) {
+    const result = migrateCanvasVariant(
+      project.base.ui,
+      canvas,
+      variant,
+      changes,
+      canonical ? canonicalChoices : choices,
+      options,
+      canonical,
+    )
+    if (!canonical || !derived.length) return result
+    const before = result.dataChanges?.dataSchema ?? variant.dataSchema
+    const missing = derived.filter(
+      ([key]) =>
+        !Object.prototype.hasOwnProperty.call(before.properties ?? {}, key),
+    )
+    if (!missing.length) return result
+    const data = { ...(result.dataChanges?.data ?? variant.data) }
+    const required = new Set(before.required ?? [])
+    for (const [key] of missing) {
+      if (
+        !Object.prototype.hasOwnProperty.call(data, key) &&
+        Object.prototype.hasOwnProperty.call(canvas.data, key)
+      )
+        data[key] = canvas.data[key]
+      if (canvas.dataSchema.required?.includes(key)) required.add(key)
+    }
+    return {
+      ...result,
+      dataChanges: {
+        data,
+        dataSchema: {
+          ...before,
+          properties: { ...before.properties, ...Object.fromEntries(missing) },
+          ...(required.size ? { required: [...required] } : {}),
+        },
+      },
+    }
+  }
   return {
     changes,
+    migrate,
     resolve(
       choices: Readonly<
-        Record<string, Readonly<Record<string, CanvasRenameChoice>>>
+        Record<string, Readonly<Record<string, CanvasReconciliationChoice>>>
       > = {},
     ) {
       const diagnostics: {
         variant: string
         issues: readonly DocumentIssue[]
       }[] = []
-      const next: FormDocumentProject = { ...project, base }
+      let base = project.base
+      try {
+        const result = migrate({ ...base, renames: [] }, undefined, true)
+        base = validateDocuments(
+          { ...base, ...result.dataChanges, ui: canvas.ui },
+          options,
+        )
+      } catch (cause) {
+        diagnostics.push({ variant: '', issues: reconciliationIssues(cause) })
+      }
       const variants = project.variants.map((variant) => {
-        if (blockers.length) {
-          diagnostics.push({ variant: variant.name, issues: blockers })
-          return variant
-        }
         try {
-          const plan = planVariantReconciliation(
-            variant.renames,
-            changes,
+          const result = migrate(
+            variant,
             Object.prototype.hasOwnProperty.call(choices, variant.name)
               ? choices[variant.name]
               : undefined,
           )
           const updated = {
             ...variant,
-            renames: plan.renames,
-            dataSchema: reconcileVariantSchema(variant.dataSchema, plan),
-            data: reconcileVariantData(variant.data, plan),
+            ...result.dataChanges,
+            renames: result.renames,
+            uiOverrides: result.uiOverrides,
           }
           validateDocuments(
             {
-              ui: materializeUi(next, updated, options),
+              ui: result.ui,
               dataSchema: updated.dataSchema,
               data: updated.data,
             },
@@ -417,7 +480,9 @@ export function prepareFormDocumentReconciliation(
         }
       })
       return {
-        project: diagnostics.length ? project : { base, variants },
+        project: diagnostics.length
+          ? project
+          : { base, variants, canvasDataSchema: canvas.dataSchema },
         diagnostics,
       }
     },

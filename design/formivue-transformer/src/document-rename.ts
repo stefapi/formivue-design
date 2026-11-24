@@ -93,6 +93,7 @@ function renameValue(
 export function renameDocumentSchema(
   original: FormDocuments['dataSchema'],
   { path, key }: DocumentPropertyRename,
+  allowImplicitDestination = false,
 ): FormDocuments['dataSchema'] {
   const lookup = schemaLookup(original)
   const source = documentPath(path)
@@ -113,7 +114,7 @@ export function renameDocumentSchema(
       'The property is missing from the data schema',
     )
   const destination = [...path.slice(0, -1), key]
-  if (lookup.at(destination) !== undefined)
+  if (!allowImplicitDestination && lookup.at(destination) !== undefined)
     documentError(
       'schema_key_collision',
       documentPath(destination),

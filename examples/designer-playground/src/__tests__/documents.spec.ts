@@ -1003,6 +1003,122 @@ describe('separate UI, schema and data documents', () => {
     }
   })
 
+  test('retains a detached ArrayTable column and its chart binding after JSON reimport', async () => {
+    const initial = documents()
+    const row = (
+      initial.dataSchema.$defs as Record<string, FormDocuments['dataSchema']>
+    ).sale
+    initial.dataSchema.properties.sales = { type: 'array', items: row }
+    delete initial.dataSchema.$defs
+    const table = initial.ui.nodes[0]
+    table.item.children.push(
+      makeNode('amountColumn', {
+        component: 'ArrayTable.Column',
+        children: [
+          makeNode('amount', {
+            kind: 'field',
+            component: 'NumberPicker',
+            bind: '/amount',
+          }),
+        ],
+      }),
+    )
+    const project = moveFormDocumentProperty(
+      createFormDocumentVariant(
+        createFormDocumentProject(initial, { contracts }),
+        'API',
+      ),
+      'API',
+      {
+        path: ['sales', null, 'amount'],
+        to: ['sales', null, 'metrics', 'amount'],
+      },
+      { contracts },
+    ).project
+    const canvas = parseFormDocuments(stringifyFormDocuments(initial))
+    canvas.ui.nodes[0].item.children.pop()
+    canvas.ui.nodes[0].item.children.push(
+      makeNode('labelColumn', {
+        component: 'ArrayTable.Column',
+        children: [
+          makeNode('label', {
+            kind: 'field',
+            component: 'Input',
+            bind: '/label',
+          }),
+        ],
+      }),
+    )
+    const newRow = (
+      canvas.dataSchema.properties.sales as FormDocuments['dataSchema']
+    ).items as FormDocuments['dataSchema']
+    newRow.properties.label = { type: 'string', default: 'new' }
+
+    const resolution = prepareFormDocumentReconciliation(project, canvas, {
+      contracts,
+    }).resolve({
+      API: { amount: 'detach', label: 'add' },
+    })
+    expect(resolution.diagnostics).toEqual([])
+    const imported = parseFormDocuments(
+      stringifyFormDocuments(
+        exportFormDocumentVariant(resolution.project, 'API', { contracts }),
+      ),
+    )
+    expect(
+      imported.ui.nodes[0].item.children.flatMap(({ children }) =>
+        children.map(({ bind }) => bind),
+      ),
+    ).toEqual(['/month', '/label'])
+    expect(
+      imported.ui.nodes.find(({ id }) => id === 'chart').bindings.rows
+        .columnPaths,
+    ).toEqual({ amount: '/metrics/amount' })
+    expect(imported.data.sales).toMatchObject([
+      { id: 'jan', label: 'new', metrics: { amount: 10 } },
+      { id: 'feb', label: 'new', metrics: { amount: 20 } },
+    ])
+    const document = createDocument(imported)
+    try {
+      const projected = () =>
+        document.scope.$document.read('/sales', [], {
+          amount: ['metrics', 'amount'],
+        })
+      expect(projected()[0]).toMatchObject({ amount: 10 })
+      document.form.setValuesIn(['sales', '0', 'metrics', 'amount'], 24)
+      await vi.waitFor(() =>
+        expect(projected()[0]).toMatchObject({ amount: 24 }),
+      )
+    } finally {
+      document.dispose()
+    }
+  })
+
+  test('keeps base values when a display component introduces a new binding', () => {
+    const initial = documents()
+    const project = createFormDocumentProject(initial, { contracts })
+    const canvas = parseFormDocuments(stringifyFormDocuments(initial))
+    canvas.ui.nodes.push(
+      makeNode('secondBadge', {
+        component: 'Badge',
+        bindings: { text: { path: '/caption' } },
+      }),
+    )
+    canvas.dataSchema.properties.caption = { type: 'string' }
+    canvas.data.caption = 'New label'
+    canvas.data.heading = 'Canvas default'
+    const review = prepareFormDocumentReconciliation(project, canvas, {
+      contracts,
+    })
+    const result = review.resolve()
+    expect(result.diagnostics).toEqual([])
+    expect(result.project.base.data).toEqual({
+      ...initial.data,
+      caption: 'New label',
+    })
+    expect(result.project.base.ui).toEqual(canvas.ui)
+  })
+
   test('normalizes legacy filter expressions on import and diagnoses incompatible chart bindings', () => {
     const initial = filteredDocuments()
     const chart = initial.ui.nodes.find(({ id }) => id === 'chart')

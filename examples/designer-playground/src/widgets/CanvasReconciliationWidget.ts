@@ -1,9 +1,10 @@
 import { Button } from '@formivue-design/vue-ui'
 import { jsonPointer } from '@formivue/json-schema'
-import type {
-  CanvasBindingChange,
-  CanvasRenameChoice,
-  DocumentDataPath,
+import {
+  canvasReconciliationChoices,
+  type CanvasBindingChange,
+  type CanvasReconciliationChoice,
+  type DocumentDataPath,
 } from '@formivue-design/formivue-transformer'
 import {
   computed,
@@ -26,7 +27,69 @@ const labels: Record<CanvasBindingChange['kind'], Message> = {
   rename: ['Renamed', 'Renommé', 'Renombrado'],
   added: ['Added', 'Ajouté', 'Añadido'],
   removed: ['Removed', 'Supprimé', 'Eliminado'],
+  type: ['Type changed', 'Type modifié', 'Tipo modificado'],
   incompatible: ['Changed binding', 'Liaison modifiée', 'Vínculo modificado'],
+}
+
+const decisions: Record<CanvasReconciliationChoice, Message> = {
+  keep: [
+    'Keep the variant key',
+    'Conserver la clé de la variante',
+    'Conservar la clave de la variante',
+  ],
+  follow: [
+    'Use the canvas key in the current object',
+    'Utiliser la clé du canevas dans l’objet actuel',
+    'Usar la clave del lienzo en el objeto actual',
+  ],
+  add: [
+    'Add the field at the canvas key',
+    'Ajouter le champ à la clé du canevas',
+    'Añadir el campo en la clave del lienzo',
+  ],
+  separate: [
+    'Add the field with a separate key',
+    'Ajouter le champ avec une clé distincte',
+    'Añadir el campo con una clave distinta',
+  ],
+  defer: [
+    'Leave the field out of this variant',
+    'Reporter l’ajout dans cette variante',
+    'Posponer la incorporación en esta variante',
+  ],
+  detach: [
+    'Remove the control and keep its data',
+    'Retirer le contrôle et conserver ses données',
+    'Quitar el control y conservar sus datos',
+  ],
+  retain: [
+    'Keep the current control and data',
+    'Conserver le contrôle actuel et ses données',
+    'Conservar el control actual y sus datos',
+  ],
+  adopt: [
+    'Adopt the canvas change and preserve previous data',
+    'Adopter le changement et préserver les données précédentes',
+    'Adoptar el cambio y preservar los datos anteriores',
+  ],
+}
+
+const effects: Partial<Record<CanvasReconciliationChoice, Message>> = {
+  separate: [
+    'Existing data stays at its current key. The new field gets a free key ending in _canvas or a numbered suffix.',
+    'Les données existantes gardent leur clé. Le nouveau champ reçoit une clé libre avec le suffixe _canvas, éventuellement numéroté.',
+    'Los datos existentes conservan su clave. El campo nuevo recibe una clave libre con el sufijo _canvas, que puede llevar un número.',
+  ],
+  detach: [
+    'The schema and values remain in the JSON export.',
+    'Le schéma et les valeurs restent dans l’export JSON.',
+    'El esquema y sus valores se conservan en la exportación JSON.',
+  ],
+  adopt: [
+    'If the new field needs the same key with a different type, the previous schema and values move to a free key ending in _previous or a numbered suffix.',
+    'Si le nouveau champ reprend la clé avec un type différent, le schéma et les valeurs précédents passent à une clé libre avec le suffixe _previous, éventuellement numéroté.',
+    'Si el campo nuevo usa la misma clave con otro tipo, el esquema y los valores anteriores pasan a una clave libre con el sufijo _previous, que puede llevar un número.',
+  ],
 }
 
 export const CanvasReconciliationWidget = defineComponent({
@@ -115,6 +178,14 @@ export const CanvasReconciliationWidget = defineComponent({
                   ...(change.from && change.to
                     ? [pathLabel(change.from), ' → ', pathLabel(change.to)]
                     : [pathLabel(change.to ?? change.from)]),
+                  change.kind === 'type' &&
+                  change.fromTypes.join() !== change.toTypes.join()
+                    ? h(
+                        'span',
+                        { class: 'text-muted-foreground' },
+                        ` · ${change.fromTypes.join(' / ')} → ${change.toTypes.join(' / ')}`,
+                      )
+                    : null,
                 ],
               ),
             ),
@@ -134,7 +205,7 @@ export const CanvasReconciliationWidget = defineComponent({
                     const change = changeById.value.get(componentId)
                     const selected = choices.value[name][componentId]
                     const resulting = (current: DocumentDataPath) =>
-                      selected === 'keep'
+                      selected !== 'follow'
                         ? current
                         : [
                             ...current.slice(0, -1),
@@ -167,11 +238,17 @@ export const CanvasReconciliationWidget = defineComponent({
                           : null,
                         h('label', { class: 'grid max-w-md gap-1' }, [
                           message(
-                            [
-                              'Key for {name}',
-                              'Clé pour {name}',
-                              'Clave para {name}',
-                            ],
+                            change.kind === 'rename'
+                              ? [
+                                  'Key for {name}',
+                                  'Clé pour {name}',
+                                  'Clave para {name}',
+                                ]
+                              : [
+                                  'Decision for {name}',
+                                  'Décision pour {name}',
+                                  'Decisión para {name}',
+                                ],
                             { name: label(change) },
                           ),
                           h(
@@ -183,7 +260,7 @@ export const CanvasReconciliationWidget = defineComponent({
                               onChange: (event: Event) => {
                                 const choice = (
                                   event.target as HTMLSelectElement
-                                ).value as CanvasRenameChoice
+                                ).value as CanvasReconciliationChoice
                                 choices.value = {
                                   ...choices.value,
                                   [name]: {
@@ -193,41 +270,40 @@ export const CanvasReconciliationWidget = defineComponent({
                                 }
                               },
                             },
-                            [
-                              h(
-                                'option',
-                                { value: 'keep' },
-                                message([
-                                  'Keep the variant key',
-                                  'Conserver la clé de la variante',
-                                  'Conservar la clave de la variante',
-                                ]),
-                              ),
-                              h(
-                                'option',
-                                { value: 'follow' },
-                                message([
-                                  'Use the canvas key in the current object',
-                                  'Utiliser la clé du canevas dans l’objet actuel',
-                                  'Usar la clave del lienzo en el objeto actual',
-                                ]),
-                              ),
-                            ],
+                            canvasReconciliationChoices[change.kind].map(
+                              (value) =>
+                                h(
+                                  'option',
+                                  { value },
+                                  message(decisions[value]),
+                                ),
+                            ),
                           ),
                         ]),
-                        h(
-                          'p',
-                          { class: 'break-all' },
-                          message(
-                            [
-                              'Resulting path {path}',
-                              'Chemin résultant {path}',
-                              'Ruta resultante {path}',
-                            ],
-                            { path: pathLabel(next) },
-                          ),
-                        ),
-                        nextDraft && pathLabel(nextDraft) !== pathLabel(next)
+                        effects[selected]
+                          ? h(
+                              'p',
+                              { class: 'text-muted-foreground' },
+                              message(effects[selected]),
+                            )
+                          : null,
+                        change.kind === 'rename'
+                          ? h(
+                              'p',
+                              { class: 'break-all' },
+                              message(
+                                [
+                                  'Resulting path {path}',
+                                  'Chemin résultant {path}',
+                                  'Ruta resultante {path}',
+                                ],
+                                { path: pathLabel(next) },
+                              ),
+                            )
+                          : null,
+                        change.kind === 'rename' &&
+                        nextDraft &&
+                        pathLabel(nextDraft) !== pathLabel(next)
                           ? h(
                               'p',
                               { class: 'break-all' },

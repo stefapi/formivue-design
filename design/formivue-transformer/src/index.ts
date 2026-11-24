@@ -163,12 +163,16 @@ export type { DocumentDataPath } from './document-paths'
 export type { DocumentPropertyRename } from './document-rename'
 export type { DocumentPropertyMove } from './document-move'
 export {
+  canvasReconciliationChoices,
+  chooseCanvasAction,
   defaultCanvasRenameChoice,
   materializedCanvasPath,
   planVariantReconciliation,
   reconcileVariantData,
   reconcileVariantSchema,
   type CanvasBindingChange,
+  type CanvasNodeOverride,
+  type CanvasReconciliationChoice,
   type CanvasRenameChoice,
 } from './document-reconciliation'
 export {

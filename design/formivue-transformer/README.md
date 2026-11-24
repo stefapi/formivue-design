@@ -206,20 +206,31 @@ Collisions, shared definitions on the affected path, editable array key moves
 into nested objects and rules that cannot be migrated produce diagnostics
 before the project is updated.
 
-### Review canvas renames in the playground
+### Reconcile canvas changes in the playground
 
 Generate from the canvas to compare the current bindings by stable component
 ID. For a field renamed in the same canvas object, each variant can retain
 its key or use the canvas key inside its current object. The review replays
-previous moves before applying the choice. It checks all saved variants
-before adopting the canvas and reports additions, removals and incompatible
-bindings by path.
+previous moves before applying the choice.
 
-The playground updates the corresponding drafts independently. Keeping a
-variant key preserves the draft schema and values. Following the canvas key
-migrates them with the UI binding. The last applied preview stays available
-until the draft is applied. The three JSON documents export the current
-valid draft and can be imported again for editing or rendering.
+- An addition can use the canvas key, use a free key ending in `_canvas`,
+  or be deferred in a variant. Reusing an existing key validates its schema
+  and values against the new control.
+- A removal can keep its current control in a variant or detach the control.
+  Its schema, values, and surviving data bindings are preserved.
+- A type change can keep the current control or adopt the canvas control.
+  When the new type reuses an occupied key, the previous schema and values
+  are archived together under a free key ending in `_previous` in the same
+  object. Existing keys are preserved, including when the change affects
+  every item of an array.
+
+The review validates the base and all saved variants before adopting the
+canvas. A collision or a schema rule that cannot be migrated leaves the
+project and its drafts intact. A draft is migrated using the same decisions
+and its own schema, values and path changes. The last applied preview stays
+available until the draft is applied. The three JSON files contain the
+effective UI, constraints and values, including detached and archived
+properties, and can be imported again for editing or rendering.
 
 ### Project constraints onto the form
 

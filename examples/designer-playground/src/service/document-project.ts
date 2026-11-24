@@ -4,20 +4,17 @@ import type { TreeNode } from '@formivue-design/core'
 import {
   createFormDocumentProject,
   createFormDocumentVariant,
-  defaultCanvasRenameChoice,
+  chooseCanvasAction,
   materializedCanvasPath,
   materializeFormDocumentVariant,
   moveFormDocumentProperty,
   parseFormDocuments,
-  planVariantReconciliation,
   prepareFormDocumentReconciliation,
-  reconcileVariantData,
-  reconcileVariantSchema,
   renameFormDocumentProperty,
   stringifyFormDocuments,
   transformToFormDocuments,
   type CompileFormDocumentOptions,
-  type CanvasRenameChoice,
+  type CanvasReconciliationChoice,
   type CanvasBindingChange,
   type DocumentDataPath,
   type DocumentPropertyMove,
@@ -36,6 +33,7 @@ import {
 interface Draft {
   files: FormDocumentJson
   renames: FormDocumentVariant['renames']
+  uiOverrides?: FormDocumentVariant['uiOverrides']
 }
 
 type ReviewedChange = {
@@ -53,7 +51,10 @@ interface SavedProject {
   applied?: FormDocuments
 }
 
-type ReconciliationChoices = Record<string, Record<string, CanvasRenameChoice>>
+type ReconciliationChoices = Record<
+  string,
+  Record<string, CanvasReconciliationChoice>
+>
 type Reconciliation = {
   changes: readonly CanvasBindingChange[]
   variants: readonly {
@@ -133,6 +134,7 @@ export function useDocumentProject(
           : saved.project.base,
       ),
       renames: variant?.renames ?? [],
+      uiOverrides: variant?.uiOverrides,
     }
   })
   const files = computed(() => current.value?.files)
@@ -143,7 +145,11 @@ export function useDocumentProject(
   }
 
   function edit(next: FormDocumentJson) {
-    storeDraft({ files: next, renames: current.value?.renames ?? [] })
+    storeDraft({
+      files: next,
+      renames: current.value?.renames ?? [],
+      uiOverrides: current.value?.uiOverrides,
+    })
   }
 
   function generate(tree: TreeNode) {
@@ -162,27 +168,37 @@ export function useDocumentProject(
       documents,
       options,
     )
-    const renames = prepared.changes.filter(({ kind }) => kind === 'rename')
     const variants = saved.project.variants.map((variant) => ({
       name: variant.name,
-      fields: renames.map((change) => ({
-        componentId: change.componentId,
-        path: materializedCanvasPath(change, variant.renames),
-        draftPath: Object.prototype.hasOwnProperty.call(
-          saved.drafts,
-          variant.name,
+      fields: prepared.changes
+        .filter(
+          (change) =>
+            change.kind !== 'rename' ||
+            !variant.uiOverrides?.some(({ id }) => id === change.componentId),
         )
-          ? materializedCanvasPath(change, saved.drafts[variant.name].renames)
-          : undefined,
-      })),
+        .map((change) => ({
+          componentId: change.componentId,
+          path: materializedCanvasPath(change, variant.renames),
+          draftPath: Object.prototype.hasOwnProperty.call(
+            saved.drafts,
+            variant.name,
+          )
+            ? materializedCanvasPath(change, saved.drafts[variant.name].renames)
+            : undefined,
+        })),
     }))
     const choices = Object.fromEntries(
       variants.map(({ name, fields }) => [
         name,
         Object.fromEntries(
-          fields.map(({ path, draftPath, componentId }, index) => [
+          fields.map(({ path, draftPath, componentId }) => [
             componentId,
-            defaultCanvasRenameChoice(draftPath ?? path, renames[index]),
+            chooseCanvasAction(
+              prepared.changes.find(
+                (change) => change.componentId === componentId,
+              ),
+              draftPath ?? path,
+            ),
           ]),
         ),
       ]),
@@ -201,14 +217,7 @@ export function useDocumentProject(
               try {
                 return [
                   name,
-                  rebaseDraft(
-                    saved.project,
-                    result.project,
-                    prepared.changes,
-                    choices,
-                    name,
-                    draft,
-                  ),
+                  rebaseDraft(saved.project, prepared, choices, name, draft),
                 ]
               } catch (cause) {
                 if (!(cause instanceof DocumentValidationError)) throw cause
@@ -245,46 +254,40 @@ export function useDocumentProject(
         }
       },
     }
-    if (!Object.keys(saved.drafts).length && !variants.length) {
+    if (
+      (!prepared.changes.length ||
+        (!Object.keys(saved.drafts).length && !variants.length)) &&
       review.check(choices).confirm()
-    } else if (!prepared.changes.length && review.check(choices).confirm()) {
+    )
       return
-    } else {
-      reconciliation.value = review
-    }
+    reconciliation.value = review
   }
 
   function rebaseDraft(
     before: FormDocumentProject,
-    after: FormDocumentProject,
-    changes: readonly CanvasBindingChange[],
+    prepared: ReturnType<typeof prepareFormDocumentReconciliation>,
     choices: ReconciliationChoices,
     name: string,
     draft: Draft,
   ): Draft {
-    const plan = planVariantReconciliation(
-      draft.renames,
-      changes,
-      name ? choices[name] : undefined,
-    )
-    const materialize = (
-      project: FormDocumentProject,
-      renames: Draft['renames'],
-    ) =>
-      name
-        ? materializeFormDocumentVariant(
-            {
-              ...project,
-              variants: project.variants.map((variant) =>
-                variant.name === name ? { ...variant, renames } : variant,
-              ),
-            },
-            name,
-            options,
-          ).ui
-        : project.base.ui
-    const oldUi = materialize(before, draft.renames)
-    const nextUi = materialize(after, plan.renames)
+    const oldUi = name
+      ? materializeFormDocumentVariant(
+          {
+            ...before,
+            variants: before.variants.map((variant) =>
+              variant.name === name
+                ? {
+                    ...variant,
+                    renames: draft.renames,
+                    uiOverrides: draft.uiOverrides,
+                  }
+                : variant,
+            ),
+          },
+          name,
+          options,
+        ).ui
+      : before.base.ui
     const files = { ...draft.files }
     const json = (part: keyof FormDocumentJson) => {
       try {
@@ -301,7 +304,21 @@ export function useDocumentProject(
         },
       ])
     }
-    if (!isEqual(oldUi, nextUi)) {
+    const { ui, renames, uiOverrides, dataChanges } = prepared.migrate(
+      {
+        renames: draft.renames,
+        uiOverrides: draft.uiOverrides,
+        get dataSchema() {
+          return json('dataSchema')
+        },
+        get data() {
+          return json('data')
+        },
+      },
+      name ? choices[name] : undefined,
+      !name,
+    )
+    if (!isEqual(oldUi, ui)) {
       if (!isEqual(oldUi, json('ui')))
         throw new DocumentValidationError([
           {
@@ -311,21 +328,13 @@ export function useDocumentProject(
               'The draft UI has independent edits. Reconcile them before changing the canvas version.',
           },
         ])
-      files.ui = JSON.stringify(nextUi, null, 2)
+      files.ui = JSON.stringify(ui, null, 2)
     }
-    if (plan.keys.length) {
-      files.dataSchema = JSON.stringify(
-        reconcileVariantSchema(json('dataSchema'), plan),
-        null,
-        2,
-      )
-      files.data = JSON.stringify(
-        reconcileVariantData(json('data'), plan),
-        null,
-        2,
-      )
+    if (dataChanges) {
+      files.dataSchema = JSON.stringify(dataChanges.dataSchema, null, 2)
+      files.data = JSON.stringify(dataChanges.data, null, 2)
     }
-    return { files, renames: plan.renames }
+    return { files, renames, uiOverrides }
   }
 
   function choose(name: string) {
@@ -352,7 +361,13 @@ export function useDocumentProject(
       ...saved.project,
       variants: saved.project.variants.map((variant) =>
         variant.name === saved.selected
-          ? { ...variant, dataSchema, data, renames: draft.renames }
+          ? {
+              ...variant,
+              dataSchema,
+              data,
+              renames: draft.renames,
+              uiOverrides: draft.uiOverrides,
+            }
           : variant,
       ),
     }
@@ -373,6 +388,7 @@ export function useDocumentProject(
         storeDraft({
           files: stringifyFormDocuments(renamed),
           renames: next.renames,
+          uiOverrides: next.uiOverrides,
         })
         return true
       },
@@ -391,7 +407,11 @@ export function useDocumentProject(
         const active = variant.name === saved.selected
         return {
           variant: active
-            ? { ...variant, renames: current.value.renames }
+            ? {
+                ...variant,
+                renames: current.value.renames,
+                uiOverrides: current.value.uiOverrides,
+              }
             : variant,
           active,
         }
@@ -441,7 +461,14 @@ export function useDocumentProject(
             },
           ])
         name = ''
-        next = { ...existing, base: documents }
+        next = isEqual(existing.base.ui, documents.ui)
+          ? {
+              ...existing,
+              base: documents,
+              canvasDataSchema:
+                existing.canvasDataSchema ?? existing.base.dataSchema,
+            }
+          : { base: documents, variants: existing.variants }
       }
     }
     const conflicts = applyPreview(documents)
