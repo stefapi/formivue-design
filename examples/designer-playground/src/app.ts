@@ -96,8 +96,9 @@ import {
   DocumentEditorWidget,
   MarkupSchemaWidget,
 } from './widgets'
-import { loadInitialSchema, saveSchema } from './service'
+import { loadInitialSchema, saveCanvasSnapshot, saveSchema } from './service'
 import { useDocumentProject } from './service/document-project'
+import type { DocumentProjectArchive } from './service/document-project-archive'
 import { createVariantsDemo } from './service/variants-demo'
 import { DataModelWidget } from './widgets/DataModelWidget'
 import type {
@@ -315,6 +316,22 @@ export const App = defineComponent({
       ],
       rootComponentName: 'Form',
     })
+    const openArchive = (archive: DocumentProjectArchive) => {
+      const next = archive.state.applied
+        ? createFormDocument(archive.state.applied, documentOptions)
+        : undefined
+      try {
+        saveCanvasSnapshot(archive.canvas, advanced, profile)
+        engine.setCurrentTree(archive.canvas)
+        engine.workbench.currentWorkspace.operation.selection.clear()
+      } catch (cause) {
+        next?.dispose()
+        throw cause
+      }
+      clearDocument()
+      previewDocument.value = next
+      model.importArchive(archive)
+    }
     onMounted(() => {
       const restored = loadInitialSchema(engine, advanced, profile)
       if (demo && !restored) {
@@ -540,6 +557,7 @@ export const App = defineComponent({
                                           model.generate(tree)
                                           saveSchema(engine, advanced, profile)
                                         },
+                                        onImport: openArchive,
                                         onJson: () =>
                                           engine.workbench.setWorkbenchType(
                                             'JSONTREE',

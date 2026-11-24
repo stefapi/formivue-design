@@ -27,8 +27,10 @@ import { Button } from '@formivue-design/vue-ui'
 import { exampleLocale, message, type Message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
 import type { DocumentProject } from '../service/document-project'
+import type { DocumentProjectArchive } from '../service/document-project-archive'
 import { TestDataWidget } from './TestDataWidget'
 import { CanvasReconciliationWidget } from './CanvasReconciliationWidget'
+import { ProjectArchiveWidget } from './ProjectArchiveWidget'
 
 const schemaTab: Message = ['Schema', 'Schéma', 'Esquema']
 const testTab: Message = ['Test data', 'Données d’essai', 'Datos de prueba']
@@ -332,6 +334,10 @@ export const DataModelWidget = defineComponent({
     materials: Object as PropType<Record<string, Component>>,
     demoHref: String,
     onGenerate: { type: Function as PropType<() => void>, required: true },
+    onImport: {
+      type: Function as PropType<(archive: DocumentProjectArchive) => void>,
+      required: true,
+    },
     onJson: { type: Function as PropType<() => void>, required: true },
     onNavigate: {
       type: Function as PropType<(id?: string) => void>,
@@ -483,6 +489,18 @@ export const DataModelWidget = defineComponent({
               ]),
             ],
           ),
+          h(ProjectArchiveWidget, {
+            tree: props.tree,
+            model: props.model,
+            onImport: (archive) => {
+              props.onImport(archive)
+              name.value = ''
+              error.value = undefined
+              applied.value = false
+              reconciled.value = false
+              tab.value = 'schema'
+            },
+          }),
           h('div', { class: 'flex flex-wrap items-end gap-2' }, [
             action(
               [

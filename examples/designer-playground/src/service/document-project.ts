@@ -1,6 +1,6 @@
 import { computed, shallowRef } from 'vue'
 import { isEqual } from '@formivue/shared'
-import type { TreeNode } from '@formivue-design/core'
+import type { ITreeNode, TreeNode } from '@formivue-design/core'
 import {
   createFormDocumentProject,
   createFormDocumentVariant,
@@ -30,25 +30,19 @@ import {
   type DocumentIssue,
 } from '@formivue/json-schema'
 
-interface Draft {
-  files: FormDocumentJson
-  renames: FormDocumentVariant['renames']
-  uiOverrides?: FormDocumentVariant['uiOverrides']
-}
+import {
+  parseDocumentProject,
+  stringifyDocumentProject,
+  type DocumentProjectArchive,
+  type ProjectDraft as Draft,
+  type SavedDocumentProject as SavedProject,
+} from './document-project-archive'
 
 type ReviewedChange = {
   impact:
     | ReturnType<typeof renameFormDocumentProperty>['impact']
     | ReturnType<typeof moveFormDocumentProperty>['impact']
   confirm(): boolean
-}
-
-interface SavedProject {
-  version: 1
-  project?: FormDocumentProject
-  selected: string
-  drafts: Record<string, Draft>
-  applied?: FormDocuments
 }
 
 type ReconciliationChoices = Record<
@@ -500,6 +494,16 @@ export function useDocumentProject(
       reconciliation.value = undefined
     },
     storageError,
+    exportArchive(canvas: ITreeNode) {
+      return stringifyDocumentProject(canvas, state.value)
+    },
+    readArchive(source: string) {
+      return parseDocumentProject(source, options)
+    },
+    importArchive(archive: DocumentProjectArchive) {
+      update(archive.state)
+      reconciliation.value = undefined
+    },
     hasDraft: computed(() =>
       Object.prototype.hasOwnProperty.call(state.value.drafts, selected.value),
     ),

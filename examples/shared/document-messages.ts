@@ -1,6 +1,21 @@
 import { exampleLanguage, message, type Message } from './language'
 
 const contractIssues: Record<string, Message> = {
+  project_archive_invalid: [
+    'Invalid project archive section.',
+    'Section de l’archive du projet invalide.',
+    'Sección no válida del archivo del proyecto.',
+  ],
+  project_archive_json: [
+    'The file does not contain valid JSON.',
+    'Le fichier ne contient pas de JSON valide.',
+    'El archivo no contiene JSON válido.',
+  ],
+  project_archive_version: [
+    'Unsupported project archive format or version.',
+    'Format ou version d’archive du projet non pris en charge.',
+    'Formato o versión del archivo del proyecto no compatible.',
+  ],
   removed_ui_binding: [
     'This canvas field was removed. Resolve its existing bindings.',
     'Ce champ a été supprimé du canevas. Réconciliez ses liaisons existantes.',

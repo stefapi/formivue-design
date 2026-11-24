@@ -2,7 +2,7 @@
 // formivue/antd/playground/service (localStorage du schéma JSON). Seul écart :
 // le toast `message.success` antd disparaît (V1) — le retour visuel du save
 // est assuré par le ActionsWidget (indicateur « Saved », tokens V6).
-import { Engine } from '@formivue-design/core'
+import type { Engine, ITreeNode } from '@formivue-design/core'
 import {
   transformToSchema,
   transformToTreeNode,
@@ -12,6 +12,17 @@ export const STORAGE_KEY = 'formivue-vue-schema'
 
 const storageKey = (advanced: boolean, profile: string) =>
   [STORAGE_KEY, advanced ? 'advanced' : '', profile].filter(Boolean).join('-')
+
+export function saveCanvasSnapshot(
+  canvas: ITreeNode,
+  advanced: boolean,
+  profile: string,
+) {
+  localStorage.setItem(
+    storageKey(advanced, profile),
+    JSON.stringify({ canvas }),
+  )
+}
 
 export const saveSchema = (
   designer: Engine,
@@ -31,9 +42,8 @@ export const loadInitialSchema = (
 ) => {
   try {
     const storedSchema = localStorage.getItem(storageKey(advanced, profile))
-    designer.setCurrentTree(
-      transformToTreeNode(storedSchema ? JSON.parse(storedSchema) : undefined),
-    )
+    const saved = storedSchema ? JSON.parse(storedSchema) : undefined
+    designer.setCurrentTree(saved?.canvas ?? transformToTreeNode(saved))
     return !!storedSchema
   } catch {}
 }

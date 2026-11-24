@@ -22,6 +22,7 @@ import { Button } from '@formivue-design/vue-ui'
 import { DataSchemaEditor } from '@formivue-design/data-schema-editor'
 import { exampleLocale, message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
+import { downloadJson } from '../service/download-json'
 import { SchemaEditorWidget } from './SchemaEditorWidget'
 
 const files = {
@@ -103,14 +104,7 @@ export const DocumentEditorWidget = defineComponent({
         })
         const canonical = stringifyFormDocuments(session.exportDocuments())
         session.dispose()
-        const url = URL.createObjectURL(
-          new Blob([canonical[key]], { type: 'application/json' }),
-        )
-        const link = document.createElement('a')
-        link.href = url
-        link.download = files[key]
-        link.click()
-        setTimeout(() => URL.revokeObjectURL(url), 0)
+        downloadJson(files[key], canonical[key])
         error.value = ''
       } catch (cause) {
         error.value = documentError(cause)

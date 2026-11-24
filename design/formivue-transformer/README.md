@@ -232,6 +232,18 @@ available until the draft is applied. The three JSON files contain the
 effective UI, constraints and values, including detached and archived
 properties, and can be imported again for editing or rendering.
 
+In the playground, **Export project** in **Data model** downloads a single
+`formivue.project.json` with the current canvas, base model, all variants,
+selected variant, all drafts and last applied preview. Draft documents are
+stored as text so unfinished JSON can be edited after import. Confirmed
+reconciliation decisions travel with variant and draft path changes,
+UI overrides, and preserved data properties.
+
+Use **Import project** to validate the archive and review the replacement
+before opening it. The archive is meant for resuming work in the designer.
+The three individual JSON documents remain the format for rendering or
+sharing one variant.
+
 ### Project constraints onto the form
 
 The document compiler projects numeric ranges, integer input, increments,

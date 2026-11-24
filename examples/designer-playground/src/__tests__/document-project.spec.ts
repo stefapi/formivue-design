@@ -1,6 +1,7 @@
 import {
   createFormDocument,
   createFormDocumentProject,
+  materializeFormDocumentVariant,
   parseFormDocuments,
   stringifyFormDocuments,
   type FormDocuments,
@@ -204,6 +205,7 @@ test('reconciles a canvas rename while transporting moved variant data and its i
 
 test('resolves additions, removals and type changes independently across exported variants', () => {
   const storage = 'test-formivue-structural-reconciliation'
+  const importedStorage = storage + '-imported'
   const preview = vi.fn((documents: FormDocuments) =>
     createFormDocument(documents).dispose(),
   )
@@ -352,16 +354,58 @@ test('resolves additions, removals and type changes independently across exporte
         billing: { properties: { amount_previous_2: { minimum: 10 } } },
       },
     })
-    model.edit(serialized)
-    const restored = useDocumentProject(storage, {}, preview)
+    model.choose('Historical')
+    expect(
+      model
+        .reviewRename({ path: ['reference'], key: 'draft_reference' })
+        .confirm(),
+    ).toBe(true)
+    const historicalDraft = model.files.value
+    const invalidDraft = { ...historicalDraft, data: '{ invalid JSON' }
+    model.edit(invalidDraft)
+    model.choose('')
+    const baseDraft = {
+      ...model.files.value,
+      dataSchema: '{ unfinished schema',
+    }
+    model.edit(baseDraft)
+    model.choose('API')
+
+    const tree = canvas(true)
+    const snapshot = tree.serialize()
+    const archive = model.exportArchive(snapshot)
+    const target = useDocumentProject(importedStorage, {}, preview)
+    const decoded = target.readArchive(archive)
+    expect(decoded.canvas).toEqual(snapshot)
+    expect(decoded.state.project).toEqual(model.project.value)
+    expect(target.project.value).toBeUndefined()
+    const unsupported = JSON.parse(archive)
+    unsupported.version++
+    expect(() => target.readArchive(JSON.stringify(unsupported))).toThrow(
+      /Unsupported project archive/,
+    )
+    expect(target.project.value).toBeUndefined()
+    target.importArchive(decoded)
+    const restored = useDocumentProject(importedStorage, {}, preview)
     restored.restorePreview()
     expect(preview).toHaveBeenLastCalledWith(applied)
+    expect(restored.selected.value).toBe('API')
     expect(restored.hasDraft.value).toBe(true)
     expect(parseFormDocuments(restored.files.value)).toEqual(imported)
-    restored.apply(imported)
+    restored.choose('')
+    expect(restored.files.value).toEqual(baseDraft)
     restored.choose('Historical')
-    const historical = parseFormDocuments(
-      JSON.parse(JSON.stringify(restored.files.value)),
+    expect(restored.files.value).toEqual(invalidDraft)
+    expect(() => {
+      const invalid = JSON.parse(archive)
+      invalid.state.project.variants[0].renames = [{ path: [], key: 'bad' }]
+      restored.readArchive(JSON.stringify(invalid))
+    }).toThrow('/state/project/variants/0/renames/0')
+    expect(restored.files.value).toEqual(invalidDraft)
+
+    const historical = materializeFormDocumentVariant(
+      restored.project.value,
+      'Historical',
     )
     expect(
       historical.ui.nodes.map(({ bind, component }) => [bind, component]),
@@ -372,10 +416,23 @@ test('resolves additions, removals and type changes independently across exporte
     expect(historical.dataSchema).toEqual(applied.dataSchema)
     expect(historical.data).toEqual(applied.data)
     createFormDocument(historical).dispose()
-    restored.generate(canvas(true))
+
+    restored.edit(historicalDraft)
+    const repaired = parseFormDocuments(restored.files.value)
+    expect(repaired.ui.nodes[1].bind).toBe('/draft_reference')
+    restored.apply(repaired)
+    expect(restored.hasDraft.value).toBe(false)
+    expect(restored.project.value.variants[1].renames).toContainEqual({
+      path: ['reference'],
+      key: 'draft_reference',
+    })
+    restored.generate(new TreeNode(decoded.canvas))
     expect(restored.reconciliation.value).toBeUndefined()
-    expect(parseFormDocuments(restored.files.value)).toEqual(historical)
+    expect(parseFormDocuments(restored.files.value)).toEqual(repaired)
+    restored.choose('API')
+    expect(parseFormDocuments(restored.files.value)).toEqual(imported)
   } finally {
     localStorage.removeItem(storage)
+    localStorage.removeItem(importedStorage)
   }
 })
