@@ -210,9 +210,11 @@ h3 {
   font-size: 0.875rem;
 }
 
-.live-content {
+.live-plot {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: clamp(1.25rem, 3vw, 2rem);
 }
 
 .live-plot,
@@ -222,7 +224,7 @@ h3 {
 }
 
 .live-table {
-  border-left: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
 }
 
 .live-plot figcaption,
@@ -262,7 +264,7 @@ h3 {
 }
 
 .live-table .dn-array-table > div:first-child {
-  min-width: 19rem;
+  min-width: 34rem;
 }
 
 .gallery {
@@ -331,13 +333,13 @@ h3 {
 }
 
 @media (max-width: 52rem) {
-  .live-content {
+  .live-plot {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .live-table {
+  .live-plot figure + figure {
     border-top: 1px solid var(--color-border);
-    border-left: 0;
+    padding-top: 1.25rem;
   }
 }
 

@@ -15,9 +15,9 @@ export const copy = {
   interactive: ['Interactive demo', 'Démo interactive', 'Demo interactiva'],
   gallery: ['Gallery', 'Galerie', 'Galería'],
   intro: [
-    'Explore 20 chart components, from sales tracking to flow maps, and try linking a chart to an editable table.',
-    'Du suivi des ventes aux cartes de flux, explorez les 20 composants et essayez une liaison à un tableau modifiable.',
-    'Explore 20 componentes, desde el seguimiento de ventas hasta los mapas de flujos, y pruebe un gráfico vinculado a una tabla editable.',
+    'Explore 20 chart components, from sales tracking to flow maps, and try charts linked to an editable table.',
+    'Du suivi des ventes aux cartes de flux, explorez les 20 composants et essayez les graphiques liés à un tableau modifiable.',
+    'Explore 20 componentes, desde el seguimiento de ventas hasta los mapas de flujos, y pruebe gráficos vinculados a una tabla editable.',
   ],
   explore: [
     'Explore the gallery',
@@ -30,10 +30,14 @@ export const copy = {
     'Ventas que se actualizan en tiempo real',
   ],
   liveHelp: [
-    'Edit, reorder or delete a row. The chart recalculates sales by month and channel.',
-    'Modifiez, déplacez ou supprimez une ligne. Le graphique recalcule les ventes regroupées par mois et par canal.',
-    'Edite, reordene o elimine una fila. El gráfico recalcula las ventas por mes y canal.',
+    'Filter both charts by period or status. The sales rows stay visible and editable.',
+    'Filtrez les deux graphiques par période ou par statut. Les lignes de vente restent visibles et modifiables.',
+    'Filtre ambos gráficos por período o estado. Las filas de ventas siguen visibles y se pueden editar.',
   ],
+  period: ['Period', 'Période', 'Período'],
+  allPeriods: ['All periods', 'Toutes les périodes', 'Todos los períodos'],
+  status: ['Status', 'Statut', 'Estado'],
+  allStatuses: ['All statuses', 'Tous les statuts', 'Todos los estados'],
   aggregation: ['Aggregation', 'Agrégation', 'Agregación'],
   sum: ['Sum', 'Somme', 'Suma'],
   mean: ['Mean', 'Moyenne', 'Media'],
@@ -66,9 +70,14 @@ export const t = (key: keyof typeof copy, params?: Record<string, number>) =>
   message(copy[key], params)
 
 export const schemaCopy = {
+  Date: ['Date', 'Date', 'Fecha'],
   Mois: ['Month', 'Mois', 'Mes'],
   Canal: ['Channel', 'Canal', 'Canal'],
+  Boutique: ['Store', 'Boutique', 'Tienda'],
   Montant: ['Amount', 'Montant', 'Importe'],
+  Statut: copy.status,
+  Payée: ['Paid', 'Payée', 'Pagada'],
+  'En attente': ['Pending', 'En attente', 'Pendiente'],
   Actions: ['Actions', 'Actions', 'Acciones'],
   'Monter la ligne': ['Move row up', 'Monter la ligne', 'Subir la fila'],
   'Descendre la ligne': [
@@ -87,10 +96,15 @@ export const schemaCopy = {
     'Ventes par mois et par canal',
     'Ventas por mes y canal',
   ],
-  'Ajoutez une vente pour afficher le graphique.': [
-    'Add a sale to display the chart.',
-    'Ajoutez une vente pour afficher le graphique.',
-    'Añada una venta para mostrar el gráfico.',
+  'Ventes par canal': [
+    'Sales by channel',
+    'Ventes par canal',
+    'Ventas por canal',
+  ],
+  'Aucune vente pour cette sélection.': [
+    'No sales match this selection.',
+    'Aucune vente pour cette sélection.',
+    'No hay ventas para esta selección.',
   ],
 } satisfies Record<string, Message>
 
@@ -99,7 +113,7 @@ export const galleryCopy = {
   Canal: schemaCopy.Canal,
   Ventes: ['Sales', 'Ventes', 'Ventas'],
   Objectif: ['Target', 'Objectif', 'Objetivo'],
-  Boutique: ['Store', 'Boutique', 'Tienda'],
+  Boutique: schemaCopy.Boutique,
   Partenaires: ['Partners', 'Partenaires', 'Socios'],
   Commandes: ['Orders', 'Commandes', 'Pedidos'],
   Région: ['Region', 'Région', 'Región'],

@@ -11,32 +11,68 @@ import {
 } from '../../shared/schema-language'
 import { copy, schemaCopy, t } from './copy'
 import { chartGroups, chartPropsForLanguage } from './gallery'
-import { chartSchema, sampleSales, tableSchema } from './sales'
+import {
+  chartSchema,
+  sampleSales,
+  salesPeriods,
+  salesStatuses,
+  tableSchema,
+} from './sales'
 
 const brandMark = `${import.meta.env.BASE_URL}formivue-mark.svg`
 const { SchemaField } = createSchemaField({
   components: { ...Materials, ...ChartMaterials },
 })
 const form = createForm({ initialValues: { sales: sampleSales() } })
+const schemaLanguage = createExampleSchemaScope(schemaCopy)
 const languageScope = {
-  ...createExampleSchemaScope(schemaCopy),
-  $salesChartRows: (rows: ReturnType<typeof sampleSales>, monthLabel: string) =>
-    rows.map(({ Mois, ...row }) => ({ ...row, [monthLabel]: Mois })),
+  ...schemaLanguage,
+  $salesChartRows: (rows: ReturnType<typeof sampleSales>) => {
+    const month = schemaLanguage.$exampleText('Mois')
+    const channel = schemaLanguage.$exampleText('Canal')
+    const amount = schemaLanguage.$exampleText('Montant')
+    const store = schemaLanguage.$exampleText('Boutique')
+    return rows.map(({ Date, Canal, Montant, Statut }) => ({
+      Date,
+      Statut,
+      [month]: Date,
+      [channel]: Canal === 'Boutique' ? store : Canal,
+      [amount]: Montant,
+    }))
+  },
 }
 const translatedTable = computed(() =>
   translateExampleSchema(tableSchema, schemaCopy),
 )
 const aggregation = ref<'sum' | 'mean'>('sum')
 const valueFormat = ref<'auto' | 'euro' | 'decimal'>('euro')
+const period = ref('')
+const status = ref('')
+const periodOptions = computed(() => {
+  const month = new Intl.DateTimeFormat(exampleLocale.value, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+  return salesPeriods.map(([start]) => ({
+    value: start,
+    label: month.format(new Date(start)),
+  }))
+})
 watch(
-  [aggregation, valueFormat],
-  ([aggregation, valueFormat]) =>
-    form.setValuesIn('chartSettings', { aggregation, valueFormat }),
+  [aggregation, valueFormat, period, status],
+  ([aggregation, valueFormat, period, status]) =>
+    form.setValuesIn('chartSettings', {
+      aggregation,
+      valueFormat,
+      period: salesPeriods.find(([start]) => start === period) ?? [],
+      status,
+    }),
   { immediate: true },
 )
 
 const family = ref('all')
-const filters = [{ id: 'all', label: copy.all }, ...chartGroups]
+const familyFilters = [{ id: 'all', label: copy.all }, ...chartGroups]
 const visibleCharts = computed(() =>
   chartGroups
     .filter((group) => family.value === 'all' || group.id === family.value)
@@ -88,6 +124,32 @@ const visibleCharts = computed(() =>
           </p>
         </div>
         <div class="controls">
+          <label>
+            <span>{{ t('period') }}</span>
+            <select v-model="period">
+              <option value="">{{ t('allPeriods') }}</option>
+              <option
+                v-for="option in periodOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>{{ t('status') }}</span>
+            <select v-model="status">
+              <option value="">{{ t('allStatuses') }}</option>
+              <option
+                v-for="option in salesStatuses"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ message(schemaCopy[option.label]) }}
+              </option>
+            </select>
+          </label>
           <label>
             <span>{{ t('aggregation') }}</span>
             <select v-model="aggregation">
@@ -141,7 +203,7 @@ const visibleCharts = computed(() =>
       </div>
       <div class="filters" role="group" :aria-label="t('families')">
         <button
-          v-for="filter in filters"
+          v-for="filter in familyFilters"
           :key="filter.id"
           type="button"
           :aria-pressed="family === filter.id"
