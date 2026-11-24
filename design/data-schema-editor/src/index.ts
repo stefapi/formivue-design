@@ -563,6 +563,12 @@ export const DataSchemaEditor = defineComponent({
     const usages = computed(() =>
       schemaUsages(props.modelValue, props.dependencies),
     )
+    function referencedDataPath() {
+      const paths = new Map<string, (string | null)[]>()
+      for (const { path } of usages.value.get(location.value.pointer) ?? [])
+        paths.set(JSON.stringify(path), [...path])
+      if (paths.size === 1) return paths.values().next().value
+    }
     function select(pointer: string) {
       selected.value = pointer
       inspecting.value = true
@@ -708,8 +714,18 @@ export const DataSchemaEditor = defineComponent({
                 },
               ),
               slots.inspector?.({
-                path: location.value.data,
+                path: location.value.data ?? referencedDataPath(),
                 pointer: location.value.pointer,
+                objects: locations.value.flatMap(({ data, path }) => {
+                  if (!data) return []
+                  const schema = valueAt(props.modelValue, path)
+                  return isJsonObject(schema) &&
+                    (schema.type === 'object' ||
+                      (Array.isArray(schema.type) &&
+                        schema.type.includes('object')))
+                    ? [data]
+                    : []
+                }),
               }),
             ]),
           location.value.path.length

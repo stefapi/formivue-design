@@ -8,6 +8,7 @@ import {
   exportFormDocumentVariant,
   reconcileFormDocumentProject,
   renameFormDocumentProperty,
+  moveFormDocumentProperty,
   parseFormDocuments,
   stringifyFormDocuments,
   splitFormSchema,
@@ -698,6 +699,228 @@ describe('separate UI, schema and data documents', () => {
       document.dispose()
       for (const key of Object.keys(measures))
         Reflect.deleteProperty(SVGElement.prototype, key)
+    }
+  })
+
+  test('moves root and row fields and recalculates filtered chart and table data after import', async () => {
+    const initial = filteredDocuments()
+    const rowSchema = (
+      initial.dataSchema.$defs as Record<string, FormDocuments['dataSchema']>
+    ).sale
+    initial.dataSchema.properties.sales = { type: 'array', items: rowSchema }
+    delete initial.dataSchema.$defs
+    initial.ui.nodes.find(({ id }) => id === 'heading').key = 'headingBadge'
+    const sales = initial.ui.nodes.find(({ id }) => id === 'sales')
+    sales.item.children.push(
+      makeNode('amountColumn', {
+        component: 'ArrayTable.Column',
+        props: { title: 'Amount' },
+        children: [
+          makeNode('amount', {
+            kind: 'field',
+            component: 'NumberPicker',
+            bind: '/amount',
+          }),
+        ],
+      }),
+    )
+    initial.ui.nodes.push(
+      makeNode('profile', {
+        kind: 'object',
+        bind: '/profile',
+        children: [
+          makeNode('profileName', {
+            kind: 'field',
+            component: 'Input',
+            bind: '/owner',
+          }),
+        ],
+      }),
+      makeNode('headingInput', {
+        kind: 'field',
+        component: 'Input',
+        bind: '/heading',
+      }),
+    )
+    initial.dataSchema.properties.profile = {
+      type: 'object',
+      properties: { owner: { type: 'string' } },
+    }
+    initial.data.profile = { owner: 'Alice' }
+    const project = createFormDocumentVariant(
+      createFormDocumentProject(initial, { contracts }),
+      'API',
+    )
+    const heading = moveFormDocumentProperty(
+      project,
+      'API',
+      { path: ['heading'], to: ['profile', 'heading'] },
+      { contracts },
+    )
+    expect(heading.impact.createdObjects).toEqual([])
+    const filter = moveFormDocumentProperty(
+      heading.project,
+      'API',
+      { path: ['selection', 'status'], to: ['choices', 'status'] },
+      { contracts },
+    )
+    const amount = moveFormDocumentProperty(
+      filter.project,
+      'API',
+      {
+        path: ['sales', null, 'amount'],
+        to: ['sales', null, 'metrics', 'amount'],
+      },
+      { contracts },
+    )
+    expect(amount.impact.createdObjects).toEqual(['/sales/*/metrics'])
+    expect(amount.impact.componentIds).toEqual(
+      expect.arrayContaining(['amount', 'chart', 'donut', 'table']),
+    )
+    const status = moveFormDocumentProperty(
+      amount.project,
+      'API',
+      {
+        path: ['sales', null, 'status'],
+        to: ['sales', null, 'metrics', 'status'],
+      },
+      { contracts },
+    )
+    const portable = parseFormDocuments(
+      stringifyFormDocuments(
+        exportFormDocumentVariant(status.project, 'API', { contracts }),
+      ),
+    )
+    expect(portable.data.profile).toEqual({ owner: 'Alice', heading: 'Sales' })
+    expect(portable.data.heading).toBeUndefined()
+    expect(portable.data.sales[0]).toMatchObject({
+      id: '1',
+      metrics: { amount: 10, status: 'paid' },
+    })
+    expect(portable.data.sales[0]).not.toHaveProperty('amount')
+    expect(
+      portable.ui.nodes.find(({ id }) => id === 'chart').bindings.rows,
+    ).toEqual({
+      path: '/sales',
+      columnPaths: { amount: '/metrics/amount', status: '/metrics/status' },
+    })
+    expect(
+      portable.ui.nodes.find(({ id }) => id === 'chart').props.filters[1],
+    ).toMatchObject({
+      valueBinding: { path: '/choices/status' },
+    })
+    expect(exportFormDocumentVariant(project, 'API', { contracts })).toEqual(
+      initial,
+    )
+
+    const measures = {
+      getComputedTextLength: () => 24,
+      getBBox: () => ({ x: 0, y: 0, width: 24, height: 12 }),
+    }
+    for (const [key, value] of Object.entries(measures))
+      Object.defineProperty(SVGElement.prototype, key, {
+        configurable: true,
+        value,
+      })
+    const document = createDocument(portable)
+    const view = mount(PreviewWidget, {
+      props: { tree: tree(), materials, document },
+    })
+    try {
+      expect(document.form.query(['profile', 'heading']).take()).toBeDefined()
+      const cell = document.form
+        .query(['sales', '0', 'metrics', 'amount'])
+        .take()
+      expect(cell).toBeDefined()
+      const chart = () => view.get('figure tbody').text()
+      const table = () =>
+        view.get('table[aria-label="Data table"] tbody').text()
+      await vi.waitFor(() => expect(chart()).toContain('January10'))
+      document.form.setValuesIn(['sales', '0', 'metrics', 'amount'], 25)
+      await vi.waitFor(() => {
+        expect(chart()).toContain('January25')
+        expect(table()).toContain('January25')
+      })
+      document.form.setValuesIn(['choices', 'status'], 'pending')
+      await vi.waitFor(() => expect(chart()).toContain('January5'))
+      const baseline = document.exportData()
+      const rows = baseline.sales as unknown[]
+      document.replaceData({
+        ...baseline,
+        sales: [rows[1], rows[0], ...rows.slice(2)],
+      })
+      await vi.waitFor(() =>
+        expect(
+          document.form.query(['sales', '1', 'metrics', 'amount']).take(),
+        ).toBe(cell),
+      )
+      document.replaceData({
+        ...document.exportData(),
+        sales: [rows[0], ...rows.slice(2)],
+      })
+      await vi.waitFor(() =>
+        expect(view.findAll('.dn-array-table tbody tr')).toHaveLength(3),
+      )
+      expect(document.exportData().sales[0]).toMatchObject({
+        id: '1',
+        metrics: { amount: 25 },
+      })
+    } finally {
+      view.unmount()
+      document.dispose()
+      for (const key of Object.keys(measures))
+        Reflect.deleteProperty(SVGElement.prototype, key)
+    }
+  })
+
+  test('refuses collisions, cross-row moves and shared schema changes atomically', () => {
+    const initial = documents()
+    initial.dataSchema.properties.copy = initial.dataSchema.properties.sales
+    initial.data.copy = initial.data.sales
+    initial.data.metadata = { heading: 'Keep this value' }
+    const project = createFormDocumentVariant(
+      createFormDocumentProject(initial, { contracts }),
+      'API',
+    )
+    const changes = [
+      {
+        path: ['heading'],
+        to: ['sales'],
+        code: 'schema_key_collision',
+        issue: '/sales',
+      },
+      {
+        path: ['heading'],
+        to: ['metadata', 'heading'],
+        code: 'data_key_collision',
+        issue: '/metadata/heading',
+      },
+      {
+        path: ['sales', null, 'amount'],
+        to: ['copy', null, 'amount'],
+        code: 'cross_record_move',
+        issue: '/copy/*/amount',
+      },
+      {
+        path: ['sales', null, 'amount'],
+        to: ['sales', null, 'metrics', 'amount'],
+        code: 'shared_schema_move',
+        issue: '/sales/*',
+      },
+    ]
+    for (const { path, to, code, issue } of changes) {
+      expect(() =>
+        moveFormDocumentProperty(project, 'API', { path, to }, { contracts }),
+      ).toThrow(
+        expect.objectContaining({
+          issues: expect.arrayContaining([
+            expect.objectContaining({ code, path: issue }),
+          ]),
+        }),
+      )
+      expect(exportFormDocumentVariant(project, 'API', { contracts })).toEqual(
+        initial,
+      )
     }
   })
 

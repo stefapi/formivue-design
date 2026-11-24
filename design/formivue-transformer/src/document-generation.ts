@@ -117,7 +117,17 @@ export function generateFormDataSchema(
       if (slot && 'rows' in slot) {
         requirePath([...target, null], ['object'])
         for (const { column, types } of slot.rows.columns)
-          if (column) requirePath([...target, null, column], types)
+          if (column)
+            requirePath(
+              [
+                ...target,
+                null,
+                ...(binding.columnPaths?.[column]
+                  ? pointerSegments(binding.columnPaths[column])
+                  : [column]),
+              ],
+              types,
+            )
       } else {
         const types =
           slot && 'types' in slot

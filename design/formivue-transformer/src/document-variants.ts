@@ -10,10 +10,19 @@ import {
   renameDocumentData,
   renameDocumentSchema,
   renameDocumentUi,
+  type DocumentPropertyChange,
   type DocumentPropertyRename,
 } from './document-rename'
 import {
+  moveDocumentData,
+  moveDocumentSchema,
+  pathStartsWith,
+  validateMove,
+  type DocumentPropertyMove,
+} from './document-move'
+import {
   createFormDocument,
+  compileFormDocuments,
   type CompileFormDocumentOptions,
   type FormDocuments,
   type UiDocument,
@@ -23,7 +32,7 @@ export interface FormDocumentVariant {
   readonly name: string
   readonly dataSchema: FormDocuments['dataSchema']
   readonly data: JsonObject
-  readonly renames: readonly DocumentPropertyRename[]
+  readonly renames: readonly DocumentPropertyChange[]
 }
 
 export interface FormDocumentProject {
@@ -98,7 +107,11 @@ export function createFormDocumentVariant(
     data: copyJson(source.data) as JsonObject,
     renames:
       'renames' in source
-        ? source.renames.map(({ path, key }) => ({ path: [...path], key }))
+        ? source.renames.map((change) =>
+            'to' in change
+              ? { path: [...change.path], to: [...change.to] }
+              : { path: [...change.path], key: change.key },
+          )
         : [],
   }
   return { ...project, variants: [...project.variants, variant] }
@@ -170,9 +183,75 @@ export function renameFormDocumentProperty(
   const rename = { path: [...path], key }
   const dataSchema = renameDocumentSchema(variant.dataSchema, rename)
   const data = renameDocumentData(variant.data, rename)
+  const result = applyPropertyChange(
+    project,
+    variant,
+    rename,
+    dataSchema,
+    data,
+    options,
+  )
+  return {
+    project: result.project,
+    impact: { from, to, componentIds: result.componentIds },
+  }
+}
+
+export function moveFormDocumentProperty(
+  project: FormDocumentProject,
+  name: string,
+  change: DocumentPropertyMove,
+  options: CompileFormDocumentOptions = {},
+) {
+  validateMove(change)
+  const variant = variantByName(project, name)
+  const from = documentPath(change.path)
+  const to = documentPath(change.to)
+  const impact = {
+    from,
+    to,
+    componentIds: [] as string[],
+    createdObjects: [] as string[],
+    dependencies: compileFormDocuments(
+      {
+        ui: materializeUi(project, variant, options),
+        dataSchema: variant.dataSchema,
+      },
+      options,
+    ).dependencies.filter(({ path }) => pathStartsWith(path, change.path)),
+  }
+  if (from === to) return { project, impact }
+  const move = { path: [...change.path], to: [...change.to] }
+  const { dataSchema, createdObjects } = moveDocumentSchema(
+    variant.dataSchema,
+    move,
+  )
+  const data = moveDocumentData(variant.data, move)
+  const result = applyPropertyChange(
+    project,
+    variant,
+    move,
+    dataSchema,
+    data,
+    options,
+  )
+  return {
+    project: result.project,
+    impact: { ...impact, createdObjects, componentIds: result.componentIds },
+  }
+}
+
+function applyPropertyChange(
+  project: FormDocumentProject,
+  variant: FormDocumentVariant,
+  change: DocumentPropertyChange,
+  dataSchema: FormDocuments['dataSchema'],
+  data: JsonObject,
+  options: CompileFormDocumentOptions,
+) {
   const { ui, componentIds } = renameDocumentUi(
     materializeUi(project, variant, options),
-    rename,
+    change,
     options,
   )
   const validated = validateDocuments({ ui, dataSchema, data }, options)
@@ -180,7 +259,7 @@ export function renameFormDocumentProperty(
     ...variant,
     dataSchema: validated.dataSchema,
     data: validated.data,
-    renames: [...variant.renames, rename],
+    renames: [...variant.renames, change],
   }
   return {
     project: {
@@ -189,7 +268,7 @@ export function renameFormDocumentProperty(
         entry === variant ? updated : entry,
       ),
     },
-    impact: { from, to, componentIds },
+    componentIds,
   }
 }
 

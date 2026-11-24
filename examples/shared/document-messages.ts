@@ -1,6 +1,46 @@
 import { exampleLanguage, message, type Message } from './language'
 
 const contractIssues: Record<string, Message> = {
+  cross_record_move: [
+    'The source and destination must belong to the same record',
+    'La source et la destination doivent appartenir au même enregistrement',
+    'El origen y el destino deben pertenecer al mismo registro',
+  ],
+  shared_schema_move: [
+    'This object uses a schema reference',
+    'Cet objet utilise une référence de schéma',
+    'Este objeto utiliza una referencia de esquema',
+  ],
+  invalid_move_parent: [
+    'The destination parent must be an object',
+    'Le parent de destination doit être un objet',
+    'El elemento padre del destino debe ser un objeto',
+  ],
+  incompatible_move_layout: [
+    'The field would leave its layout or repeated row',
+    'Le champ quitterait sa disposition ou sa ligne répétée',
+    'El campo saldría de su disposición o fila repetida',
+  ],
+  incompatible_move_binding: [
+    'The binding would leave its row scope',
+    'La liaison sortirait de la portée de sa ligne',
+    'El vínculo quedaría fuera del ámbito de su fila',
+  ],
+  incompatible_move_row_key: [
+    'The row key must stay directly in the row',
+    'La clé doit rester une propriété directe de la ligne',
+    'La clave debe seguir siendo una propiedad directa de la fila',
+  ],
+  schema_key_collision: [
+    'The destination already exists in the schema',
+    'La destination existe déjà dans le schéma',
+    'El destino ya existe en el esquema',
+  ],
+  data_key_collision: [
+    'The destination conflicts with an existing value',
+    'La destination entre en conflit avec une valeur existante',
+    'El destino entra en conflicto con un valor existente',
+  ],
   invalid_json_object: [
     'Expected a JSON object',
     'Un objet JSON est attendu',
@@ -57,9 +97,9 @@ const contractIssues: Record<string, Message> = {
     'La interfaz no corresponde a ninguna variante de este proyecto',
   ],
   stale_rename: [
-    'The draft changed. Review the rename again.',
-    'Le brouillon a changé. Réexaminer le renommage.',
-    'El borrador cambió. Revisa el cambio de nombre.',
+    'The draft changed. Review the change again.',
+    'Le brouillon a changé. Réexaminer la modification.',
+    'El borrador cambió. Revisa la modificación.',
   ],
 }
 

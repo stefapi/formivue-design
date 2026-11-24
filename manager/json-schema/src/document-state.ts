@@ -15,6 +15,7 @@ import {
   isJsonObject,
   jsonPointer,
   pointerSegments,
+  projectDocumentRows,
   valueAt,
   type DocumentIssue,
   type JsonObject,
@@ -307,13 +308,19 @@ export function createDataDocument(options: DataDocumentOptions) {
   const draftData = () => copyJson(form.values, true) as JsonObject
   const scope = {
     $document: {
-      read(pointer: string, base: string[] = []) {
+      read(
+        pointer: string,
+        base: string[] = [],
+        columns?: Record<string, string[]>,
+      ) {
         const value = valueAt(state.data, [
           ...base,
           ...pointerSegments(pointer),
         ])
         // Tracking the subtree lets row edits update chart props in place.
-        return value === undefined ? undefined : copyJson(value)
+        return value === undefined
+          ? undefined
+          : copyJson(columns ? projectDocumentRows(value, columns) : value)
       },
     },
   }

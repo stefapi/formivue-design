@@ -177,6 +177,35 @@ before a new project is returned. `reconcileFormDocumentProject` checks a
 new canvas export against all saved variants and reports changes to
 bound fields by component ID.
 
+### Move a property between objects
+
+```ts
+const { project: moved, impact } = moveFormDocumentProperty(
+  project,
+  'Sales API',
+  { path: ['sales', null, 'amount'], to: ['sales', null, 'metrics', 'amount'] },
+  { contracts },
+)
+```
+
+The operation moves the property schema and the value in every affected
+record. It preserves applicable `required` rules and rewrites supported
+structured bindings. The impact reports the new objects and the affected
+components and dependencies. The playground shows this report before
+confirming the move in the variant draft.
+
+Rows contracts accept `bindings.rows.columnPaths`, a map from logical column
+names to row-relative JSON Pointers. For example,
+`"columnPaths": { "amount": "/metrics/amount" }` lets a chart or DataTable
+keep its existing column configuration. Runtime consumers receive projected
+rows. The editable array, its row identity and the exported values retain
+their original nested structure.
+
+A move stays in the same root record or in each item of the same array.
+Collisions, shared definitions on the affected path, editable array key moves
+into nested objects and rules that cannot be migrated produce diagnostics
+before the project is updated.
+
 ### Project constraints onto the form
 
 The document compiler projects numeric ranges, integer input, increments,

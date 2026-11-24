@@ -3,6 +3,7 @@ import { isEqual } from '@formivue/shared'
 import {
   copyJson,
   pointerSegments,
+  projectDocumentRows,
   valueAt,
   type JsonObject,
 } from '@formivue/json-schema'
@@ -50,12 +51,18 @@ export const TestDataWidget = defineComponent({
     })
     const scope = {
       $document: {
-        read(pointer: string, base: string[] = []) {
+        read(
+          pointer: string,
+          base: string[] = [],
+          columns?: Record<string, string[]>,
+        ) {
           const value = valueAt(form.values, [
             ...base,
             ...pointerSegments(pointer),
           ])
-          return value === undefined ? undefined : copyJson(value)
+          return value === undefined
+            ? undefined
+            : copyJson(columns ? projectDocumentRows(value, columns) : value)
         },
       },
     }

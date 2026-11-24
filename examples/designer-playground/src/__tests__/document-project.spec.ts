@@ -8,7 +8,7 @@ import {
 import { expect, test, vi } from 'vitest'
 import { useDocumentProject } from '../service/document-project'
 
-test('restores pending renames and invalid JSON beside the last applied variant', () => {
+test('restores pending path changes and invalid JSON beside the last applied variant', () => {
   const storageKey = 'test-formivue-document-project'
   const base: FormDocuments = {
     ui: {
@@ -44,6 +44,11 @@ test('restores pending renames and invalid JSON beside the last applied variant'
     expect(
       model.reviewRename({ path: ['total'], key: 'amount' }).confirm(),
     ).toBe(true)
+    expect(
+      model
+        .reviewMove({ path: ['amount'], to: ['billing', 'amount'] })
+        .confirm(),
+    ).toBe(true)
     model.edit({ ...model.files.value, data: '{ invalid JSON' })
     model.choose('')
     expect(parseFormDocuments(model.files.value)).toEqual(base)
@@ -56,9 +61,9 @@ test('restores pending renames and invalid JSON beside the last applied variant'
     expect(restored.files.value.data).toBe('{ invalid JSON')
     const prepared = parseFormDocuments({
       ...restored.files.value,
-      data: '{"amount":75}',
+      data: '{"billing":{"amount":75}}',
     })
-    expect(prepared.ui.nodes[0].bind).toBe('/amount')
+    expect(prepared.ui.nodes[0].bind).toBe('/billing/amount')
     restored.apply(prepared)
     expect(restored.hasDraft.value).toBe(false)
     expect(preview).toHaveBeenLastCalledWith(prepared)

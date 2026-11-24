@@ -161,11 +161,13 @@ export {
 export { generateFormDataSchema } from './document-generation'
 export type { DocumentDataPath } from './document-paths'
 export type { DocumentPropertyRename } from './document-rename'
+export type { DocumentPropertyMove } from './document-move'
 export {
   createFormDocumentProject,
   createFormDocumentVariant,
   exportFormDocumentVariant,
   materializeFormDocumentVariant,
+  moveFormDocumentProperty,
   reconcileFormDocumentProject,
   renameFormDocumentProperty,
   type FormDocumentProject,

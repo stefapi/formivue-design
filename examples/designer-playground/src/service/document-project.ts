@@ -5,12 +5,14 @@ import {
   createFormDocumentProject,
   createFormDocumentVariant,
   materializeFormDocumentVariant,
+  moveFormDocumentProperty,
   parseFormDocuments,
   reconcileFormDocumentProject,
   renameFormDocumentProperty,
   stringifyFormDocuments,
   transformToFormDocuments,
   type CompileFormDocumentOptions,
+  type DocumentPropertyMove,
   type DocumentPropertyRename,
   type FormDocumentJson,
   type FormDocumentProject,
@@ -22,6 +24,13 @@ import { DocumentValidationError } from '@formivue/json-schema'
 interface Draft {
   files: FormDocumentJson
   renames: FormDocumentVariant['renames']
+}
+
+type ReviewedChange = {
+  impact:
+    | ReturnType<typeof renameFormDocumentProperty>['impact']
+    | ReturnType<typeof moveFormDocumentProperty>['impact']
+  confirm(): boolean
 }
 
 interface SavedProject {
@@ -143,7 +152,9 @@ export function useDocumentProject(
     update({ ...saved, project: next, selected: variant.name })
   }
 
-  function reviewRename(rename: DocumentPropertyRename) {
+  function reviewChange(
+    change: DocumentPropertyRename | DocumentPropertyMove,
+  ): ReviewedChange | undefined {
     const saved = state.value
     const draft = current.value
     if (!saved.project || !saved.selected || !draft) return
@@ -156,12 +167,10 @@ export function useDocumentProject(
           : variant,
       ),
     }
-    const { project, impact } = renameFormDocumentProperty(
-      candidate,
-      saved.selected,
-      rename,
-      options,
-    )
+    const { project, impact } =
+      'to' in change
+        ? moveFormDocumentProperty(candidate, saved.selected, change, options)
+        : renameFormDocumentProperty(candidate, saved.selected, change, options)
     const next = project.variants.find(({ name }) => name === saved.selected)
     const renamed = materializeFormDocumentVariant(
       project,
@@ -278,7 +287,8 @@ export function useDocumentProject(
     choose,
     addVariant,
     edit,
-    reviewRename,
+    reviewRename: (change: DocumentPropertyRename) => reviewChange(change),
+    reviewMove: (change: DocumentPropertyMove) => reviewChange(change),
     apply,
     resetDraft,
     restorePreview() {

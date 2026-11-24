@@ -3,6 +3,7 @@ import {
   defineComponent,
   h,
   ref,
+  useId,
   type Component,
   type PropType,
 } from 'vue'
@@ -18,6 +19,8 @@ import {
   compileDataValidator,
   DocumentValidationError,
   isJsonObject,
+  jsonPointer,
+  pointerSegments,
   type JsonObject,
 } from '@formivue/json-schema'
 import { Button } from '@formivue-design/vue-ui'
@@ -68,30 +71,64 @@ const RenameProperty = defineComponent({
   props: {
     path: { type: Array as PropType<(string | null)[]>, required: true },
     model: { type: Object as PropType<DocumentProject>, required: true },
+    objects: { type: Array as PropType<(string | null)[][]>, required: true },
+    componentLabel: {
+      type: Function as PropType<(id: string) => string | undefined>,
+      required: true,
+    },
   },
   setup(props) {
     const key = ref('')
+    const id = useId()
+    const depth = props.path.lastIndexOf(null) + 1
+    const parent = jsonPointer(props.path.slice(depth, -1) as string[]) || '/'
+    const destination = ref(parent)
     const error = ref<unknown>()
     const review = ref<ReturnType<DocumentProject['reviewRename']>>()
+    const move = computed(
+      () => 'createdObjects' in (review.value?.impact ?? {}),
+    )
+    const reviewChange = (event: Event, moving = false) => {
+      event.preventDefault()
+      error.value = undefined
+      review.value = undefined
+      try {
+        review.value = moving
+          ? props.model.reviewMove({
+              path: props.path,
+              to: [
+                ...props.path.slice(0, depth),
+                ...pointerSegments(
+                  destination.value === '/' ? '' : destination.value,
+                ),
+                props.path[props.path.length - 1],
+              ],
+            })
+          : props.model.reviewRename({
+              path: props.path,
+              key: key.value.trim(),
+            })
+      } catch (cause) {
+        error.value = cause
+      }
+    }
+    const targets = computed(() =>
+      props.objects.flatMap((path) =>
+        path.lastIndexOf(null) + 1 === depth &&
+        props.path
+          .slice(0, depth)
+          .every((segment, index) => segment === path[index])
+          ? [jsonPointer(path.slice(depth) as string[]) || '/']
+          : [],
+      ),
+    )
     return () =>
       h('div', { class: 'grid gap-2 rounded-md border p-2' }, [
         h(
           'form',
           {
             class: 'flex flex-wrap items-end gap-2',
-            onSubmit(event: Event) {
-              event.preventDefault()
-              error.value = undefined
-              review.value = undefined
-              try {
-                review.value = props.model.reviewRename({
-                  path: props.path,
-                  key: key.value.trim(),
-                })
-              } catch (cause) {
-                error.value = cause
-              }
-            },
+            onSubmit: (event: Event) => reviewChange(event),
           },
           [
             h('label', { class: 'grid gap-1 text-sm' }, [
@@ -125,6 +162,74 @@ const RenameProperty = defineComponent({
             ),
           ],
         ),
+        h('details', { class: 'min-w-0 text-sm' }, [
+          h(
+            'summary',
+            { class: 'cursor-pointer font-medium' },
+            message([
+              'Move to another object',
+              'Déplacer vers un autre objet',
+              'Mover a otro objeto',
+            ]),
+          ),
+          h(
+            'form',
+            {
+              class: 'mt-2 flex flex-wrap items-end gap-2',
+              onSubmit: (event: Event) => reviewChange(event, true),
+            },
+            [
+              h('label', { class: 'grid min-w-0 gap-1' }, [
+                message([
+                  'Destination object (JSON Pointer)',
+                  'Objet de destination (JSON Pointer)',
+                  'Objeto de destino (JSON Pointer)',
+                ]),
+                h('input', {
+                  class: selectClass,
+                  value: destination.value,
+                  list: id,
+                  onInput(event: Event) {
+                    destination.value = (
+                      event.target as HTMLInputElement
+                    ).value.trim()
+                    error.value = undefined
+                    review.value = undefined
+                  },
+                }),
+              ]),
+              h(
+                'datalist',
+                { id },
+                [...new Set(['/', ...targets.value])].map((path) =>
+                  h('option', { value: path }),
+                ),
+              ),
+              h(
+                'button',
+                {
+                  class: 'rounded-md border px-3 py-1 disabled:opacity-50',
+                  type: 'submit',
+                  disabled: !destination.value || destination.value === parent,
+                },
+                message([
+                  'Review move',
+                  'Examiner le déplacement',
+                  'Revisar el traslado',
+                ]),
+              ),
+            ],
+          ),
+          h(
+            'p',
+            { class: 'mt-1 text-muted-foreground' },
+            message([
+              'Use a path in the current record, for example /metrics. Use / for the current record itself.',
+              'Indiquez un chemin dans l’enregistrement courant, par exemple /indicateurs. Utilisez / pour l’enregistrement lui-même.',
+              'Indica una ruta en el registro actual, por ejemplo /indicadores. Usa / para el propio registro.',
+            ]),
+          ),
+        ]),
         review.value
           ? h('div', { class: 'flex flex-wrap items-center gap-2 text-sm' }, [
               h('p', { class: 'break-all', role: 'status' }, [
@@ -141,12 +246,53 @@ const RenameProperty = defineComponent({
                   { count: review.value.impact.componentIds.length },
                 ),
               ]),
+              ...('createdObjects' in review.value.impact
+                ? [
+                    review.value.impact.createdObjects.length
+                      ? h(
+                          'p',
+                          { class: 'w-full break-all' },
+                          message(
+                            [
+                              'Objects to create: {paths}',
+                              'Objets à créer : {paths}',
+                              'Objetos por crear: {paths}',
+                            ],
+                            {
+                              paths:
+                                review.value.impact.createdObjects.join(', '),
+                            },
+                          ),
+                        )
+                      : null,
+                    h(
+                      'ul',
+                      { class: 'w-full space-y-1' },
+                      review.value.impact.dependencies.map(
+                        ({ componentId, property, path }) =>
+                          h('li', { class: 'break-all' }, [
+                            props.componentLabel(componentId) ?? componentId,
+                            ' · ',
+                            property,
+                            ' · ',
+                            jsonPointer(path.map((part) => part ?? '*')),
+                          ]),
+                      ),
+                    ),
+                  ]
+                : []),
               action(
-                [
-                  'Confirm rename',
-                  'Confirmer le renommage',
-                  'Confirmar el cambio de nombre',
-                ],
+                move.value
+                  ? [
+                      'Confirm move',
+                      'Confirmer le déplacement',
+                      'Confirmar el traslado',
+                    ]
+                  : [
+                      'Confirm rename',
+                      'Confirmer le renommage',
+                      'Confirmar el cambio de nombre',
+                    ],
                 () => {
                   const confirmed = review.value.confirm()
                   review.value = undefined
@@ -155,7 +301,7 @@ const RenameProperty = defineComponent({
                       {
                         path: '/',
                         code: 'stale_rename',
-                        message: 'The draft changed. Review the rename again.',
+                        message: 'The draft changed. Review the change again.',
                       },
                     ])
                 },
@@ -523,9 +669,11 @@ export const DataModelWidget = defineComponent({
                         inspector: ({
                           path,
                           pointer,
+                          objects,
                         }: {
                           path?: (string | null)[]
                           pointer: string
+                          objects: (string | null)[][]
                         }) =>
                           selected &&
                           typeof path?.[path.length - 1] === 'string'
@@ -533,6 +681,8 @@ export const DataModelWidget = defineComponent({
                                 key: pointer,
                                 model: props.model,
                                 path,
+                                objects,
+                                componentLabel: props.componentLabel,
                               })
                             : null,
                       },

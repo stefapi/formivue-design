@@ -83,6 +83,30 @@ export function valueAt(value: unknown, path: readonly string[]): unknown {
   return value
 }
 
+/** Adapt a row source to consumers whose column keys are flat. */
+export function projectDocumentRows(
+  value: unknown,
+  columns: Readonly<Record<string, readonly string[]>>,
+) {
+  if (!Array.isArray(value) || !Object.keys(columns).length) return value
+  return value.map((row) => {
+    if (!isJsonObject(row)) return row
+    const mapped = { ...row }
+    for (const [key, path] of Object.entries(columns)) {
+      const cell = valueAt(row, path)
+      if (cell === undefined) delete mapped[key]
+      else
+        Object.defineProperty(mapped, key, {
+          value: cell,
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        })
+    }
+    return mapped
+  })
+}
+
 // Formivue uses undefined when an optional field is cleared. JSON represents
 // that by omitting the property. Other non-JSON values are rejected.
 export function copyJson(value: unknown, omitUndefined = false): JsonValue {

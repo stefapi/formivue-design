@@ -6,6 +6,7 @@ import {
   isJsonObject,
   jsonPointer,
   pointerSegments,
+  projectDocumentRows,
   valueAt,
   type DocumentIssue,
   type DocumentRowKey,
@@ -27,6 +28,8 @@ import { visitUiNodes } from './document-paths'
 
 export interface DataBinding {
   path: string
+  /** Optional row-relative JSON Pointers keyed by the consumer's column names. */
+  columnPaths?: Record<string, string>
   /** Object or array item containing this node. Omitted paths start at document root. */
   scope?: 'parent'
   /** Expected JSON types for a property outside the built-in data slots. */
@@ -144,6 +147,7 @@ export function compileFormDocuments(
     property: string
     path: (string | null)[]
     validate: NonNullable<DocumentRowsContract['validate']>
+    columns: Record<string, string[]>
   }[] = []
   const fail = (
     node: UiDocumentNode,
@@ -390,14 +394,19 @@ export function compileFormDocuments(
       }
       return { segments, path, schema, boundName }
     }
-    const bindingExpression = (binding: DataBinding) => {
-      const base =
-        binding.scope === 'parent'
-          ? `, $self.path.segments.slice(0, ${parent.length})`
-          : ''
-      return `{{ $document.read(${JSON.stringify(binding.path)}${base}) }}`
+    const bindingExpression = (
+      binding: DataBinding,
+      columns?: Record<string, string[]>,
+    ) => {
+      const args = [JSON.stringify(binding.path)]
+      if (binding.scope === 'parent')
+        args.push(`$self.path.segments.slice(0, ${parent.length})`)
+      else if (columns) args.push('[]')
+      if (columns) args.push(JSON.stringify(columns))
+      return `{{ $document.read(${args.join(', ')}) }}`
     }
     const resolvedSlots = new Map<string, DataSchema>()
+    const columnSlots = new Map<string, Record<string, string[]>>()
 
     for (const [prop, binding] of Object.entries(node.bindings ?? {})) {
       if (
@@ -438,6 +447,50 @@ export function compileFormDocuments(
       )
         ? bindingContracts[prop]
         : undefined
+      const mapped: Record<string, string[]> = Object.create(null)
+      if (binding.columnPaths !== undefined) {
+        if (
+          !contract ||
+          !('rows' in contract) ||
+          !isJsonObject(binding.columnPaths)
+        )
+          fail(
+            node,
+            boundName,
+            'Column paths require a rows contract',
+            'invalid_column_paths',
+            prop,
+          )
+        else
+          for (const [column, pointer] of Object.entries(binding.columnPaths)) {
+            if (
+              !contract.rows.columns.some((entry) => entry.column === column) ||
+              typeof pointer !== 'string' ||
+              !pointer
+            ) {
+              fail(
+                node,
+                boundName,
+                `Invalid path for column "${column}"`,
+                'invalid_column_paths',
+                prop,
+              )
+              continue
+            }
+            try {
+              mapped[column] = pointerSegments(pointer)
+            } catch {
+              fail(
+                node,
+                boundName,
+                `Invalid path for column "${column}"`,
+                'invalid_column_paths',
+                prop,
+              )
+            }
+          }
+      }
+      columnSlots.set(prop, mapped)
       if (contract && 'rows' in contract) {
         const { columns, incomplete, validate } = contract.rows
         dependencies.push({
@@ -468,7 +521,7 @@ export function compileFormDocuments(
           )
         for (const { column, types, property = prop } of columns) {
           if (typeof column !== 'string' || !column) continue
-          const columnPath = [...bound, null, column]
+          const columnPath = [...bound, null, ...(mapped[column] ?? [column])]
           dependencies.push({
             componentId: node.id,
             property,
@@ -477,7 +530,7 @@ export function compileFormDocuments(
           })
           if (
             !lookup.accepts(
-              lookup.child(row, column),
+              lookup.at(columnPath),
               types,
               !types.includes('null'),
             )
@@ -491,7 +544,13 @@ export function compileFormDocuments(
             )
         }
         if (validate)
-          rowChecks.push({ node, property: prop, path: bound, validate })
+          rowChecks.push({
+            node,
+            property: prop,
+            path: bound,
+            validate,
+            columns: mapped,
+          })
       } else {
         const scalarContract =
           contract && 'types' in contract ? contract : undefined
@@ -527,17 +586,21 @@ export function compileFormDocuments(
             )
         }
       }
-      props[prop] = bindingExpression(binding)
+      props[prop] = bindingExpression(
+        binding,
+        Object.keys(mapped).length ? mapped : undefined,
+      )
     }
 
     if (expected?.compileProps) {
       props = expected.compileProps(props, {
         path: pathName,
         columnSchema(property, column) {
+          const row = lookup.child(resolvedSlots.get(property), null)
           return describeSchema(
-            lookup.child(
-              lookup.child(resolvedSlots.get(property), null),
-              column,
+            (columnSlots.get(property)?.[column] ?? [column]).reduce(
+              (schema, key) => lookup.child(schema, key),
+              row,
             ),
           )
         },
@@ -680,10 +743,14 @@ export function compileFormDocuments(
 
   function compileChildren(nodes: UiDocumentNode[], parent: (string | null)[]) {
     const properties: Record<string, ISchema> = {}
-    nodes.forEach((node, index) => {
-      const compiled = compileNode(node, parent)
-      if (!compiled) return
-      const { path, field } = compiled
+    // Insert real object fields before bindings that reuse an intermediate object.
+    const fields = nodes
+      .flatMap((node, index) => {
+        const field = compileNode(node, parent)
+        return field ? [{ ...field, node, index }] : []
+      })
+      .sort((left, right) => left.path.length - right.path.length)
+    fields.forEach(({ path, field, node, index }) => {
       let target = properties
       for (const group of path.slice(0, -1)) {
         const container = Object.prototype.hasOwnProperty.call(target, group)
@@ -721,20 +788,27 @@ export function compileFormDocuments(
     diagnostics: issues,
     validateBindings(data: JsonObject) {
       const result: DocumentIssue[] = []
-      for (const { node, property, path, validate } of rowChecks) {
+      for (const { node, property, path, validate, columns } of rowChecks) {
         const visit = (value: unknown, index: number, current: string[]) => {
           if (index === path.length) {
             if (!Array.isArray(value)) return
             result.push(
-              ...validate(value).map((issue) => ({
-                component: node.component,
-                componentId: node.id,
-                property,
-                path: jsonPointer([...current, ...issue.path]),
-                message: issue.message,
-                code: issue.code,
-                severity: 'error' as const,
-              })),
+              ...validate(projectDocumentRows(value, columns) as unknown[]).map(
+                (issue) => ({
+                  component: node.component,
+                  componentId: node.id,
+                  property,
+                  path: jsonPointer([
+                    ...current,
+                    ...issue.path.slice(0, 1),
+                    ...(columns[issue.path[1]] ?? issue.path.slice(1, 2)),
+                    ...issue.path.slice(2),
+                  ]),
+                  message: issue.message,
+                  code: issue.code,
+                  severity: 'error' as const,
+                }),
+              ),
             )
             return
           }

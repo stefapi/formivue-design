@@ -20,12 +20,20 @@ import {
   type DocumentDataPath,
 } from './document-paths'
 import { schemaLookup, type DataSchema } from './document-schema'
-import type { DataBinding, FormDocuments, UiDocument } from './documents'
+import { pathStartsWith, type DocumentPropertyMove } from './document-move'
+import type {
+  DataBinding,
+  FormDocuments,
+  UiDocument,
+  UiDocumentNode,
+} from './documents'
 
 export interface DocumentPropertyRename {
   path: DocumentDataPath
   key: string
 }
+export type DocumentPropertyChange =
+  DocumentPropertyRename | DocumentPropertyMove
 
 const has = (value: object, key: string) =>
   Object.prototype.hasOwnProperty.call(value, key)
@@ -33,7 +41,7 @@ const index = /^(0|[1-9]\d*)$/u
 
 export function renameDataPath(
   path: DocumentDataPath,
-  rename: DocumentPropertyRename,
+  rename: DocumentPropertyChange,
 ): DocumentDataPath {
   if (
     path.length < rename.path.length ||
@@ -43,8 +51,12 @@ export function renameDataPath(
     )
   )
     return path
-  const last = rename.path.length - 1
-  return [...path.slice(0, last), rename.key, ...path.slice(last + 1)]
+  const target =
+    'to' in rename ? rename.to : [...rename.path.slice(0, -1), rename.key]
+  return [
+    ...target.map((key, index) => (key === null ? path[index] : key)),
+    ...path.slice(rename.path.length),
+  ]
 }
 
 function renameValue(
@@ -292,24 +304,72 @@ export function renameDocumentData(
 
 export function renameDocumentUi(
   ui: UiDocument,
-  rename: DocumentPropertyRename,
+  rename: DocumentPropertyChange,
   options: DocumentContractOptions,
 ): { ui: UiDocument; componentIds: string[] } {
   const result = copyJson(ui) as unknown as UiDocument
   const contracts = options.contracts ?? standardDocumentContracts
   const componentIds: string[] = []
+  const moves: {
+    node: UiDocumentNode
+    from: UiDocumentNode
+    to?: UiDocumentNode
+  }[] = []
+  const ancestry = new Map<
+    UiDocumentNode,
+    { parent: UiDocumentNode | undefined; scope: DocumentDataPath }
+  >()
 
-  visitUiNodes(result, (node, scope, path) => {
-    const nextScope = renameDataPath(scope, rename)
+  visitUiNodes(result, (node, scope, path, parent) => {
+    ancestry.set(node, { parent, scope: path })
+    let nextScope = renameDataPath(scope, rename)
     const nextPath = renameDataPath(path, rename)
     const originalBindings = node.bindings
+    const contract = contracts.resolve(node.component, node.props)
+    if (node.bind !== undefined && !pathStartsWith(nextPath, nextScope)) {
+      let owner = parent
+      while (
+        owner &&
+        !pathStartsWith(
+          nextPath,
+          renameDataPath(ancestry.get(owner).scope, rename),
+        )
+      ) {
+        if (
+          owner.kind === 'void' ||
+          owner.kind === 'array' ||
+          ancestry.get(owner).parent?.item === owner
+        )
+          documentError(
+            'incompatible_move_layout',
+            documentPath(nextPath),
+            'The field would leave its layout or repeated row',
+          )
+        owner = ancestry.get(owner).parent
+      }
+      nextScope = owner ? renameDataPath(ancestry.get(owner).scope, rename) : []
+      moves.push({ node, from: parent, to: owner })
+    }
     const rewriteBinding = (binding: DataBinding) => {
       const base = binding.scope === 'parent' ? scope : []
       const bound = [...base, ...pointerSegments(binding.path)]
       const next = renameDataPath(bound, rename)
-      return next === bound
-        ? binding
-        : { ...binding, path: jsonPointer(next.slice(base.length) as string[]) }
+      const nextBase = binding.scope === 'parent' ? nextScope : []
+      if (pathStartsWith(next, nextBase)) {
+        const pointer = jsonPointer(next.slice(nextBase.length) as string[])
+        return pointer === binding.path
+          ? binding
+          : { ...binding, path: pointer }
+      }
+      if (next.includes(null))
+        documentError(
+          'incompatible_move_binding',
+          documentPath(next),
+          'The binding would leave the component’s row scope',
+        )
+      const absolute = { ...binding, path: jsonPointer(next as string[]) }
+      delete absolute.scope
+      return absolute
     }
     let changed = false
     if (node.bind !== undefined) {
@@ -320,7 +380,34 @@ export function renameDocumentUi(
       }
     }
     for (const [property, binding] of Object.entries(originalBindings ?? {})) {
-      const next = rewriteBinding(binding)
+      let next = rewriteBinding(binding)
+      const slot = contract?.bindings?.[property]
+      if (slot && 'rows' in slot) {
+        const base = binding.scope === 'parent' ? scope : []
+        const row = [...base, ...pointerSegments(binding.path), null]
+        const targetRow = renameDataPath(row, rename)
+        for (const { column } of slot.rows.columns) {
+          if (!column) continue
+          const pointer = binding.columnPaths?.[column]
+          if (pointer === undefined && !('to' in rename)) continue
+          const relative =
+            pointer === undefined ? [column] : pointerSegments(pointer)
+          const mapped = renameDataPath([...row, ...relative], rename)
+          const moved = mapped.slice(targetRow.length)
+          if (!pathStartsWith(mapped, targetRow) || moved.includes(null))
+            documentError(
+              'incompatible_move_binding',
+              documentPath(mapped),
+              'A mapped column must stay in its source row',
+            )
+          const target = jsonPointer(moved as string[])
+          if (target !== (pointer ?? jsonPointer([column])))
+            next = {
+              ...next,
+              columnPaths: { ...next.columnPaths, [column]: target },
+            }
+        }
+      }
       if (next !== binding) {
         node.bindings = { ...node.bindings, [property]: next }
         changed = true
@@ -328,20 +415,32 @@ export function renameDocumentUi(
     }
     if (node.rowKey !== undefined) {
       const rowKey = [...path, null, node.rowKey]
-      const next = renameDataPath(rowKey, rename)[rowKey.length - 1]
+      const mapped = renameDataPath(rowKey, rename)
+      const targetRow = [...nextPath, null]
+      if (
+        !pathStartsWith(mapped, targetRow) ||
+        mapped.length !== targetRow.length + 1
+      )
+        documentError(
+          'incompatible_move_row_key',
+          documentPath(mapped),
+          'An editable array row key must remain a direct property of the row',
+        )
+      const next = mapped[mapped.length - 1]
       if (next !== node.rowKey) {
         if (node.props?.rowKey === node.rowKey) node.props.rowKey = next
         node.rowKey = next
         changed = true
       }
     }
-    const contract = contracts.resolve(node.component, node.props)
     if (contract?.renameProps && node.props) {
       const props = contract.renameProps(node.props, {
         renameBinding: rewriteBinding,
         renameColumn(property, column) {
           const binding = originalBindings?.[property]
           if (!binding) return column
+          if ('to' in rename || binding.columnPaths?.[column] !== undefined)
+            return column
           const base = binding.scope === 'parent' ? scope : []
           const path = [...base, ...pointerSegments(binding.path), null, column]
           return renameDataPath(path, rename)[path.length - 1]
@@ -392,5 +491,10 @@ export function renameDocumentUi(
     if (changed) componentIds.push(node.id)
   })
 
+  for (const { node, from, to } of moves) {
+    from.children = from.children.filter((child) => child !== node)
+    const siblings = to ? (to.children ??= []) : result.nodes
+    siblings.push(node)
+  }
   return { ui: result, componentIds }
 }
