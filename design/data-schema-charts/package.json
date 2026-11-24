@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@formivue-design/formivue-transformer": "workspace:*",
-    "@formivue-design/charts-runtime": "workspace:*"
+    "@formivue-design/charts-runtime": "workspace:*",
+    "@formivue/json-schema": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

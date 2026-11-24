@@ -1,0 +1,190 @@
+{
+  "charts": {
+    "BarChart": "cartesian",
+    "StackedBarChart": "cartesian",
+    "LineChart": "cartesian",
+    "AreaChart": "cartesian",
+    "PieChart": "slice",
+    "DonutChart": "slice",
+    "RadialBarChart": "radial",
+    "CircularBarChart": "radial",
+    "NestedDonutChart": "hierarchy",
+    "TreemapChart": "hierarchy",
+    "HeatmapChart": "heatmap",
+    "ScatterChart": "scatter",
+    "BoxplotChart": "boxplot",
+    "TimelineChart": "timeline",
+    "SankeyChart": "flow",
+    "ChordChart": "flow",
+    "NetworkGraph": "network",
+    "PointMap": "pointMap",
+    "FlowMap": "flowMap",
+    "ChoroplethMap": "choropleth"
+  },
+  "rules": {
+    "TimelineChart": ["dateOrder"],
+    "SankeyChart": ["acyclic"]
+  },
+  "profiles": {
+    "cartesian": [
+      {
+        "when": {
+          "countRows": true
+        },
+        "required": [
+          ["xKey", "period"],
+          ["groupKey", "group", "whenSet"]
+        ]
+      },
+      {
+        "when": {
+          "groupKey": true
+        },
+        "required": [
+          ["xKey", "period"],
+          ["groupKey", "group"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "finite"
+      },
+      {
+        "required": [["xKey", "period"]],
+        "series": true
+      }
+    ],
+    "slice": [
+      {
+        "when": {
+          "countRows": true
+        },
+        "required": [["xKey", "period"]]
+      },
+      {
+        "required": [
+          ["xKey", "period"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "positive"
+      }
+    ],
+    "radial": [
+      {
+        "required": [
+          ["xKey", "label"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "positive"
+      }
+    ],
+    "hierarchy": [
+      {
+        "required": [
+          ["xKey", "label"],
+          ["groupKey", "label", "whenSet"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "positive"
+      }
+    ],
+    "heatmap": [
+      {
+        "required": [
+          ["xKey", "label"],
+          ["groupKey", "label"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "finite"
+      }
+    ],
+    "scatter": [
+      {
+        "required": [
+          ["xKey", "number"],
+          ["valueKey", "number"]
+        ]
+      }
+    ],
+    "boxplot": [
+      {
+        "required": [
+          ["xKey", "label"],
+          ["valueKey", "number"]
+        ]
+      }
+    ],
+    "timeline": [
+      {
+        "required": [
+          ["xKey", "label"],
+          ["startKey", "date"],
+          ["endKey", "date"]
+        ]
+      }
+    ],
+    "flow": [
+      {
+        "required": [
+          ["sourceKey", "label"],
+          ["targetKey", "label"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "positive"
+      }
+    ],
+    "network": [
+      {
+        "required": [
+          ["sourceKey", "label"],
+          ["targetKey", "label"],
+          ["valueKey", "number", "whenSet"]
+        ],
+        "aggregate": "positive"
+      }
+    ],
+    "pointMap": [
+      {
+        "required": [
+          ["latitudeKey", "latitude"],
+          ["longitudeKey", "longitude"]
+        ],
+        "optional": [
+          ["xKey", "label"],
+          ["valueKey", "number"]
+        ]
+      }
+    ],
+    "flowMap": [
+      {
+        "required": [
+          ["latitudeKey", "latitude"],
+          ["longitudeKey", "longitude"],
+          ["destinationLatitudeKey", "latitude"],
+          ["destinationLongitudeKey", "longitude"]
+        ],
+        "optional": [
+          ["xKey", "label"],
+          ["valueKey", "number"]
+        ]
+      }
+    ],
+    "choropleth": [
+      {
+        "required": [
+          ["xKey", "country"],
+          ["valueKey", "number"]
+        ],
+        "aggregate": "finite"
+      }
+    ]
+  },
+  "filters": {
+    "matches": {
+      "columnTypes": ["string", "number", "boolean", "null"],
+      "valueTypes": ["string", "number", "boolean", "array", "null"]
+    },
+    "dateRange": {
+      "columnTypes": ["string", "number", "null"],
+      "valueTypes": ["array", "null"]
+    }
+  }
+}

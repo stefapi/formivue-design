@@ -90,7 +90,15 @@ const branchStep: DocumentComponentContract = {
         }
         const resolved = resolveBinding({ path: branch.path }, property, [type])
         if (!resolved) return branch
-        if (!resolved.types.includes(type))
+        const restrictions = resolved.schema?.constraints
+        if (
+          !resolved.types.includes(type) ||
+          (restrictions &&
+            Object.prototype.hasOwnProperty.call(restrictions, 'const') &&
+            restrictions.const !== branch.equals) ||
+          (Array.isArray(restrictions?.enum) &&
+            !restrictions.enum.includes(branch.equals))
+        )
           report({
             property,
             path: resolved.path,
@@ -128,6 +136,16 @@ export const advancedDocumentContracts: DocumentContractExtension = {
     StepperStep: branchStep,
     DataTable: (props) => {
       const columns = Array.isArray(props.columns) ? props.columns : []
+      const mapped = columns.flatMap((column) => {
+        const key = isJsonObject(column) ? column.key : undefined
+        return typeof key === 'string' && key
+          ? [{ column: key, types: scalarTypes }]
+          : []
+      })
+      const rowKey =
+        typeof props.rowKey === 'string' && props.rowKey
+          ? props.rowKey
+          : undefined
       return {
         kind: 'void',
         renameProps(props, { renameColumn }) {
@@ -162,18 +180,55 @@ export const advancedDocumentContracts: DocumentContractExtension = {
           rows: {
             required: true,
             rows: {
-              columns: columns.flatMap((column) => {
-                const key = isJsonObject(column) ? column.key : undefined
-                return typeof key === 'string' && key
-                  ? [{ column: key, types: scalarTypes }]
-                  : []
-              }),
-              incomplete: columns.some(
-                (column) =>
-                  !isJsonObject(column) ||
-                  typeof column.key !== 'string' ||
-                  !column.key,
-              ),
+              columns: [
+                ...mapped,
+                ...(rowKey
+                  ? [
+                      {
+                        column: rowKey,
+                        types: ['string', 'number'] as const,
+                        property: 'rowKey',
+                      },
+                    ]
+                  : []),
+              ],
+              incomplete:
+                mapped.length !== columns.length ||
+                new Set(mapped.map(({ column }) => column)).size !==
+                  mapped.length ||
+                (props.rowKey !== undefined && !rowKey),
+              validate: rowKey
+                ? (rows) => {
+                    const keys = new Set<string>()
+                    return rows.flatMap((row, index) => {
+                      const value = isJsonObject(row) ? row[rowKey] : undefined
+                      const path = [String(index), rowKey]
+                      if (
+                        typeof value !== 'string' &&
+                        typeof value !== 'number'
+                      )
+                        return [
+                          {
+                            path,
+                            code: 'invalid_table_row_key',
+                            message:
+                              'A table row key must be a string or number',
+                          },
+                        ]
+                      const key = String(value)
+                      if (keys.has(key))
+                        return [
+                          {
+                            path,
+                            code: 'duplicate_table_row_key',
+                            message: 'Table row keys must be unique',
+                          },
+                        ]
+                      keys.add(key)
+                      return []
+                    })
+                  }
+                : undefined,
             },
           },
         },

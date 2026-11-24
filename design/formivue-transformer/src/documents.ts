@@ -18,9 +18,11 @@ import {
   type DocumentDataType,
   type DocumentDependency,
   type DocumentRowsContract,
+  type DocumentSchemaDescription,
 } from './document-contracts'
 import { schemaLookup, type DataSchema } from './document-schema'
 import { projectDocumentConstraints } from './document-projection'
+import { visitUiNodes } from './document-paths'
 
 export interface DataBinding {
   path: string
@@ -94,6 +96,19 @@ export function compileFormDocuments(
       },
     ])
   const lookup = schemaLookup(dataSchema)
+  const describeSchema = (
+    schema: DataSchema,
+  ): DocumentSchemaDescription | undefined =>
+    schema === undefined || schema === false
+      ? undefined
+      : {
+          types: lookup.possible(schema),
+          constraints: lookup.constraints(schema),
+          item: (index) =>
+            describeSchema(
+              lookup.child(schema, index === undefined ? null : String(index)),
+            ),
+        }
   if (!lookup.accepts(dataSchema, ['object']))
     throw new DocumentValidationError([
       {
@@ -317,6 +332,7 @@ export function compileFormDocuments(
     }
 
     let props: JsonObject = { ...node.props }
+    if (expected?.normalizeProps) props = expected.normalizeProps(props)
     const bindingContracts = expected?.bindings ?? {}
     for (const [prop, contract] of Object.entries(bindingContracts)) {
       if (Object.prototype.hasOwnProperty.call(props, prop))
@@ -371,6 +387,14 @@ export function compileFormDocuments(
       }
       return { segments, path, schema, boundName }
     }
+    const bindingExpression = (binding: DataBinding) => {
+      const base =
+        binding.scope === 'parent'
+          ? `, $self.path.segments.slice(0, ${parent.length})`
+          : ''
+      return `{{ $document.read(${JSON.stringify(binding.path)}${base}) }}`
+    }
+    const resolvedSlots = new Map<string, DataSchema>()
 
     for (const [prop, binding] of Object.entries(node.bindings ?? {})) {
       if (
@@ -404,6 +428,7 @@ export function compileFormDocuments(
       const resolved = resolveBinding(binding, prop)
       if (!resolved) continue
       const { path: bound, schema: propertySchema, boundName } = resolved
+      resolvedSlots.set(prop, propertySchema)
       const contract = Object.prototype.hasOwnProperty.call(
         bindingContracts,
         prop,
@@ -438,12 +463,12 @@ export function compileFormDocuments(
             'incomplete_column_mapping',
             prop,
           )
-        for (const { column, types } of columns) {
+        for (const { column, types, property = prop } of columns) {
           if (typeof column !== 'string' || !column) continue
           const columnPath = [...bound, null, column]
           dependencies.push({
             componentId: node.id,
-            property: prop,
+            property,
             path: columnPath,
             types,
           })
@@ -459,7 +484,7 @@ export function compileFormDocuments(
               location(columnPath),
               `Column "${column}" must have type ${types.join(' or ')}`,
               'incompatible_column',
-              prop,
+              property,
             )
         }
         if (validate)
@@ -499,17 +524,20 @@ export function compileFormDocuments(
             )
         }
       }
-      const base =
-        binding.scope === 'parent'
-          ? `, $self.path.segments.slice(0, ${parent.length})`
-          : ''
-      props[prop] =
-        `{{ $document.read(${JSON.stringify(binding.path)}${base}) }}`
+      props[prop] = bindingExpression(binding)
     }
 
     if (expected?.compileProps) {
       props = expected.compileProps(props, {
         path: pathName,
+        columnSchema(property, column) {
+          return describeSchema(
+            lookup.child(
+              lookup.child(resolvedSlots.get(property), null),
+              column,
+            ),
+          )
+        },
         resolveBinding(binding, property, types) {
           const resolved = resolveBinding(binding, property)
           if (!resolved) return
@@ -523,6 +551,8 @@ export function compileFormDocuments(
             segments: resolved.segments,
             path: resolved.boundName,
             types: lookup.possible(resolved.schema),
+            expression: bindingExpression(binding),
+            schema: describeSchema(resolved.schema),
           }
         },
         report(issue) {
@@ -731,6 +761,15 @@ export function createFormDocument(
     documents.dataSchema,
   ) as FormDocuments['dataSchema']
   const compiled = compileFormDocuments({ ui, dataSchema }, options)
+  if (options.contracts) {
+    const registry = options.contracts
+    visitUiNodes(ui, (node) => {
+      if (!node.props) return
+      const contract = registry.resolve(node.component, node.props)
+      if (contract?.normalizeProps)
+        node.props = contract.normalizeProps(node.props)
+    })
+  }
   const data = createDataDocument({
     schema: dataSchema,
     data: documents.data,

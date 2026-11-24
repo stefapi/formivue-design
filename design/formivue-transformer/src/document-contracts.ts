@@ -26,7 +26,11 @@ export interface DocumentDependency {
 }
 
 export interface DocumentRowsContract {
-  columns: readonly { column: string; types: readonly DocumentDataType[] }[]
+  columns: readonly {
+    column: string
+    types: readonly DocumentDataType[]
+    property?: string
+  }[]
   incomplete?: boolean
   validate?: (rows: unknown[]) => readonly {
     path: readonly string[]
@@ -47,13 +51,31 @@ export interface DocumentContractContext {
     binding: DataBinding,
     property: string,
     types: readonly DocumentDataType[],
-  ): { segments: string[]; path: string; types: readonly string[] } | undefined
+  ):
+    | {
+        segments: string[]
+        path: string
+        types: readonly string[]
+        expression?: string
+        schema?: DocumentSchemaDescription
+      }
+    | undefined
+  columnSchema(
+    property: string,
+    column: string,
+  ): DocumentSchemaDescription | undefined
   report(issue: {
     code: string
     message: string
     path?: string
     property?: string
   }): void
+}
+
+export interface DocumentSchemaDescription {
+  types: readonly string[]
+  constraints: Readonly<Record<string, unknown>>
+  item(index?: number): DocumentSchemaDescription | undefined
 }
 
 export interface DocumentComponentContract {
@@ -65,6 +87,8 @@ export interface DocumentComponentContract {
   bindings?: Readonly<Record<string, DocumentBindingContract>>
   allowsBinding?: (property: string) => boolean
   migrateProps?: (props: JsonObject) => JsonObject
+  /** Canonicalizes props when an existing UI document is read. */
+  normalizeProps?: (props: JsonObject) => JsonObject
   renameProps?: (
     props: JsonObject,
     context: DocumentRenameContext,

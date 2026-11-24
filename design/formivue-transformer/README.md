@@ -99,6 +99,46 @@ registered contract generates a warning. Typed bindings can still be checked
 and a renderer registry can reject unrecognized component names. Duplicate
 contracts and unresolved bindings produce errors.
 
+### Bind chart filters to form fields
+
+Declare the row source and the filter bindings in `ui.json`. Both paths
+refer to properties described by `data.schema.json`. More than one chart
+can read the same filter fields.
+
+```json
+{
+  "bindings": { "rows": { "path": "/sales" } },
+  "props": {
+    "filters": [
+      {
+        "column": "ordered",
+        "operation": "dateRange",
+        "valueBinding": { "path": "/selection/period" }
+      },
+      {
+        "column": "status",
+        "operation": "matches",
+        "valueBinding": { "path": "/selection/status" }
+      }
+    ]
+  }
+}
+```
+
+`dateRange` expects a date column and a field that accepts a pair of dates.
+`matches` accepts a scalar or a list of choices compatible with its column.
+A filter may also declare a fixed `value`. Supported legacy field expressions
+are converted to `valueBinding` when reading a document. The compiler validates
+the row source, mapped columns and filter fields, and generates runtime bindings.
+Filters limit the chart and its data table while preserving the source rows.
+Renaming a column or a filter field in a variant updates its references in
+`ui.json`.
+
+The chart runtime and the chart extension use the same JSON mapping catalogue
+and row validators for chart-specific rules, including cyclic Sankey flows.
+The advanced extension validates DataTable columns and explicitly configured
+row keys, as well as questionnaire and stepper branch values.
+
 ### Generate a model and prepare variants
 
 `generateFormDataSchema(ui, { contracts })` derives a JSON Schema from a

@@ -82,7 +82,9 @@ export function schemaLookup(root: DataSchema) {
         : schema.properties &&
             Object.prototype.hasOwnProperty.call(schema.properties, key)
           ? schema.properties[key]
-          : schema.type === 'array' && index !== undefined
+          : index !== undefined &&
+              (schema.type === 'array' ||
+                (Array.isArray(schema.type) && schema.type.includes('array')))
             ? (schema.prefixItems?.[index] ?? schema.items)
             : undefined
     const matches = [

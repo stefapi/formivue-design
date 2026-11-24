@@ -126,6 +126,106 @@ const contracts = createDocumentContractRegistry([
 const createDocument = (documents: FormDocuments) =>
   createFormDocument(documents, { contracts })
 
+function filteredDocuments() {
+  const initial = documents()
+  const filters = [
+    {
+      column: 'ordered',
+      operation: 'dateRange',
+      valueBinding: { path: '/selection/period' },
+    },
+    {
+      column: 'status',
+      operation: 'matches',
+      valueBinding: { path: '/selection/status' },
+    },
+  ]
+  initial.ui.nodes.unshift(
+    makeNode('selection', {
+      kind: 'object',
+      bind: '/selection',
+      children: [
+        makeNode('period', {
+          kind: 'field',
+          component: 'DatePicker.RangePicker',
+          bind: '/period',
+        }),
+        makeNode('status', {
+          kind: 'field',
+          component: 'Select',
+          bind: '/status',
+          options: [
+            { label: 'Paid', value: 'paid' },
+            { label: 'Pending', value: 'pending' },
+          ],
+        }),
+      ],
+    }),
+  )
+  const chart = initial.ui.nodes.find(({ id }) => id === 'chart')
+  chart.props.filters = filters
+  initial.ui.nodes.push(
+    makeNode('donut', {
+      component: 'DonutChart',
+      props: { xKey: 'status', valueKey: 'amount', filters },
+      bindings: { rows: { path: '/sales' } },
+    }),
+  )
+  initial.dataSchema.properties.selection = {
+    type: 'object',
+    properties: {
+      period: {
+        type: 'array',
+        items: { type: 'string', format: 'date' },
+      },
+      status: { type: 'string', enum: ['paid', 'pending'] },
+    },
+  }
+  const definitions = initial.dataSchema.$defs as Record<
+    string,
+    { properties: Record<string, object> }
+  >
+  Object.assign(definitions.sale.properties, {
+    ordered: { type: 'string', format: 'date' },
+    status: { type: 'string', enum: ['paid', 'pending'] },
+  })
+  initial.data.selection = {
+    period: ['2026-01-01', '2026-01-31'],
+    status: 'paid',
+  }
+  initial.data.sales = [
+    {
+      id: '1',
+      month: 'January',
+      ordered: '2026-01-01',
+      status: 'paid',
+      amount: 10,
+    },
+    {
+      id: '2',
+      month: 'January',
+      ordered: '2026-01-08',
+      status: 'pending',
+      amount: 5,
+    },
+    {
+      id: '3',
+      month: 'February',
+      ordered: '2026-02-01',
+      status: 'pending',
+      amount: 20,
+    },
+    {
+      id: '4',
+      month: 'February',
+      ordered: '2026-02-02',
+      status: 'paid',
+      amount: 30,
+    },
+  ]
+  return initial
+}
+
 describe('separate UI, schema and data documents', () => {
   test('uses a session-local contract to migrate and compile a custom component', () => {
     const registry = createDocumentContractRegistry([
@@ -477,6 +577,184 @@ describe('separate UI, schema and data documents', () => {
       for (const key of Object.keys(measures))
         Reflect.deleteProperty(SVGElement.prototype, key)
     }
+  })
+
+  test('keeps two charts and their tables filtered after renaming and reimport', async () => {
+    const initial = filteredDocuments()
+    const generated = createFormDocumentProject(initial.ui, { contracts })
+    expect(generated.base.dataSchema.properties.selection).toMatchObject({
+      properties: {
+        period: { type: 'array', items: { type: 'string' } },
+        status: { enum: ['paid', 'pending'] },
+      },
+    })
+    const project = createFormDocumentVariant(
+      createFormDocumentProject(initial, { contracts }),
+      'API',
+    )
+    const renamed = [
+      { path: ['sales', null, 'status'], key: 'state' },
+      { path: ['sales', null, 'amount'], key: 'net' },
+      { path: ['selection', 'status'], key: 'selected' },
+    ].reduce(
+      (current, rename) =>
+        renameFormDocumentProperty(current, 'API', rename, { contracts })
+          .project,
+      project,
+    )
+    const exported = exportFormDocumentVariant(renamed, 'API', { contracts })
+    const files = stringifyFormDocuments(exported)
+    const imported = parseFormDocuments(files)
+    for (const id of ['chart', 'donut']) {
+      const node = imported.ui.nodes.find((node) => node.id === id)
+      expect(node.bindings.rows).toEqual({ path: '/sales' })
+      expect(node.props.filters).toEqual([
+        {
+          column: 'ordered',
+          operation: 'dateRange',
+          valueBinding: { path: '/selection/period' },
+        },
+        {
+          column: 'state',
+          operation: 'matches',
+          valueBinding: { path: '/selection/selected' },
+        },
+      ])
+    }
+    expect(files.ui).not.toContain('{{')
+    const compiled = compileFormDocuments(imported, { contracts })
+    expect(compiled.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          componentId: 'chart',
+          property: 'filters[1].column',
+          path: ['sales', null, 'state'],
+        }),
+        expect.objectContaining({
+          componentId: 'donut',
+          property: 'filters[1].valueBinding',
+          path: ['selection', 'selected'],
+        }),
+      ]),
+    )
+
+    const measures = {
+      getComputedTextLength: () => 24,
+      getBBox: () => ({ x: 0, y: 0, width: 24, height: 12 }),
+    }
+    for (const [key, value] of Object.entries(measures))
+      Object.defineProperty(SVGElement.prototype, key, {
+        configurable: true,
+        value,
+      })
+    const document = createDocument(imported)
+    const view = mount(PreviewWidget, {
+      props: { tree: tree(), materials, document },
+    })
+    const chartTables = () =>
+      view
+        .findAll('figure')
+        .map((figure) =>
+          figure
+            .findAll('tbody tr')
+            .map((row) => row.findAll('td').map((cell) => cell.text())),
+        )
+    try {
+      expect(view.find('button[data-slot="range-picker"]').exists()).toBe(true)
+      expect(view.get('button[role="combobox"]').text()).toContain('Paid')
+      await vi.waitFor(() => {
+        expect(chartTables()).toEqual([[['January', '10']], [['paid', '10']]])
+        expect(view.findAll('figure svg').length).toBeGreaterThanOrEqual(2)
+      })
+      document.form.setValuesIn(['selection', 'selected'], 'pending')
+      await vi.waitFor(() =>
+        expect(chartTables()).toEqual([[['January', '5']], [['pending', '5']]]),
+      )
+      document.form.setValuesIn(
+        ['selection', 'period'],
+        ['2026-02-01', '2026-02-28'],
+      )
+      await vi.waitFor(() =>
+        expect(chartTables()).toEqual([
+          [['February', '20']],
+          [['pending', '20']],
+        ]),
+      )
+      expect(document.exportData().sales).toEqual(imported.data.sales)
+      expect(view.findAll('.dn-array-table tbody tr')).toHaveLength(4)
+      expect(
+        view.findAll('table[aria-label="Data table"] tbody tr'),
+      ).toHaveLength(4)
+      document.form.setValuesIn(['sales', '2', 'net'], 25)
+      await vi.waitFor(() =>
+        expect(chartTables()).toEqual([
+          [['February', '25']],
+          [['pending', '25']],
+        ]),
+      )
+      expect(document.exportData().sales[0]).toEqual(imported.data.sales[0])
+    } finally {
+      view.unmount()
+      document.dispose()
+      for (const key of Object.keys(measures))
+        Reflect.deleteProperty(SVGElement.prototype, key)
+    }
+  })
+
+  test('normalizes legacy filter expressions on import and diagnoses incompatible chart bindings', () => {
+    const initial = filteredDocuments()
+    const chart = initial.ui.nodes.find(({ id }) => id === 'chart')
+    chart.props.filters[1] = {
+      column: 'status',
+      operation: 'matches',
+      value: '{{ $form.getValuesIn(["selection","status"]) }}',
+    }
+    const imported = parseFormDocuments(stringifyFormDocuments(initial))
+    const document = createDocument(imported)
+    try {
+      expect(
+        document.exportDocuments().ui.nodes.find(({ id }) => id === 'chart')
+          .props.filters[1],
+      ).toEqual({
+        column: 'status',
+        operation: 'matches',
+        valueBinding: { path: '/selection/status' },
+      })
+    } finally {
+      document.dispose()
+    }
+
+    chart.props.filters[0].valueBinding.path = '/selection/status'
+    chart.props.filters[1].column = 'missing'
+    const donut = initial.ui.nodes.find(({ id }) => id === 'donut')
+    donut.props.filters = [
+      {
+        column: 'status',
+        operation: 'matches',
+        valueBinding: { path: '/selection/missing' },
+      },
+    ]
+    expect(() => compileFormDocuments(initial, { contracts })).toThrow(
+      expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'invalid_chart_filter',
+            path: '/selection/status',
+            property: 'filters[0].valueBinding',
+          }),
+          expect.objectContaining({
+            code: 'incompatible_column',
+            path: '/sales/*/missing',
+            property: 'filters[1].column',
+          }),
+          expect.objectContaining({
+            code: 'missing_data_path',
+            path: '/selection/missing',
+            property: 'filters[0].valueBinding',
+          }),
+        ]),
+      }),
+    )
   })
 
   test('reports rename collisions and reconciles compatible edits to the canvas', () => {
@@ -894,6 +1172,74 @@ describe('separate UI, schema and data documents', () => {
     }
     timeline.data = { events: [{ label: 'Event', start: 5, end: 1 }] }
     expect(() => createDocument(timeline)).toThrow(/TimelineChart.*dateOrder/u)
+  })
+
+  test('rejects cyclic Sankey flows, duplicate DataTable keys and unavailable branch choices', () => {
+    const initial = documents()
+    initial.dataSchema.properties.route = { type: 'string', enum: ['review'] }
+    initial.data.route = 'review'
+    initial.ui.nodes.push(
+      makeNode('step', {
+        component: 'QuestionnaireStep',
+        props: { branches: [{ path: '/route', equals: 'skip', next: 'end' }] },
+      }),
+    )
+    const hasIssue = (code: string, path: string) =>
+      expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({ code, path }),
+        ]),
+      })
+    expect(() => compileFormDocuments(initial, { contracts })).toThrow(
+      hasIssue('incompatible_branch_value', '/route'),
+    )
+    initial.ui.nodes.pop()
+    const table = initial.ui.nodes.find(({ id }) => id === 'table')
+    table.props.rowKey = 'month'
+    initial.data.sales[1].month = 'January'
+    expect(() => createDocument(initial)).toThrow(
+      hasIssue('duplicate_table_row_key', '/sales/1/month'),
+    )
+
+    initial.dataSchema.properties.links = {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+          value: { type: 'number' },
+        },
+      },
+    }
+    initial.data.links = [{ from: 'A', to: 'B', value: 2 }]
+    initial.data.sales[1].month = 'February'
+    initial.ui.nodes.push(
+      makeNode('sankey', {
+        component: 'SankeyChart',
+        props: { sourceKey: 'from', targetKey: 'to', valueKey: 'value' },
+        bindings: { rows: { path: '/links' } },
+      }),
+    )
+    const document = createDocument(initial)
+    try {
+      expect(() =>
+        document.applyPatch({
+          baseRevision: 0,
+          revision: 1,
+          operations: [
+            {
+              op: 'add',
+              path: '/links/-',
+              value: { from: 'B', to: 'A', value: 2 },
+            },
+          ],
+        }),
+      ).toThrow(hasIssue('cyclic_chart_flow', '/links'))
+      expect(document.exportData().links).toEqual(initial.data.links)
+    } finally {
+      document.dispose()
+    }
   })
 
   test('applies three independently edited documents from the JSON panel', async () => {

@@ -1,4 +1,5 @@
 import { isDatePeriod, periodStart } from './date-period'
+import catalog from '../chart-data-contracts.json'
 import { hasFlowCycle, pairs } from './special-data'
 import type { ChartName } from './appearance'
 import type { ChartOptions } from './base'
@@ -77,102 +78,77 @@ const check = (
   reason: ColumnCheck['reason'],
 ) => ({ column, parse, reason })
 
+type ColumnRole =
+  | 'period'
+  | 'label'
+  | 'group'
+  | 'number'
+  | 'date'
+  | 'latitude'
+  | 'longitude'
+  | 'country'
+type ColumnRule = [keyof MappingOptions, ColumnRole, 'whenSet'?]
+interface MappingRule {
+  when?: Partial<Record<keyof MappingOptions, boolean>>
+  required: ColumnRule[]
+  optional?: ColumnRule[]
+  series?: boolean
+  aggregate?: Mapping['aggregate']
+}
+
+const profiles = catalog.profiles as unknown as Record<string, MappingRule[]>
+const chartRules: Partial<Record<ChartName, readonly string[]>> = catalog.rules
+
+export const chartColumnProperties = [
+  ...new Set(
+    Object.values(profiles).flatMap((rules) =>
+      rules.flatMap(({ required, optional }) =>
+        [...required, ...(optional ?? [])].map(([property]) => property),
+      ),
+    ),
+  ),
+]
+
 function mappingFor(
   name: ChartName,
   props: MappingOptions,
   country: Parser,
 ): Mapping {
   const period = props.datePeriod
-  const x = isDatePeriod(period)
-    ? check(props.xKey, (value) => periodStart(value, period), 'date')
-    : check(props.xKey, categoryValue, 'label')
-  const category = check(props.xKey, label, 'label')
-  const value = check(props.valueKey, num, 'number')
-  const group = check(props.groupKey, label, 'label')
-  const coordinates = [
-    check(props.latitudeKey, latitude, 'latitude'),
-    check(props.longitudeKey, longitude, 'longitude'),
-  ]
-  switch (name) {
-    case 'BarChart':
-    case 'StackedBarChart':
-    case 'LineChart':
-    case 'AreaChart': {
-      const dimensions = props.groupKey
-        ? [x, check(props.groupKey, groupValue, 'label')]
-        : [x]
-      if (props.countRows) return { required: dimensions }
-      if (props.groupKey)
-        return { required: [...dimensions, value], aggregate: 'finite' }
-      const series = Array.isArray(props.series) ? props.series : []
-      return {
-        required: [x],
-        series: series.flatMap((item) =>
+  const parsers: Record<ColumnRole, [Parser, ColumnCheck['reason']]> = {
+    period: isDatePeriod(period)
+      ? [(value) => periodStart(value, period), 'date']
+      : [categoryValue, 'label'],
+    label: [label, 'label'],
+    group: [groupValue, 'label'],
+    number: [num, 'number'],
+    date: [epoch, 'date'],
+    latitude: [latitude, 'latitude'],
+    longitude: [longitude, 'longitude'],
+    country: [country, 'country'],
+  }
+  const rule = profiles[catalog.charts[name]].find(({ when }) =>
+    Object.entries(when ?? {}).every(
+      ([key, value]) => Boolean(props[key]) === value,
+    ),
+  )
+  const columns = (entries: ColumnRule[]) =>
+    entries.flatMap(([property, role, condition]) =>
+      condition === 'whenSet' && !props[property]
+        ? []
+        : [check(props[property] as string, ...parsers[role])],
+    )
+  return {
+    required: columns(rule.required),
+    optional: rule.optional && columns(rule.optional),
+    aggregate: rule.aggregate,
+    series: rule.series
+      ? (Array.isArray(props.series) ? props.series : []).flatMap((item) =>
           typeof item?.key === 'string' && item.key
             ? [check(item.key, num, 'number')]
             : [],
-        ),
-      }
-    }
-    case 'PieChart':
-    case 'DonutChart':
-      return props.countRows
-        ? { required: [x] }
-        : { required: [x, value], aggregate: 'positive' }
-    case 'RadialBarChart':
-    case 'CircularBarChart':
-      return { required: [category, value], aggregate: 'positive' }
-    case 'NestedDonutChart':
-    case 'TreemapChart':
-      return {
-        required: props.groupKey ? [category, group, value] : [category, value],
-        aggregate: 'positive',
-      }
-    case 'HeatmapChart':
-      return { required: [category, group, value], aggregate: 'finite' }
-    case 'ScatterChart':
-      return { required: [check(props.xKey, num, 'number'), value] }
-    case 'BoxplotChart':
-      return { required: [category, value] }
-    case 'TimelineChart':
-      return {
-        required: [
-          category,
-          check(props.startKey, epoch, 'date'),
-          check(props.endKey, epoch, 'date'),
-        ],
-      }
-    case 'SankeyChart':
-    case 'ChordChart':
-    case 'NetworkGraph': {
-      const endpoints = [
-        check(props.sourceKey, label, 'label'),
-        check(props.targetKey, label, 'label'),
-      ]
-      return {
-        required:
-          name === 'NetworkGraph' && !props.valueKey
-            ? endpoints
-            : [...endpoints, value],
-        aggregate: 'positive',
-      }
-    }
-    case 'PointMap':
-      return { required: coordinates, optional: [category, value] }
-    case 'FlowMap':
-      return {
-        required: [
-          ...coordinates,
-          check(props.destinationLatitudeKey, latitude, 'latitude'),
-          check(props.destinationLongitudeKey, longitude, 'longitude'),
-        ],
-        optional: [category, value],
-      }
-    case 'ChoroplethMap':
-      return {
-        required: [check(props.xKey, country, 'country'), value],
-        aggregate: 'finite',
-      }
+        )
+      : undefined,
   }
 }
 
@@ -250,7 +226,7 @@ function inspectMapping(
       return
     }
     if (
-      name === 'TimelineChart' &&
+      chartRules[name]?.includes('dateOrder') &&
       !orderedInterval(Number(values[1]), Number(values[2]))
     ) {
       ignore({
@@ -328,7 +304,7 @@ export function validateChartRows(
 ) {
   const report = inspectMapping(name, props, rows, undefined, country)
   const links =
-    name === 'SankeyChart' && !report.ignored
+    chartRules[name]?.includes('acyclic') && !report.ignored
       ? pairs(
           { rows, aggregation: props.aggregation, valueKey: props.valueKey },
           props.sourceKey,

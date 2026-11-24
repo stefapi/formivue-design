@@ -133,9 +133,10 @@ export function generateFormDataSchema(
 
     // Adapters declare nested binding dependencies through the same hook used by compilation.
     contract?.compileProps?.(
-      { ...node.props },
+      contract.normalizeProps?.({ ...node.props }) ?? { ...node.props },
       {
         path: documentPath(path),
+        columnSchema: () => undefined,
         resolveBinding(binding, _property, types) {
           const segments = pointerSegments(binding.path)
           const target = [

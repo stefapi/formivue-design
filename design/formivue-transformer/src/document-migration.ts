@@ -257,6 +257,7 @@ export function splitFormSchema(
       }
     }
     if (contract?.migrateProps) props = contract.migrateProps(props)
+    if (contract?.normalizeProps) props = contract.normalizeProps(props)
     if (Object.keys(props).length) node.props = props
     const own =
       kind === 'void' ? schema : migrateFieldSchema(legacy, node, contract)

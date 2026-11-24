@@ -140,7 +140,10 @@ export const transformToTreeNode = (
 
 export * from './documents'
 export type { DataSchema } from './document-schema'
-export { splitFormSchema } from './document-migration'
+export {
+  inlineBinding as parseDocumentBindingExpression,
+  splitFormSchema,
+} from './document-migration'
 export {
   createDocumentContractRegistry,
   type DocumentBindingContract,
@@ -153,6 +156,7 @@ export {
   type DocumentDependency,
   type DocumentRowsContract,
   type DocumentRenameContext,
+  type DocumentSchemaDescription,
 } from './document-contracts'
 export { generateFormDataSchema } from './document-generation'
 export type { DocumentDataPath } from './document-paths'
