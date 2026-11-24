@@ -173,6 +173,27 @@ importers:
         specifier: workspace:*
         version: link:../../manager/reactive
 
+  design/data-schema-advanced:
+    dependencies:
+      '@formivue-design/formivue-transformer':
+        specifier: workspace:*
+        version: link:../formivue-transformer
+      '@formivue/core':
+        specifier: workspace:*
+        version: link:../../manager/core
+      '@formivue/json-schema':
+        specifier: workspace:*
+        version: link:../../manager/json-schema
+
+  design/data-schema-charts:
+    dependencies:
+      '@formivue-design/charts-runtime':
+        specifier: workspace:*
+        version: link:../charts-runtime
+      '@formivue-design/formivue-transformer':
+        specifier: workspace:*
+        version: link:../formivue-transformer
+
   design/formivue-setters:
     dependencies:
       '@formivue-design/core':
@@ -230,9 +251,6 @@ importers:
 
   design/formivue-transformer:
     dependencies:
-      '@formivue-design/charts-runtime':
-        specifier: workspace:*
-        version: link:../charts-runtime
       '@formivue-design/core':
         specifier: workspace:*
         version: link:../core
@@ -608,6 +626,12 @@ importers:
       '@formivue-design/core':
         specifier: workspace:*
         version: link:../../design/core
+      '@formivue-design/data-schema-advanced':
+        specifier: workspace:*
+        version: link:../../design/data-schema-advanced
+      '@formivue-design/data-schema-charts':
+        specifier: workspace:*
+        version: link:../../design/data-schema-charts
       '@formivue-design/formivue-setters':
         specifier: workspace:*
         version: link:../../design/formivue-setters

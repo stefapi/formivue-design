@@ -96,10 +96,16 @@ The versioned public contract uses `ui.json`, `data.schema.json` and
 the data schema for the existing renderer. The headless data document in
 `manager/json-schema` validates complete snapshots and JSON Patch results
 before publishing them. It reconciles editable rows by key and keeps local
-drafts when remote updates overlap. Chart validation reuses the runtime
-mapping rules through the charts runtime's data contract export. Applications
-own remote subscriptions and revisions. The combined `{ form, schema }`
-format remains available for existing integrations.
+drafts when remote updates overlap. Applications own remote subscriptions and
+revisions. The combined `{ form, schema }` format remains available.
+
+The transformer includes the standard component contracts. Applications pass
+a registry to document migration and compilation to add contracts from
+`design/data-schema-advanced`, `design/data-schema-charts`, or their own
+components. These packages implement the transformer's public extension
+contract. The chart extension imports the chart runtime's headless
+`data-contract` export to reuse mapping and validation rules. The registry
+belongs to the application or session.
 
 ## Verification
 

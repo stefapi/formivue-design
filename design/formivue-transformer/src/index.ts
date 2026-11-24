@@ -2,6 +2,7 @@ import { ISchema, Schema, type JsonObject } from '@formivue/json-schema'
 import { ITreeNode } from '@formivue-design/core'
 import { clone, uid } from '@formivue-design/shared'
 import { splitFormSchema } from './document-migration'
+import type { DocumentContractOptions } from './document-contracts'
 
 export interface ITransformerOptions {
   designableFieldName?: string
@@ -140,7 +141,23 @@ export const transformToTreeNode = (
 export * from './documents'
 export type { DataSchema } from './document-schema'
 export { splitFormSchema } from './document-migration'
+export {
+  createDocumentContractRegistry,
+  type DocumentBindingContract,
+  type DocumentComponentContract,
+  type DocumentContractContext,
+  type DocumentContractExtension,
+  type DocumentContractOptions,
+  type DocumentContractRegistry,
+  type DocumentDataType,
+  type DocumentDependency,
+  type DocumentRowsContract,
+} from './document-contracts'
 
-export function transformToFormDocuments(tree: ITreeNode, values?: JsonObject) {
-  return splitFormSchema(transformToSchema(tree), values)
+export function transformToFormDocuments(
+  tree: ITreeNode,
+  values?: JsonObject,
+  options?: DocumentContractOptions,
+) {
+  return splitFormSchema(transformToSchema(tree), values, options)
 }

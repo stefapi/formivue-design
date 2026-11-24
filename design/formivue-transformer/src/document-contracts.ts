@@ -1,13 +1,98 @@
 import {
-  chartAppearance,
-  chartDataColumns,
-  validateChartRows,
-} from '@formivue-design/charts-runtime/data-contract'
+  DocumentValidationError,
+  jsonPointer,
+  type JsonObject,
+} from '@formivue/json-schema'
+import type { DataBinding, UiDocumentNode } from './documents'
 
-export const scalarTypes = ['string', 'number', 'boolean', 'null']
-const choices = ['string', 'number']
+export const documentDataTypes = [
+  'object',
+  'array',
+  'string',
+  'number',
+  'integer',
+  'boolean',
+  'null',
+] as const
 
-const fields: Record<string, string[]> = {
+export type DocumentDataType = (typeof documentDataTypes)[number]
+
+export interface DocumentDependency {
+  componentId: string
+  property: string
+  /** Null identifies a repeated array item. */
+  path: readonly (string | null)[]
+  types: readonly DocumentDataType[]
+}
+
+export interface DocumentRowsContract {
+  columns: readonly { column: string; types: readonly DocumentDataType[] }[]
+  incomplete?: boolean
+  validate?: (rows: unknown[]) => readonly {
+    path: readonly string[]
+    code: string
+    message: string
+  }[]
+}
+
+export type DocumentBindingContract = { required?: boolean } & (
+  | { types: readonly DocumentDataType[]; nullable?: boolean }
+  | { rows: DocumentRowsContract }
+)
+
+export interface DocumentContractContext {
+  path: string
+  /** Resolves a dependency and returns the schema's possible types for the adapter to check. */
+  resolveBinding(
+    binding: DataBinding,
+    property: string,
+    types: readonly DocumentDataType[],
+  ): { segments: string[]; path: string; types: readonly string[] } | undefined
+  report(issue: {
+    code: string
+    message: string
+    path?: string
+    property?: string
+  }): void
+}
+
+export interface DocumentComponentContract {
+  kind: UiDocumentNode['kind']
+  types?: readonly DocumentDataType[]
+  items?: readonly DocumentDataType[]
+  /** Some widgets use option trees whose values are presentation metadata. */
+  enumFromOptions?: false
+  bindings?: Readonly<Record<string, DocumentBindingContract>>
+  allowsBinding?: (property: string) => boolean
+  migrateProps?: (props: JsonObject) => JsonObject
+  compileProps?: (
+    props: JsonObject,
+    context: DocumentContractContext,
+  ) => JsonObject
+}
+
+type ContractFactory = (props: JsonObject) => DocumentComponentContract
+
+export interface DocumentContractExtension {
+  name: string
+  components: Readonly<
+    Record<string, DocumentComponentContract | ContractFactory>
+  >
+}
+
+export interface DocumentContractRegistry {
+  resolve(
+    component: string | undefined,
+    props?: JsonObject,
+  ): DocumentComponentContract | undefined
+}
+
+export interface DocumentContractOptions {
+  contracts?: DocumentContractRegistry
+}
+
+const choices = ['string', 'number'] as const
+const fields: Record<string, readonly DocumentDataType[]> = {
   Input: ['string'],
   'Input.TextArea': ['string'],
   Password: ['string'],
@@ -18,29 +103,30 @@ const fields: Record<string, string[]> = {
   TimePicker: ['string'],
   Switch: ['boolean'],
   'Radio.Group': choices,
-  Combobox: choices,
-  InputOTP: ['string'],
   Text: ['string'],
-  PreviewText: scalarTypes,
+  PreviewText: ['string', 'number', 'boolean', 'null'],
   Checkbox: ['boolean'],
   Radio: choices,
 }
-const lists: Record<string, string[]> = {
+
+const lists: Record<string, readonly DocumentDataType[]> = {
   'Checkbox.Group': choices,
-  Cascader: choices,
   Transfer: choices,
-  TagsInput: ['string'],
   'DatePicker.RangePicker': ['string'],
   'TimePicker.RangePicker': ['string'],
   Upload: ['object'],
   'Upload.Dragger': ['object'],
 }
-const displays: Record<string, string[]> = {
-  Avatar: ['src', 'alt', 'fallback'],
-  Badge: ['text'],
-  HoverCard: ['triggerText', 'title', 'message', 'href'],
-}
-const layouts = new Set([
+
+const arrayActions = [
+  'Index',
+  'Addition',
+  'Remove',
+  'Copy',
+  'MoveDown',
+  'MoveUp',
+]
+const layouts = [
   'FormItem',
   'Card',
   'Space',
@@ -51,87 +137,78 @@ const layouts = new Set([
   'FormTab.TabPane',
   'FormCollapse',
   'FormCollapse.CollapsePanel',
-  'Carousel',
-  'CarouselSlide',
-  'Drawer',
-  'Sheet',
-  'ScrollArea',
-  'Resizable',
-  'ResizablePanel',
-  'Questionnaire',
-  'QuestionnaireStep',
-  'Stepper',
-  'StepperStep',
-])
+  'ArrayTable.Column',
+  'ArrayTable.SortHandle',
+  ...['ArrayCards', 'ArrayTable'].flatMap((name) =>
+    arrayActions.map((action) => `${name}.${action}`),
+  ),
+]
 
-export const isChart = (
-  component: string,
-): component is keyof typeof chartAppearance =>
-  !!component &&
-  Object.prototype.hasOwnProperty.call(chartAppearance, component)
+const select = (props: JsonObject): DocumentComponentContract =>
+  props.multiple === true
+    ? { kind: 'field', types: ['array'], items: choices }
+    : { kind: 'field', types: choices }
 
-export const isRowsDisplay = (component: string) =>
-  component === 'DataTable' || isChart(component)
-export const displayValueProps = (component: string) =>
-  isRowsDisplay(component) ? ['rows'] : (displays[component] ?? [])
-
-export function widgetData(
-  component: string,
-  props: Record<string, unknown> = {},
-) {
-  if (component === 'Object') return { kind: 'object' as const }
-  if (component === 'ArrayTable' || component === 'ArrayCards')
-    return { kind: 'array' as const }
-  if (
-    isRowsDisplay(component) ||
-    Object.prototype.hasOwnProperty.call(displays, component) ||
-    layouts.has(component) ||
-    /^(ArrayTable|ArrayCards)\./u.test(component)
-  )
-    return { kind: 'void' as const }
-  if (
-    component === 'Select' ||
-    component === 'TreeSelect' ||
-    component === 'ToggleGroup'
-  )
-    return props.multiple === true
-      ? { kind: 'field' as const, types: ['array'], items: choices }
-      : { kind: 'field' as const, types: choices }
-  if (Object.prototype.hasOwnProperty.call(lists, component))
-    return { kind: 'field' as const, types: ['array'], items: lists[component] }
-  if (Object.prototype.hasOwnProperty.call(fields, component))
-    return { kind: 'field' as const, types: fields[component] }
+const standard: DocumentContractExtension = {
+  name: 'standard',
+  components: {
+    ...Object.fromEntries(layouts.map((name) => [name, { kind: 'void' }])),
+    ...Object.fromEntries(
+      Object.entries(fields).map(([name, types]) => [
+        name,
+        { kind: 'field', types },
+      ]),
+    ),
+    ...Object.fromEntries(
+      Object.entries(lists).map(([name, items]) => [
+        name,
+        { kind: 'field', types: ['array'], items },
+      ]),
+    ),
+    Object: { kind: 'object' },
+    ArrayTable: { kind: 'array' },
+    ArrayCards: { kind: 'array' },
+    Select: select,
+    TreeSelect: (props) => ({ ...select(props), enumFromOptions: false }),
+    Cascader: {
+      kind: 'field',
+      types: ['array'],
+      items: choices,
+      enumFromOptions: false,
+    },
+  },
 }
 
-export function rowColumns(component: string, props: Record<string, unknown>) {
-  if (isChart(component)) return chartDataColumns(component, props)
-  const columns = Array.isArray(props.columns) ? props.columns : []
+export function createDocumentContractRegistry(
+  extensions: readonly DocumentContractExtension[] = [],
+): DocumentContractRegistry {
+  const contracts = new Map<
+    string,
+    { name: string; contract: DocumentComponentContract | ContractFactory }
+  >()
+  for (const { name, components } of [standard, ...extensions]) {
+    for (const [component, contract] of Object.entries(components)) {
+      const previous = contracts.get(component)
+      if (previous)
+        throw new DocumentValidationError([
+          {
+            path: jsonPointer(['extensions', name, component]),
+            component,
+            code: 'duplicate_component_contract',
+            severity: 'error',
+            message: `Component "${component}" already has a contract from "${previous.name}"`,
+          },
+        ])
+      contracts.set(component, { name, contract })
+    }
+  }
   return {
-    columns: columns.map((column) => ({
-      column: column?.key,
-      types: scalarTypes,
-    })),
-    incomplete: columns.some(
-      (column) => typeof column?.key !== 'string' || !column.key,
-    ),
+    resolve(component, props = {}) {
+      if (component === undefined) return
+      const contract = contracts.get(component)?.contract
+      return typeof contract === 'function' ? contract(props) : contract
+    },
   }
 }
 
-export function rowIssues(
-  component: string,
-  props: Record<string, unknown>,
-  rows: unknown[],
-) {
-  if (!isChart(component)) return []
-  const report = validateChartRows(
-    component,
-    props,
-    rows as Record<string, unknown>[],
-  )
-  return report.cyclic
-    ? [{ path: [], message: 'Sankey flows must be acyclic' }]
-    : report.examples.map(({ row, column, reason }) => ({
-        path: column ? [String(row - 1), column] : [String(row - 1)],
-        message: `Invalid chart data (${reason})`,
-      }))
-}
+export const standardDocumentContracts = createDocumentContractRegistry()

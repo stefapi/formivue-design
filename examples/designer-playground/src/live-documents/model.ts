@@ -1,10 +1,13 @@
 import {
   createFormDocument,
+  createDocumentContractRegistry,
   parseFormDocuments,
   stringifyFormDocuments,
   type FormDocuments,
   type FormDocumentJson,
 } from '@formivue-design/formivue-transformer'
+import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
+import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
 import { exampleLocale } from '../../../shared/language'
 import { t } from './copy'
 import ui from './documents/ui.json?raw'
@@ -12,6 +15,10 @@ import dataSchema from './documents/data.schema.json?raw'
 import data from './documents/data.json?raw'
 
 const initialFiles = { ui, dataSchema, data } satisfies FormDocumentJson
+const contracts = createDocumentContractRegistry([
+  advancedDocumentContracts,
+  chartDocumentContracts,
+])
 
 interface Shop {
   id: string
@@ -43,7 +50,7 @@ function shops(data: FormDocuments['data']): Shop[] {
 
 export function createSalesDemo(initial = parseFormDocuments(initialFiles)) {
   let remote = shops(initial.data)
-  const session = createFormDocument(initial)
+  const session = createFormDocument(initial, { contracts })
 
   function send(index: number, amount: number | string) {
     const baseRevision = session.revision

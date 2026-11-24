@@ -12,11 +12,12 @@ import {
   type JsonObject,
 } from '@formivue/json-schema'
 import {
-  displayValueProps,
-  isRowsDisplay,
-  rowColumns,
-  rowIssues,
-  widgetData,
+  documentDataTypes,
+  standardDocumentContracts,
+  type DocumentContractOptions,
+  type DocumentDataType,
+  type DocumentDependency,
+  type DocumentRowsContract,
 } from './document-contracts'
 import { schemaLookup, type DataSchema } from './document-schema'
 
@@ -57,13 +58,16 @@ export interface FormDocuments {
   data: JsonObject
 }
 
-interface CompileOptions {
+export interface CompileFormDocumentOptions extends DocumentContractOptions {
   hasComponent?: (component: string) => boolean
 }
 
 export function compileFormDocuments(
   { ui, dataSchema }: Pick<FormDocuments, 'ui' | 'dataSchema'>,
-  options: CompileOptions = {},
+  {
+    contracts = standardDocumentContracts,
+    hasComponent,
+  }: CompileFormDocumentOptions = {},
 ) {
   if (
     !isJsonObject(ui) ||
@@ -72,17 +76,29 @@ export function compileFormDocuments(
     (ui.form !== undefined && !isJsonObject(ui.form))
   )
     throw new DocumentValidationError([
-      { path: '/ui', message: 'Expected a version 1 UI document' },
+      {
+        path: '/ui',
+        code: 'invalid_ui_document',
+        severity: 'error',
+        message: 'Expected a version 1 UI document',
+      },
     ])
   if (!isJsonObject(dataSchema))
     throw new DocumentValidationError([
-      { path: '/dataSchema', message: 'Expected a JSON Schema object' },
+      {
+        path: '/dataSchema',
+        code: 'invalid_data_schema',
+        severity: 'error',
+        message: 'Expected a JSON Schema object',
+      },
     ])
   const lookup = schemaLookup(dataSchema)
   if (!lookup.accepts(dataSchema, ['object']))
     throw new DocumentValidationError([
       {
         path: '/dataSchema',
+        code: 'invalid_data_schema',
+        severity: 'error',
         message: 'The root schema must describe an object',
       },
     ])
@@ -103,23 +119,39 @@ export function compileFormDocuments(
     'x-index',
     'x-value',
   ])
-  const schemaTypes = [
-    'object',
-    'array',
-    'string',
-    'number',
-    'integer',
-    'boolean',
-    'null',
-  ]
-  const rowChecks: { node: UiDocumentNode; path: (string | null)[] }[] = []
-  const fail = (node: UiDocumentNode, path: string, message: string) =>
-    issues.push({ component: node.component ?? node.id, path, message })
+  const dependencies: DocumentDependency[] = []
+  const rowChecks: {
+    node: UiDocumentNode
+    property: string
+    path: (string | null)[]
+    validate: NonNullable<DocumentRowsContract['validate']>
+  }[] = []
+  const fail = (
+    node: UiDocumentNode,
+    path: string,
+    message: string,
+    code = 'invalid_ui_binding',
+    property?: string,
+  ) =>
+    issues.push({
+      component: node.component ?? node.id,
+      componentId: node.id,
+      path,
+      message,
+      code,
+      severity: 'error',
+      property,
+    })
   const parse = (node: UiDocumentNode, pointer: string) => {
     try {
       return pointerSegments(pointer)
     } catch {
-      fail(node, String(pointer), 'Invalid JSON Pointer')
+      fail(
+        node,
+        String(pointer),
+        'Invalid JSON Pointer',
+        'invalid_json_pointer',
+      )
       return []
     }
   }
@@ -145,25 +177,33 @@ export function compileFormDocuments(
       (node.field !== undefined && !isJsonObject(node.field)) ||
       (node.bindings !== undefined && !isJsonObject(node.bindings))
     ) {
-      issues.push({ path: location(parent), message: 'Invalid UI node' })
+      issues.push({
+        path: location(parent),
+        code: 'invalid_ui_node',
+        severity: 'error',
+        message: 'Invalid UI node',
+      })
       return
     }
     if (ids.has(node.id))
       fail(node, location(parent), `Duplicate UI id "${node.id}"`)
     ids.add(node.id)
-    if (
-      node.component &&
-      options.hasComponent &&
-      !options.hasComponent(node.component)
-    )
-      fail(node, location(parent), `Unknown component "${node.component}"`)
+    const unknownComponent =
+      node.component && hasComponent && !hasComponent(node.component)
+    if (unknownComponent)
+      fail(
+        node,
+        location(parent),
+        `Unknown component "${node.component}"`,
+        'unknown_component',
+      )
     for (const key of Object.keys(node.field ?? {}))
       if (
         !formatProperties.has(key) &&
         (!key.startsWith('x-') || reservedProperties.has(key))
       )
         fail(node, location(parent), `Unsupported field metadata "${key}"`)
-    const expected = widgetData(node.component, node.props)
+    const expected = contracts.resolve(node.component, node.props)
     if (expected && expected.kind !== node.kind)
       fail(node, location(parent), `Expected a ${expected.kind} node`)
     const bind = node.kind !== 'void' && !item ? parse(node, node.bind) : []
@@ -192,25 +232,58 @@ export function compileFormDocuments(
     const path = [...parent, ...bind]
     const pathName = location(path)
     const target = lookup.at(path)
+    if (node.component && !expected && !unknownComponent)
+      issues.push({
+        component: node.component,
+        componentId: node.id,
+        path: node.kind === 'void' ? location([...path, node.key]) : pathName,
+        code: 'missing_component_contract',
+        severity: 'warning',
+        message: `No data contract registered for "${node.component}"`,
+      })
     if (node.kind !== 'void') {
       if (target === undefined || target === false)
-        fail(node, pathName, 'Path is missing from the data schema')
-      const types = node.kind === 'field' ? expected?.types : [node.kind]
-      if (types && !lookup.accepts(target, types, node.kind === 'field'))
         fail(
           node,
           pathName,
-          `Expected ${types.join(' or ')} in the data schema`,
+          'Path is missing from the data schema',
+          'missing_data_path',
+          'bind',
         )
-      if (
-        expected?.items &&
-        !lookup.accepts(lookup.child(target, null), expected.items, true)
-      )
-        fail(
-          node,
-          pathName,
-          `Expected array items of type ${expected.items.join(' or ')}`,
-        )
+      const types: readonly DocumentDataType[] =
+        node.kind === 'field' ? expected?.types : [node.kind]
+      if (types) {
+        dependencies.push({
+          componentId: node.id,
+          property: 'bind',
+          path,
+          types,
+        })
+        if (!lookup.accepts(target, types, node.kind === 'field'))
+          fail(
+            node,
+            pathName,
+            `Expected ${types.join(' or ')} in the data schema`,
+            'incompatible_data_type',
+            'bind',
+          )
+      }
+      if (expected?.items) {
+        dependencies.push({
+          componentId: node.id,
+          property: 'bind',
+          path: [...path, null],
+          types: expected.items,
+        })
+        if (!lookup.accepts(lookup.child(target, null), expected.items, true))
+          fail(
+            node,
+            pathName,
+            `Expected array items of type ${expected.items.join(' or ')}`,
+            'incompatible_data_type',
+            'bind',
+          )
+      }
       if (!item && node.kind !== 'object') {
         if (editors.has(pathName))
           fail(node, pathName, 'Multiple fields write to this path')
@@ -231,54 +304,149 @@ export function compileFormDocuments(
           pathName,
           'A row key must reference a string or number in each item',
         )
-      else rowKeys.push({ path, key: node.rowKey })
+      else {
+        rowKeys.push({ path, key: node.rowKey })
+        dependencies.push({
+          componentId: node.id,
+          property: 'rowKey',
+          path: [...path, null, node.rowKey],
+          types: ['string', 'number'],
+        })
+      }
     }
 
-    const props: Record<string, unknown> = { ...node.props }
-    const dataProps = displayValueProps(node.component)
-    for (const prop of dataProps)
+    let props: JsonObject = { ...node.props }
+    const bindingContracts = expected?.bindings ?? {}
+    for (const [prop, contract] of Object.entries(bindingContracts)) {
       if (Object.prototype.hasOwnProperty.call(props, prop))
-        fail(node, pathName, `Move "${prop}" to the data document and bind it`)
+        fail(
+          node,
+          pathName,
+          `Move "${prop}" to the data document and bind it`,
+          'inline_bound_property',
+          prop,
+        )
+      if (
+        contract.required &&
+        !Object.prototype.hasOwnProperty.call(node.bindings ?? {}, prop)
+      )
+        fail(
+          node,
+          pathName,
+          prop === 'rows'
+            ? 'A rows binding is required'
+            : `A binding for "${prop}" is required`,
+          'missing_property_binding',
+          prop,
+        )
+    }
+
+    const resolveBinding = (binding: DataBinding, property: string) => {
+      let segments: string[]
+      try {
+        segments = pointerSegments(binding.path)
+      } catch {
+        fail(
+          node,
+          String(binding.path),
+          'Invalid JSON Pointer',
+          'invalid_json_pointer',
+          property,
+        )
+        return
+      }
+      const path = [...(binding.scope === 'parent' ? parent : []), ...segments]
+      const schema = lookup.at(path)
+      const boundName = location(path)
+      if (schema === undefined || schema === false) {
+        fail(
+          node,
+          boundName,
+          `Missing path for "${property}"`,
+          'missing_data_path',
+          property,
+        )
+        return
+      }
+      return { segments, path, schema, boundName }
+    }
+
     for (const [prop, binding] of Object.entries(node.bindings ?? {})) {
       if (
         !isJsonObject(binding) ||
         typeof binding.path !== 'string' ||
         (binding.scope !== undefined && binding.scope !== 'parent')
       ) {
-        fail(node, pathName, `Invalid binding for "${prop}"`)
+        fail(
+          node,
+          pathName,
+          `Invalid binding for "${prop}"`,
+          'invalid_property_binding',
+          prop,
+        )
         continue
       }
       if (
         ['value', 'name', 'multiple', 'rowKey'].includes(prop) ||
         /^on[A-Z]/u.test(prop) ||
-        ((node.component === 'DataTable' || isRowsDisplay(node.component)) &&
-          (prop === 'columns' || prop === 'series' || prop.endsWith('Key')))
+        expected?.allowsBinding?.(prop) === false
       ) {
         fail(
           node,
           pathName,
           `"${prop}" cannot be assigned by a property binding`,
+          'forbidden_property_binding',
+          prop,
         )
         continue
       }
-      const segments = parse(node, binding.path)
-      const bound = [...(binding.scope === 'parent' ? parent : []), ...segments]
-      const propertySchema = lookup.at(bound)
-      const boundName = location(bound)
-      if (propertySchema === undefined || propertySchema === false)
-        fail(node, boundName, `Missing path for "${prop}"`)
-      if (prop === 'rows' && isRowsDisplay(node.component)) {
+      const resolved = resolveBinding(binding, prop)
+      if (!resolved) continue
+      const { path: bound, schema: propertySchema, boundName } = resolved
+      const contract = Object.prototype.hasOwnProperty.call(
+        bindingContracts,
+        prop,
+      )
+        ? bindingContracts[prop]
+        : undefined
+      if (contract && 'rows' in contract) {
+        const { columns, incomplete, validate } = contract.rows
+        dependencies.push({
+          componentId: node.id,
+          property: prop,
+          path: bound,
+          types: ['array'],
+        })
         const row = lookup.child(propertySchema, null)
         if (
           !lookup.accepts(propertySchema, ['array']) ||
           !lookup.accepts(row, ['object'])
         )
-          fail(node, boundName, 'Rows must be an array of objects')
-        const { columns, incomplete } = rowColumns(node.component, props)
-        if (incomplete) fail(node, boundName, 'Incomplete column mapping')
+          fail(
+            node,
+            boundName,
+            'Rows must be an array of objects',
+            'incompatible_rows',
+            prop,
+          )
+        if (incomplete)
+          fail(
+            node,
+            boundName,
+            'Incomplete column mapping',
+            'incomplete_column_mapping',
+            prop,
+          )
         for (const { column, types } of columns) {
+          if (typeof column !== 'string' || !column) continue
+          const columnPath = [...bound, null, column]
+          dependencies.push({
+            componentId: node.id,
+            property: prop,
+            path: columnPath,
+            types,
+          })
           if (
-            typeof column === 'string' &&
             !lookup.accepts(
               lookup.child(row, column),
               types,
@@ -287,23 +455,47 @@ export function compileFormDocuments(
           )
             fail(
               node,
-              boundName,
+              location(columnPath),
               `Column "${column}" must have type ${types.join(' or ')}`,
+              'incompatible_column',
+              prop,
             )
         }
-        rowChecks.push({ node, path: bound })
+        if (validate)
+          rowChecks.push({ node, property: prop, path: bound, validate })
       } else {
-        const types = dataProps.includes(prop) ? ['string'] : binding.types
+        const scalarContract =
+          contract && 'types' in contract ? contract : undefined
+        const types = scalarContract?.types ?? binding.types
         if (
           !Array.isArray(types) ||
           !types.length ||
-          !types.every((type) => schemaTypes.includes(type))
+          !types.every((type) =>
+            documentDataTypes.includes(type as DocumentDataType),
+          )
         ) {
-          fail(node, boundName, `Declare the expected types for "${prop}"`)
-        } else if (
-          !lookup.accepts(propertySchema, types, dataProps.includes(prop))
-        ) {
-          fail(node, boundName, `"${prop}" expects ${types.join(' or ')}`)
+          fail(
+            node,
+            boundName,
+            `Declare the expected types for "${prop}"`,
+            'missing_binding_types',
+            prop,
+          )
+        } else {
+          dependencies.push({
+            componentId: node.id,
+            property: prop,
+            path: bound,
+            types: types as DocumentDataType[],
+          })
+          if (!lookup.accepts(propertySchema, types, scalarContract?.nullable))
+            fail(
+              node,
+              boundName,
+              `"${prop}" expects ${types.join(' or ')}`,
+              'incompatible_binding_type',
+              prop,
+            )
         }
       }
       const base =
@@ -313,34 +505,34 @@ export function compileFormDocuments(
       props[prop] =
         `{{ $document.read(${JSON.stringify(binding.path)}${base}) }}`
     }
-    if (isRowsDisplay(node.component) && !node.bindings?.rows)
-      fail(node, pathName, 'A rows binding is required')
 
-    if (
-      (node.component === 'StepperStep' ||
-        node.component === 'QuestionnaireStep') &&
-      Array.isArray(props.branches)
-    ) {
-      props.branches = props.branches.map((branch) => {
-        if (!isJsonObject(branch) || typeof branch.path !== 'string') {
-          fail(node, pathName, 'Invalid branch binding')
-          return branch
-        }
-        const segments = parse(node, branch.path)
-        const bound = lookup.at(segments)
-        const type =
-          branch.equals === null
-            ? 'null'
-            : Number.isInteger(branch.equals)
-              ? 'integer'
-              : typeof branch.equals
-        if (!lookup.possible(bound).includes(type) || bound === undefined)
+    if (expected?.compileProps) {
+      props = expected.compileProps(props, {
+        path: pathName,
+        resolveBinding(binding, property, types) {
+          const resolved = resolveBinding(binding, property)
+          if (!resolved) return
+          dependencies.push({
+            componentId: node.id,
+            property,
+            path: resolved.path,
+            types,
+          })
+          return {
+            segments: resolved.segments,
+            path: resolved.boundName,
+            types: lookup.possible(resolved.schema),
+          }
+        },
+        report(issue) {
           fail(
             node,
-            branch.path,
-            'Branch value is incompatible with the data schema',
+            issue.path ?? pathName,
+            issue.message,
+            issue.code,
+            issue.property,
           )
-        return { ...branch, path: segments }
+        },
       })
     }
 
@@ -442,29 +634,34 @@ export function compileFormDocuments(
     return properties
   }
 
-  const schema: ISchema = {
+  const schema = {
     type: 'object',
     properties: compileChildren(ui.nodes, []),
-  }
-  if (issues.length) throw new DocumentValidationError(issues)
+  } satisfies ISchema
+  if (issues.some(({ severity }) => severity !== 'warning'))
+    throw new DocumentValidationError(issues)
   return {
     form: ui.form ?? {},
     schema,
     rowKeys,
+    dependencies,
+    diagnostics: issues,
     validateBindings(data: JsonObject) {
       const result: DocumentIssue[] = []
-      for (const { node, path } of rowChecks) {
+      for (const { node, property, path, validate } of rowChecks) {
         const visit = (value: unknown, index: number, current: string[]) => {
           if (index === path.length) {
             if (!Array.isArray(value)) return
             result.push(
-              ...rowIssues(node.component, node.props ?? {}, value).map(
-                (issue) => ({
-                  component: node.component,
-                  path: jsonPointer([...current, ...issue.path]),
-                  message: issue.message,
-                }),
-              ),
+              ...validate(value).map((issue) => ({
+                component: node.component,
+                componentId: node.id,
+                property,
+                path: jsonPointer([...current, ...issue.path]),
+                message: issue.message,
+                code: issue.code,
+                severity: 'error' as const,
+              })),
             )
             return
           }
@@ -487,7 +684,7 @@ export function compileFormDocuments(
 
 export function createFormDocument(
   documents: FormDocuments,
-  options: CompileOptions & { revision?: number } = {},
+  options: CompileFormDocumentOptions & { revision?: number } = {},
 ) {
   const ui = copyJson(documents.ui) as unknown as UiDocument
   const dataSchema = copyJson(
@@ -504,6 +701,7 @@ export function createFormDocument(
   return Object.assign(data, {
     formProps: compiled.form,
     schema: compiled.schema,
+    diagnostics: compiled.diagnostics,
     exportDocuments(): FormDocuments {
       return {
         ui: copyJson(ui) as unknown as UiDocument,

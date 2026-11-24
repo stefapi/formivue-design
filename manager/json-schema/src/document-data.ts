@@ -11,6 +11,10 @@ export interface DocumentIssue {
   path: string
   message: string
   component?: string
+  componentId?: string
+  property?: string
+  code?: string
+  severity?: 'error' | 'warning'
 }
 
 export class DocumentValidationError extends Error {

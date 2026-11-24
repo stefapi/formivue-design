@@ -25,6 +25,8 @@
     "@formivue-design/vue-settings-form": "workspace:*",
     "@formivue-design/formivue-setters": "workspace:*",
     "@formivue-design/formivue-transformer": "workspace:*",
+    "@formivue-design/data-schema-charts": "workspace:*",
+    "@formivue-design/data-schema-advanced": "workspace:*",
     "@formivue-design/formivue-vue": "workspace:*",
     "@formivue/core": "workspace:*",
     "@formivue/reactive-vue": "workspace:*",

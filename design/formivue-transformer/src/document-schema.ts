@@ -124,7 +124,7 @@ export function schemaLookup(root: DataSchema) {
     },
     possible,
     constraints,
-    accepts(schema: DataSchema, expected: string[], nullable = false) {
+    accepts(schema: DataSchema, expected: readonly string[], nullable = false) {
       const actual = possible(schema).filter(
         (type) => !nullable || type !== 'null',
       )

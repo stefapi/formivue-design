@@ -68,6 +68,37 @@ const files = stringifyFormDocuments(session.exportDocuments())
 session.dispose()
 ```
 
+### Component contracts
+
+Standard components work with the default registry. Add extensions explicitly
+when migrating or compiling documents that use additional components.
+
+```ts
+import {
+  createDocumentContractRegistry,
+  createFormDocument,
+  transformToFormDocuments,
+} from '@formivue-design/formivue-transformer'
+import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
+import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
+
+const contracts = createDocumentContractRegistry([
+  advancedDocumentContracts,
+  chartDocumentContracts,
+])
+const documents = transformToFormDocuments(tree, undefined, { contracts })
+const session = createFormDocument(documents, { contracts })
+```
+
+An extension registers components by name and supplies their data shape and
+property bindings. It can declare table columns and a row validator, or
+transform component props while migrating and compiling.
+`compileFormDocuments` returns resolved dependencies and diagnostics. The
+dependency path uses `null` for an array item. A custom component without a
+registered contract generates a warning. Typed bindings can still be checked
+and a renderer registry can reject unrecognized component names. Duplicate
+contracts and unresolved bindings produce errors.
+
 The application supplies the transport. A patch applies to the last accepted
 remote revision and publishes only if its entire result is valid. Display
 bindings read the latest valid data. Editors keep their draft and track

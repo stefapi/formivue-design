@@ -303,17 +303,19 @@ export function chartDataColumns(name: ChartName, props: MappingOptions) {
       ...required,
       ...(series ?? []),
       ...(optional?.filter(({ column }) => column) ?? []),
-    ].map(({ column, parse, reason }) => ({
-      column,
-      types:
-        reason === 'number' || reason === 'latitude' || reason === 'longitude'
-          ? ['number']
-          : reason === 'country'
-            ? ['string']
-            : parse === categoryValue || reason === 'date'
-              ? ['string', 'number']
-              : ['string', 'number', 'boolean'],
-    })),
+    ].map<{ column: string; types: ('string' | 'number' | 'boolean')[] }>(
+      ({ column, parse, reason }) => ({
+        column,
+        types:
+          reason === 'number' || reason === 'latitude' || reason === 'longitude'
+            ? ['number']
+            : reason === 'country'
+              ? ['string']
+              : parse === categoryValue || reason === 'date'
+                ? ['string', 'number']
+                : ['string', 'number', 'boolean'],
+      }),
+    ),
     incomplete: required.some(({ column }) => !column) || series?.length === 0,
   }
 }

@@ -8,10 +8,13 @@ import {
   type JsonValue,
 } from '@formivue/json-schema'
 import { type FormDocuments, type UiDocumentNode } from './documents'
-import { displayValueProps, rowColumns, widgetData } from './document-contracts'
+import {
+  standardDocumentContracts,
+  type DocumentComponentContract,
+  type DocumentContractOptions,
+} from './document-contracts'
 import { schemaLookup, type DataSchema } from './document-schema'
 import type { IFormivueSchema } from './index'
-import { FormPath } from '@formivue/core'
 
 type ObjectSchema = Exclude<DataSchema, boolean>
 type LegacySchema = ISchema & { 'x-designable-id'?: string }
@@ -103,8 +106,8 @@ function inlineBinding(value: string): string | undefined {
 function migrateFieldSchema(
   field: LegacySchema,
   node: UiDocumentNode,
+  expected?: DocumentComponentContract,
 ): ObjectSchema {
-  const expected = widgetData(node.component, node.props)
   const legacyTypes = {
     'string[]': ['array'],
     'Array<object>': ['array'],
@@ -123,12 +126,13 @@ function migrateFieldSchema(
       field[name] === undefined ? [] : [[name, field[name]]],
     ),
   )
-  if (type.length) schema.type = type.length === 1 ? type[0] : type
+  if (type.length) schema.type = type.length === 1 ? type[0] : [...type]
   if (field.items && !node.item && !Array.isArray(field.items))
     schema.items = clean(field.items) as DataSchema
   if (expected?.items && !schema.items)
     schema.items = {
-      type: expected.items.length === 1 ? expected.items[0] : expected.items,
+      type:
+        expected.items.length === 1 ? expected.items[0] : [...expected.items],
     }
   if (Array.isArray(field.enum)) {
     const values = field.enum.map((option) =>
@@ -140,12 +144,7 @@ function migrateFieldSchema(
           isJsonObject(option) ? option : { label: option, value: option },
         ),
       ) as JsonObject[]
-    // Cascader's tree contains paths. Its options are metadata for the widget.
-    if (
-      node.component !== 'Cascader' &&
-      node.component !== 'TreeSelect' &&
-      values.length
-    ) {
+    if (expected?.enumFromOptions !== false && values.length) {
       if (schema.type === 'array')
         schema.items = { ...(schema.items as ObjectSchema), enum: values }
       else schema.enum = values
@@ -157,6 +156,7 @@ function migrateFieldSchema(
 export function splitFormSchema(
   legacy: IFormivueSchema,
   values?: JsonObject,
+  { contracts = standardDocumentContracts }: DocumentContractOptions = {},
 ): FormDocuments {
   const dataSchema: ObjectSchema = {
     $schema: schemaVersion,
@@ -180,8 +180,8 @@ export function splitFormSchema(
     item = false,
   ): UiDocumentNode {
     const component = legacy['x-component'] as string
-    const props = clean({ ...legacy['x-component-props'] }) as JsonObject
-    const contract = widgetData(component, props)
+    let props = clean({ ...legacy['x-component-props'] }) as JsonObject
+    const contract = contracts.resolve(component, props)
     const kind: UiDocumentNode['kind'] =
       contract?.kind ??
       (legacy.type === 'void'
@@ -220,7 +220,7 @@ export function splitFormSchema(
       legacy.default ??
       (component === 'Text' ? props.content : undefined)
     if (component === 'Text') delete props.content
-    for (const prop of displayValueProps(component)) {
+    for (const [prop, binding] of Object.entries(contract?.bindings ?? {})) {
       const value = props[prop]
       delete props[prop]
       if (typeof value === 'string' && /^\s*\{\{/u.test(value)) {
@@ -235,21 +235,20 @@ export function splitFormSchema(
             },
           ])
         ;(node.bindings ??= {})[prop] = { path }
-      } else if (value !== undefined || prop === 'rows') {
+      } else if (value !== undefined || binding.required) {
         const name = `${node.id}-${prop}`
-        const data = value ?? []
+        const data = value ?? ('rows' in binding ? [] : null)
         ;(node.bindings ??= {})[prop] = { path: jsonPointer([name]) }
         let dataType: DataSchema = infer([data])
-        if (prop === 'rows' && Array.isArray(data) && data.length === 0) {
-          const { columns } = rowColumns(component, props)
+        if ('rows' in binding && Array.isArray(data) && data.length === 0) {
           dataType = {
             type: 'array',
             items: {
               type: 'object',
               properties: Object.fromEntries(
-                columns
+                binding.rows.columns
                   .filter(({ column }) => column)
-                  .map(({ column, types }) => [column, { type: types }]),
+                  .map(({ column, types }) => [column, { type: [...types] }]),
               ),
             },
           }
@@ -257,20 +256,10 @@ export function splitFormSchema(
         derived.push({ name, schema: dataType, data, node })
       }
     }
-    if (
-      (component === 'QuestionnaireStep' || component === 'StepperStep') &&
-      Array.isArray(props.branches)
-    )
-      props.branches = props.branches.map((branch) =>
-        isJsonObject(branch) && typeof branch.path === 'string'
-          ? {
-              ...branch,
-              path: jsonPointer(FormPath.parse(branch.path).segments),
-            }
-          : branch,
-      )
+    if (contract?.migrateProps) props = contract.migrateProps(props)
     if (Object.keys(props).length) node.props = props
-    const own = kind === 'void' ? schema : migrateFieldSchema(legacy, node)
+    const own =
+      kind === 'void' ? schema : migrateFieldSchema(legacy, node, contract)
     const childDefaults: JsonObject = {}
     if (kind === 'object') own.properties = {}
     if (kind === 'array' && isJsonObject(legacy.items)) {

@@ -37,16 +37,26 @@ async function mountPlayground() {
       ChartSources,
     },
     { ChartMaterials },
+    { createDocumentContractRegistry },
+    { chartDocumentContracts },
+    { advancedDocumentContracts },
   ] = await Promise.all([
     import('@formivue-design/shadcn-advanced-designer'),
     import('@formivue-design/shadcn-advanced-runtime'),
     import('@formivue-design/charts-designer'),
     import('@formivue-design/charts-runtime'),
+    import('@formivue-design/formivue-transformer'),
+    import('@formivue-design/data-schema-charts'),
+    import('@formivue-design/data-schema-advanced'),
   ])
   const materials = {
     ...localizedMaterials(AdvancedMaterials),
     ...ChartMaterials,
   }
+  const documentContracts = createDocumentContractRegistry([
+    advancedDocumentContracts,
+    chartDocumentContracts,
+  ])
   const render = () =>
     h(App, {
       advanced: {
@@ -58,6 +68,7 @@ async function mountPlayground() {
         chartSources: ChartSources,
         sources: AdvancedSources,
         materials,
+        documentContracts,
         previewFrame: AdvancedPreviewFrame,
       },
     })

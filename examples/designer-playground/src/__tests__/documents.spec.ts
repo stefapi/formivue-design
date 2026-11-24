@@ -1,12 +1,17 @@
 import { TreeNode } from '@formivue-design/core'
 import {
+  compileFormDocuments,
+  createDocumentContractRegistry,
   createFormDocument,
   parseFormDocuments,
   stringifyFormDocuments,
+  splitFormSchema,
   transformToFormDocuments,
   type FormDocuments,
   type UiDocumentNode,
 } from '@formivue-design/formivue-transformer'
+import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
+import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
 import * as Standard from '@formivue-design/formivue-vue'
 import { AdvancedSources } from '@formivue-design/shadcn-advanced-designer'
 import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
@@ -109,8 +114,176 @@ const documents = (): FormDocuments => ({
 
 const tree = () => new TreeNode({ componentName: 'Form' })
 const materials = { ...AdvancedMaterials, ...ChartMaterials }
+const contracts = createDocumentContractRegistry([
+  advancedDocumentContracts,
+  chartDocumentContracts,
+])
+const createDocument = (documents: FormDocuments) =>
+  createFormDocument(documents, { contracts })
 
 describe('separate UI, schema and data documents', () => {
+  test('uses a session-local contract to migrate and compile a custom component', () => {
+    const registry = createDocumentContractRegistry([
+      {
+        name: 'meter',
+        components: {
+          Meter: {
+            kind: 'field',
+            types: ['number'],
+            bindings: { unit: { required: true, types: ['string'] } },
+          },
+        },
+      },
+    ])
+    const migrated = splitFormSchema(
+      {
+        schema: {
+          type: 'object',
+          properties: {
+            amount: {
+              type: 'number',
+              default: 12,
+              'x-component': 'Meter',
+              'x-component-props': { unit: 'kg' },
+            },
+          },
+        },
+      },
+      undefined,
+      { contracts: registry },
+    )
+    const [node] = migrated.ui.nodes
+    const unitPath = `/${node.id}-unit`
+    expect(node.bindings).toEqual({ unit: { path: unitPath } })
+    const compiled = compileFormDocuments(migrated, { contracts: registry })
+    expect(compiled.diagnostics).toEqual([])
+    expect(compiled.dependencies).toEqual([
+      {
+        componentId: node.id,
+        property: 'bind',
+        path: ['amount'],
+        types: ['number'],
+      },
+      {
+        componentId: node.id,
+        property: 'unit',
+        path: [unitPath.slice(1)],
+        types: ['string'],
+      },
+    ])
+    expect(compiled.schema.properties.amount['x-component-props']).toEqual({
+      unit: `{{ $document.read("${unitPath}") }}`,
+    })
+    expect(() => compileFormDocuments(migrated)).toThrow(
+      expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'missing_component_contract',
+            componentId: node.id,
+            severity: 'warning',
+          }),
+          expect.objectContaining({
+            code: 'missing_binding_types',
+            property: 'unit',
+            severity: 'error',
+          }),
+        ]),
+      }),
+    )
+
+    node.bindings.unit.path = '/missing'
+    expect(() =>
+      compileFormDocuments(migrated, { contracts: registry }),
+    ).toThrow(
+      expect.objectContaining({
+        issues: [
+          expect.objectContaining({
+            code: 'missing_data_path',
+            componentId: node.id,
+            path: '/missing',
+            property: 'unit',
+            severity: 'error',
+          }),
+        ],
+      }),
+    )
+  })
+
+  test('rejects an extension that redeclares a standard contract', () => {
+    expect(() =>
+      createDocumentContractRegistry([
+        {
+          name: 'duplicate',
+          components: { Input: { kind: 'field', types: ['string'] } },
+        },
+      ]),
+    ).toThrow(
+      expect.objectContaining({
+        issues: [
+          expect.objectContaining({
+            code: 'duplicate_component_contract',
+            path: '/extensions/duplicate/Input',
+            severity: 'error',
+          }),
+        ],
+      }),
+    )
+  })
+
+  test('the advanced contract resolves branch dependencies during migration and compilation', () => {
+    const registry = createDocumentContractRegistry([advancedDocumentContracts])
+    const migrated = splitFormSchema(
+      {
+        schema: {
+          type: 'object',
+          properties: {
+            route: {
+              type: 'string',
+              default: 'skip',
+              'x-component': 'Input',
+            },
+            step: {
+              type: 'void',
+              'x-component': 'StepperStep',
+              'x-component-props': {
+                branches: [{ path: 'route', equals: 'skip', next: 'review' }],
+              },
+            },
+          },
+        },
+      },
+      undefined,
+      { contracts: registry },
+    )
+    const [branch] = migrated.ui.nodes[1].props.branches as { path: string }[]
+    expect(branch.path).toBe('/route')
+    const compiled = compileFormDocuments(migrated, { contracts: registry })
+    expect(compiled.dependencies).toContainEqual({
+      componentId: migrated.ui.nodes[1].id,
+      property: 'branches[0].path',
+      path: ['route'],
+      types: ['string'],
+    })
+    expect(
+      compiled.schema.properties.step['x-component-props'].branches,
+    ).toEqual([{ path: ['route'], equals: 'skip', next: 'review' }])
+    branch.path = '/unknown'
+    expect(() =>
+      compileFormDocuments(migrated, { contracts: registry }),
+    ).toThrow(
+      expect.objectContaining({
+        issues: [
+          expect.objectContaining({
+            code: 'missing_data_path',
+            component: 'StepperStep',
+            property: 'branches[0].path',
+            path: '/unknown',
+          }),
+        ],
+      }),
+    )
+  })
+
   test('imports, validates and updates the rendered arrays, table and chart without resetting edits', async () => {
     Object.defineProperty(SVGElement.prototype, 'getComputedTextLength', {
       configurable: true,
@@ -123,7 +296,7 @@ describe('separate UI, schema and data documents', () => {
       value: () => ({ x: 0, y: 0, width: 24, height: 12 }),
     })
     const initial = documents()
-    const document = createFormDocument(
+    const document = createDocument(
       parseFormDocuments(stringifyFormDocuments(initial)),
     )
     expect(document.exportDocuments()).toEqual(initial)
@@ -203,19 +376,17 @@ describe('separate UI, schema and data documents', () => {
   test('rejects invalid paths, mismatched types, failed patches and invalid snapshots atomically', () => {
     const missing = documents()
     missing.ui.nodes[2].bindings.rows.path = '/missing'
-    expect(() => createFormDocument(missing)).toThrow(/BarChart.*\/missing/u)
+    expect(() => createDocument(missing)).toThrow(/BarChart.*\/missing/u)
     const wrong = documents()
     wrong.ui.nodes[2].props.series = [{ key: 'month' }]
-    expect(() => createFormDocument(wrong)).toThrow(
+    expect(() => createDocument(wrong)).toThrow(
       /Column "month" must have type number/u,
     )
     const column = documents()
     column.ui.nodes[1].props.columns = [{ key: 'missing' }]
-    expect(() => createFormDocument(column)).toThrow(
-      /DataTable.*Column "missing"/u,
-    )
+    expect(() => createDocument(column)).toThrow(/DataTable.*Column "missing"/u)
     const initial = documents()
-    const session = createFormDocument(initial)
+    const session = createDocument(initial)
     expect(() =>
       session.applyPatch({
         baseRevision: 0,
@@ -281,23 +452,38 @@ describe('separate UI, schema and data documents', () => {
     const charts = Object.values(ChartSources)
       .flat()
       .flatMap((source) => source.Resource)
-    for (const palette of [standard, advanced, charts]) {
+    for (const { palette, registry, renderers } of [
+      { palette: standard, registry: undefined, renderers: Standard.Materials },
+      {
+        palette: advanced,
+        registry: createDocumentContractRegistry([advancedDocumentContracts]),
+        renderers: { ...Standard.Materials, ...AdvancedMaterials },
+      },
+      {
+        palette: charts,
+        registry: createDocumentContractRegistry([chartDocumentContracts]),
+        renderers: { ...Standard.Materials, ...ChartMaterials },
+      },
+    ]) {
       for (const resource of palette) {
         const root = new TreeNode({
           componentName: 'Form',
           children: resource.node.children.map((node) => node.serialize()),
         })
-        const migrated = transformToFormDocuments(root)
+        const migrated = transformToFormDocuments(root, undefined, {
+          contracts: registry,
+        })
         const session = createFormDocument(
           parseFormDocuments(stringifyFormDocuments(migrated)),
           {
+            contracts: registry,
             hasComponent: (name) =>
-              name.split('.').reduce((value, key) => value?.[key], {
-                ...Standard.Materials,
-                ...materials,
-              } as any) != null,
+              name
+                .split('.')
+                .reduce((value, key) => value?.[key], renderers as any) != null,
           },
         )
+        expect(session.diagnostics).toEqual([])
         expect(session.exportDocuments()).toEqual(migrated)
         session.dispose()
       }
@@ -309,7 +495,7 @@ describe('separate UI, schema and data documents', () => {
     initial.ui.nodes = initial.ui.nodes.filter(
       (node) => node.component !== 'BarChart',
     )
-    const session = createFormDocument(initial)
+    const session = createDocument(initial)
     const first = mount(PreviewWidget, {
       props: { tree: tree(), materials, document: session },
     })
@@ -345,7 +531,7 @@ describe('separate UI, schema and data documents', () => {
   })
 
   test('keeps a number being typed when the same value refreshes before blur', async () => {
-    const session = createFormDocument({
+    const session = createDocument({
       ui: {
         version: 1,
         nodes: [
@@ -395,7 +581,7 @@ describe('separate UI, schema and data documents', () => {
       type: 'string',
       enum: ['January', 'February'],
     }
-    const session = createFormDocument(initial)
+    const session = createDocument(initial)
     expect(() =>
       session.applyPatch({
         baseRevision: 0,
@@ -430,9 +616,7 @@ describe('separate UI, schema and data documents', () => {
       },
     }
     timeline.data = { events: [{ label: 'Event', start: 5, end: 1 }] }
-    expect(() => createFormDocument(timeline)).toThrow(
-      /TimelineChart.*dateOrder/u,
-    )
+    expect(() => createDocument(timeline)).toThrow(/TimelineChart.*dateOrder/u)
   })
 
   test('applies three independently edited documents from the JSON panel', async () => {
@@ -441,6 +625,7 @@ describe('separate UI, schema and data documents', () => {
       props: {
         tree: tree(),
         documents: documents(),
+        contracts,
         onApply: apply,
         onCanvas: vi.fn(),
       },

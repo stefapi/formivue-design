@@ -44,6 +44,25 @@ const byName = new Map(
 const libraries = workspaces.filter(({ layer }) => layer !== 'examples')
 
 describe('workspace architecture', () => {
+  test('the standard transformer is independent of charts and advanced contracts', () => {
+    const dependencies = new Set<string>()
+    const visit = (name: string) => {
+      if (dependencies.has(name)) return
+      dependencies.add(name)
+      for (const dependency of byName.get(name)?.declared ?? []) {
+        if (byName.has(dependency)) visit(dependency)
+      }
+    }
+    visit('@formivue-design/formivue-transformer')
+    expect(
+      [...dependencies].filter((name) =>
+        /^@formivue-design\/(charts-|shadcn-advanced-|data-schema-)/u.test(
+          name,
+        ),
+      ),
+    ).toEqual([])
+  })
+
   test('manager, designer and examples respect the dependency direction', () => {
     const violations: string[] = []
     for (const library of libraries) {

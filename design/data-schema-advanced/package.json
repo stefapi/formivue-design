@@ -1,0 +1,41 @@
+{
+  "name": "@formivue-design/data-schema-advanced",
+  "version": "3.0.3",
+  "description": "Advanced component contracts for Formivue data documents",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "dependencies": {
+    "@formivue-design/formivue-transformer": "workspace:*",
+    "@formivue/core": "workspace:*",
+    "@formivue/json-schema": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/data-schema-advanced"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT"
+}

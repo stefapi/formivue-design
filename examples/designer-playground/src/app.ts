@@ -37,6 +37,7 @@ import {
 } from '@formivue-design/vue'
 import {
   createFormDocument,
+  type DocumentContractRegistry,
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
 import { SettingsForm } from '@formivue-design/vue-settings-form'
@@ -113,6 +114,7 @@ export interface AdvancedPlayground {
   materials: typeof AdvancedMaterials & typeof ChartMaterials
   previewFrame: typeof AdvancedPreviewFrame
   sources: typeof AdvancedSources
+  documentContracts: DocumentContractRegistry
 }
 import { useInertBackground } from './inert'
 
@@ -246,6 +248,7 @@ export const App = defineComponent({
       } else {
         const materials = { ...Materials, ...props.advanced?.materials }
         const next = createFormDocument(documents, {
+          contracts: props.advanced?.documentContracts,
           hasComponent: (name) =>
             name
               .split('.')
@@ -482,6 +485,8 @@ export const App = defineComponent({
                                       h(DocumentEditorWidget, {
                                         tree,
                                         onChange,
+                                        contracts:
+                                          props.advanced?.documentContracts,
                                         documents:
                                           previewDocument.value?.exportDocuments(),
                                         onApply: applyDocument,

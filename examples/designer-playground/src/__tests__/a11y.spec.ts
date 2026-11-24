@@ -25,6 +25,9 @@ import {
   ChartSources,
 } from '@formivue-design/charts-designer'
 import { ChartMaterials } from '@formivue-design/charts-runtime'
+import { createDocumentContractRegistry } from '@formivue-design/formivue-transformer'
+import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
+import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
 
 // le loader monaco n'est pas consommé sur les vues auditées (JSONTREE/MARKUP
 // hors périmètre) — mais le module s'importe au chargement d'app : mock pour
@@ -220,6 +223,10 @@ describe('playground formivue-vue — a11y (V8)', () => {
           materials: { ...AdvancedMaterials, ...ChartMaterials },
           previewFrame: AdvancedPreviewFrame,
           sources: AdvancedSources,
+          documentContracts: createDocumentContractRegistry([
+            advancedDocumentContracts,
+            chartDocumentContracts,
+          ]),
         },
       },
     })

@@ -5,6 +5,7 @@ import {
   parseFormDocuments,
   stringifyFormDocuments,
   transformToFormDocuments,
+  type DocumentContractRegistry,
   type FormDocumentJson,
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
@@ -23,6 +24,7 @@ export const DocumentEditorWidget = defineComponent({
   name: 'DocumentEditorWidget',
   props: {
     tree: { type: Object as PropType<TreeNode>, required: true },
+    contracts: Object as PropType<DocumentContractRegistry>,
     documents: Object as PropType<FormDocuments>,
     onApply: {
       type: Function as PropType<
@@ -37,6 +39,10 @@ export const DocumentEditorWidget = defineComponent({
     const part = ref<keyof FormDocuments | 'legacy'>('ui')
     const contents = ref<FormDocumentJson>({ ui: '', dataSchema: '', data: '' })
     const error = ref('')
+    const canvasDocuments = () =>
+      transformToFormDocuments(props.tree, undefined, {
+        contracts: props.contracts,
+      })
     const setDocuments = (read: () => FormDocuments) => {
       try {
         contents.value = stringifyFormDocuments(read())
@@ -45,11 +51,13 @@ export const DocumentEditorWidget = defineComponent({
         error.value = documentError(cause)
       }
     }
-    setDocuments(() => props.documents ?? transformToFormDocuments(props.tree))
+    setDocuments(() => props.documents ?? canvasDocuments())
 
     const download = (key: keyof FormDocuments) => {
       try {
-        createFormDocument(parseFormDocuments(contents.value)).dispose()
+        createFormDocument(parseFormDocuments(contents.value), {
+          contracts: props.contracts,
+        }).dispose()
         error.value = ''
       } catch (cause) {
         error.value = documentError(cause)
@@ -103,11 +111,7 @@ export const DocumentEditorWidget = defineComponent({
                   {
                     size: 'small',
                     onClick: () =>
-                      setDocuments(
-                        () =>
-                          props.documents ??
-                          transformToFormDocuments(props.tree),
-                      ),
+                      setDocuments(() => props.documents ?? canvasDocuments()),
                   },
                   () =>
                     message([
@@ -184,9 +188,7 @@ export const DocumentEditorWidget = defineComponent({
                           size: 'small',
                           onClick: () => {
                             props.onCanvas()
-                            setDocuments(() =>
-                              transformToFormDocuments(props.tree),
-                            )
+                            setDocuments(canvasDocuments)
                           },
                         },
                         () =>
