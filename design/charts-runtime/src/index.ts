@@ -12,3 +12,8 @@ export {
   chartTitles,
   ChartLocaleKey,
 } from './shared/locale'
+export {
+  isDatePeriod,
+  periodStart,
+  type DatePeriod,
+} from './shared/date-period'

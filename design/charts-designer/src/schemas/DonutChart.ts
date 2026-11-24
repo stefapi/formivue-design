@@ -1,8 +1,8 @@
 import { centerLabel, numberSetting, sliceRadius } from './appearance'
-import { chartSchema, sliceMapping } from './shared'
+import { chartSchema, periodSliceMapping } from './shared'
 
 export const DonutChart = chartSchema({
-  ...sliceMapping,
+  ...periodSliceMapping,
   ringWidth: numberSetting(1, 100, 'Auto'),
   sliceGap: numberSetting(0, 30, '0'),
   sliceRadius,

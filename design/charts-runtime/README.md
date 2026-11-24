@@ -50,3 +50,14 @@ accept the same `rows` prop, including live data from an ArrayTable.
 
 Geographic types use a bundled world map. Where a type combines repeated
 categories or pairs, `aggregation` chooses the sum or mean.
+
+Bar, stacked bar, line, area, pie and donut charts can group dates in `xKey`
+with `datePeriod: 'day' | 'week' | 'month'`. Dates are bucketed in UTC, and
+weeks start on Monday. Use ISO dates such as `2026-01-05` or ISO timestamps.
+Invalid dates are excluded. The default `datePeriod: 'none'` uses the
+categories as provided.
+
+Set `countRows: true` to count rows in each category or period without
+mapping a numeric column. On Cartesian charts, `groupKey` gives each group
+its own count.
+Period charts that use numeric values support both sum and mean.

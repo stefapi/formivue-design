@@ -49,6 +49,9 @@ export const jsonArray = (items: ISchema, allowExpression = false): ISchema =>
     { type: 'array', items },
   )
 
+const countRows = '!!$values["x-component-props"]?.countRows'
+const datePeriodValue = '$values["x-component-props"]?.datePeriod'
+const byDate = `["day", "week", "month"].includes(${datePeriodValue})`
 const grouping = '$values["x-component-props"]?.groupKey'
 const format = '$values["x-component-props"]?.valueFormat'
 export const hideWhen = (condition: string) => ({
@@ -70,12 +73,26 @@ export const aggregation = (hidden?: string) =>
     hidden ? { 'x-reactions': hideWhen(hidden) } : undefined,
   )
 
+const periodColumn = {
+  ...axis(),
+  'x-component-props': { allowDatePeriod: true },
+}
+const datePeriod = editor(['none', 'day', 'week', 'month'], {
+  defaultValue: 'none',
+})
+const countControl = editor('Switch')
+
 export const categoricalMapping = {
-  xKey: axis(),
+  xKey: periodColumn,
+  datePeriod,
+  countRows: countControl,
   categoryOrder,
   groupKey: axis(),
-  valueKey: { ...axis(true), 'x-reactions': hideWhen(`!${grouping}`) },
-  aggregation: aggregation(`!${grouping}`),
+  valueKey: {
+    ...axis(true),
+    'x-reactions': hideWhen(`!${grouping} || ${countRows}`),
+  },
+  aggregation: aggregation(`(!${grouping} && !(${byDate})) || ${countRows}`),
   series: {
     ...jsonArray({
       type: 'object',
@@ -87,7 +104,7 @@ export const categoricalMapping = {
       },
     }),
     'x-component': 'ChartSeriesInput',
-    'x-reactions': hideWhen(`!!${grouping}`),
+    'x-reactions': hideWhen(`!!${grouping} || ${countRows}`),
   },
 }
 
@@ -96,6 +113,14 @@ export const sliceMapping = {
   categoryOrder,
   valueKey: axis(true),
   aggregation: aggregation(),
+}
+export const periodSliceMapping = {
+  ...sliceMapping,
+  xKey: periodColumn,
+  datePeriod,
+  countRows: countControl,
+  valueKey: { ...axis(true), 'x-reactions': hideWhen(countRows) },
+  aggregation: aggregation(countRows),
 }
 export const hierarchyMapping = { ...sliceMapping, groupKey: axis() }
 export const linkMapping = {
@@ -117,15 +142,19 @@ export const chartSchema = <Mapping extends Record<string, ISchema>>(
     ...mapping,
     ...(numericFormat
       ? {
-          valueFormat: editor(['auto', 'euro', 'percent', 'decimal'], {
-            defaultValue: 'auto',
-          }),
+          valueFormat: editor(
+            ['auto', 'euro', 'percent', 'decimal'],
+            { defaultValue: 'auto' },
+            'countRows' in mapping
+              ? { 'x-reactions': hideWhen(countRows) }
+              : undefined,
+          ),
           decimalPlaces: editor(
             'NumberPicker',
             { min: 0, max: 20, precision: 0, placeholder: '2' },
             {
               'x-reactions': hideWhen(
-                `!["euro", "percent", "decimal"].includes(${format})`,
+                `!["euro", "percent", "decimal"].includes(${format})${'countRows' in mapping ? ` || ${countRows}` : ''}`,
               ),
             },
           ),

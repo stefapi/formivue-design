@@ -1047,6 +1047,200 @@ describe('advanced settings through the designer and JSON preview', () => {
     },
   )
 
+  test.each([
+    {
+      period: 'day',
+      initial: [
+        ['2025-12-29', '1', '–'],
+        ['2026-01-04', '1', '1'],
+        ['2026-01-05', '–', '1'],
+        ['2026-02-01', '1', '–'],
+      ],
+      edited: [
+        ['2025-12-29', '1', '–'],
+        ['2026-01-04', '–', '1'],
+        ['2026-01-05', '–', '1'],
+        ['2026-02-01', '2', '–'],
+      ],
+    },
+    {
+      period: 'week',
+      initial: [
+        ['2025-12-29', '2', '1'],
+        ['2026-01-05', '–', '1'],
+        ['2026-01-26', '1', '–'],
+      ],
+      edited: [
+        ['2025-12-29', '1', '1'],
+        ['2026-01-05', '–', '1'],
+        ['2026-01-26', '2', '–'],
+      ],
+    },
+    {
+      period: 'month',
+      initial: [
+        ['2025-12-01', '1', '–'],
+        ['2026-01-01', '1', '2'],
+        ['2026-02-01', '1', '–'],
+      ],
+      edited: [
+        ['2025-12-01', '1', '–'],
+        ['2026-01-01', '–', '2'],
+        ['2026-02-01', '2', '–'],
+      ],
+    },
+  ])(
+    'Chart counts rows per $period and group before and after JSON import',
+    async ({ period, initial, edited }) => {
+      measureChartInJsdom()
+      const studio = designerFor('BarChart', (node, root) => {
+        appendSalesTable(
+          root,
+          [
+            { ordered: '2025-12-29', channel: 'Web', amount: null },
+            { ordered: '2026-01-04', channel: 'Web', amount: 12 },
+            { ordered: '2026-01-04', channel: 'Shop', amount: 0 },
+            { ordered: '2026-01-05', channel: 'Shop', amount: 100 },
+            { ordered: '2026-02-01', channel: 'Web', amount: 42 },
+            { ordered: '2026-02-30', channel: 'Web', amount: 8 },
+          ],
+          {
+            ordered: { title: 'Order date', type: 'string' },
+            channel: { title: 'Channel', type: 'string' },
+            amount: { title: 'Amount', type: 'number' },
+          },
+        )
+        Object.assign(node.props['x-component-props'], {
+          rows: '{{ $form.getValuesIn(["sales"]) }}',
+          valueFormat: 'euro',
+        })
+      })
+      const { designer, node } = studio
+      await editSettings(
+        studio,
+        node,
+        'BarChart',
+        {
+          datePeriod: period,
+          xKey: 'ordered',
+          groupKey: 'channel',
+          categoryOrder: 'ascending',
+          countRows: true,
+        },
+        true,
+      )
+      const options = new DOMWrapper(
+        designer
+          .get('label[for$="x-component-props.xKey"]')
+          .element.closest('[data-slot="form-item"]'),
+      )
+      expect(options.get('datalist option').text()).toBe('Order date')
+      expect(options.findAll('datalist option')).toHaveLength(1)
+      expect(
+        designer.find('label[for$="x-component-props.valueKey"]').exists(),
+      ).toBe(false)
+      expect(
+        designer.get('[aria-label="Mapping diagnostics"]').text(),
+      ).toContain('Invalid date')
+
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: 'short',
+        ...(period === 'month' ? {} : { day: 'numeric' }),
+      })
+      const display = (rows: string[][]) =>
+        rows.map(([date, ...values]) => [
+          (period === 'week' ? 'Week of ' : '') +
+            formatter.format(new Date(date)),
+          ...values,
+        ])
+      const values = (component: VueWrapper) =>
+        component
+          .findAll('figure tbody tr')
+          .map((row) => row.findAll('td').map((cell) => cell.text()))
+      await vi.waitFor(() => expect(values(designer)).toEqual(display(initial)))
+      const view = await previewAfterImport(studio)
+      await vi.waitFor(() => expect(values(view)).toEqual(display(initial)))
+      expect(view.find('figure svg').exists()).toBe(true)
+
+      const table = view.get('.dn-array-table')
+      await table
+        .findAll('tbody tr')[1]
+        .get('td:first-child input')
+        .setValue('2026-02-01')
+      await vi.waitFor(() => expect(values(view)).toEqual(display(edited)))
+
+      await table
+        .findAll('tbody tr')[4]
+        .get('button[aria-label="Remove"]')
+        .trigger('click')
+      const afterRemoval = edited.map((row, index) =>
+        index === edited.length - 1 ? [row[0], '1', row[2]] : row,
+      )
+      await vi.waitFor(() =>
+        expect(values(view)).toEqual(display(afterRemoval)),
+      )
+    },
+  )
+
+  test('Chart averages numeric series by week after JSON import', async () => {
+    measureChartInJsdom()
+    const studio = designerFor('LineChart', (node, root) => {
+      appendSalesTable(
+        root,
+        [
+          { ordered: '2026-01-05', amount: 10, target: 30 },
+          { ordered: '2026-01-11', amount: 30, target: 40 },
+          { ordered: '2026-01-12', amount: 40, target: 50 },
+        ],
+        {
+          ordered: { title: 'Order date', type: 'string' },
+          amount: { title: 'Amount', type: 'number' },
+          target: { title: 'Target', type: 'number' },
+        },
+      )
+      Object.assign(node.props['x-component-props'], {
+        rows: '{{ $form.getValuesIn(["sales"]) }}',
+        xKey: 'ordered',
+        series: [
+          { key: 'amount', title: 'Amount' },
+          { key: 'target', title: 'Target' },
+        ],
+      })
+    })
+    await editSettings(
+      studio,
+      studio.node,
+      'LineChart',
+      {
+        datePeriod: 'week',
+        aggregation: 'mean',
+      },
+      true,
+    )
+    const view = await previewAfterImport(studio)
+    const values = () =>
+      view
+        .findAll('figure tbody tr')
+        .map((row) => row.findAll('td').map((cell) => cell.text()))
+    await vi.waitFor(() =>
+      expect(values()).toEqual([
+        ['Week of Jan 5, 2026', '20', '35'],
+        ['Week of Jan 12, 2026', '40', '50'],
+      ]),
+    )
+    const amount = view
+      .get('.dn-array-table')
+      .findAll('tbody tr')[0]
+      .findAll('input[role="spinbutton"]')[0]
+    await amount.setValue('20')
+    await amount.trigger('blur')
+    await vi.waitFor(() =>
+      expect(values()[0]).toEqual(['Week of Jan 5, 2026', '25', '35']),
+    )
+  })
+
   test('Chart suggests columns from JSON and plots numeric points in a line chart', async () => {
     measureChartInJsdom()
     const studio = designerFor('LineChart')

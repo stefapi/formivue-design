@@ -8,6 +8,7 @@ import {
 } from 'vue'
 import { appearanceProps, chartAppearance, type ChartName } from './appearance'
 import type { ChartSeries } from './categorical-data'
+import type { DatePeriod } from './date-period'
 import {
   ChartLocaleKey,
   chartLabels,
@@ -60,8 +61,15 @@ const chartProps = {
   locale: String,
 }
 
+export const categoricalProps = {
+  datePeriod: { type: String as PropType<DatePeriod>, default: 'none' },
+  countRows: Boolean,
+}
+
 export type ChartOptions = ExtractPropTypes<typeof chartProps> &
-  Partial<ExtractPropTypes<typeof appearanceProps>> & {
+  Partial<
+    ExtractPropTypes<typeof appearanceProps & typeof categoricalProps>
+  > & {
     valueLabel: (value?: number) => string
     formatAxis: boolean
     color: (index: number) => string
@@ -70,11 +78,13 @@ export type ChartOptions = ExtractPropTypes<typeof chartProps> &
 export function createChart(
   name: ChartName,
   render: (options: ChartOptions) => VNode,
+  categoryProps: Partial<typeof categoricalProps> = {},
 ) {
   return defineComponent({
     name,
     props: {
       ...chartProps,
+      ...categoryProps,
       ...(Object.fromEntries(
         chartAppearance[name].map((key) => [key, appearanceProps[key]]),
       ) as Partial<typeof appearanceProps>),
@@ -93,6 +103,7 @@ export function createChart(
         }
       })
       const numberFormatter = computed(() => {
+        if (props.countRows) return
         const mode = props.valueFormat
         if (mode !== 'decimal' && mode !== 'euro' && mode !== 'percent') return
         const digits = Number.isFinite(props.decimalPlaces)

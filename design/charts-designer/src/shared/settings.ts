@@ -1,5 +1,9 @@
 import { defineComponent, h, useId, type PropType } from 'vue'
-import type { ChartName, ChartSeries } from '@formivue-design/charts-runtime'
+import {
+  isDatePeriod,
+  type ChartName,
+  type ChartSeries,
+} from '@formivue-design/charts-runtime'
 import { useOperation } from '@formivue-design/vue'
 import { ValueInput } from '@formivue-design/vue-settings-form'
 import { Button, Table } from '@formivue-design/vue-ui'
@@ -126,7 +130,7 @@ const ChartAxis = observer(
   defineComponent({
     name: 'ChartAxis',
     inheritAttrs: false,
-    props: { value: String, numeric: Boolean },
+    props: { value: String, numeric: Boolean, allowDatePeriod: Boolean },
     emits: ['change'],
     setup(props, { attrs, emit }) {
       const list = useId()
@@ -135,9 +139,16 @@ const ChartAxis = observer(
         const source = currentSource(operation)
         const columns = chartColumns(source)
         const matching = columns.find(({ key }) => key === props.value)
-        const choices = props.numeric
-          ? columns.filter(({ numeric }) => numeric)
-          : columns.sort((a, b) => Number(!!a.numeric) - Number(!!b.numeric))
+        const datesOnly =
+          props.allowDatePeriod &&
+          isDatePeriod(
+            selectedNode(operation)?.props['x-component-props']?.datePeriod,
+          )
+        const choices = datesOnly
+          ? columns.filter(({ date }) => date)
+          : props.numeric
+            ? columns.filter(({ numeric }) => numeric)
+            : columns.sort((a, b) => Number(!!a.numeric) - Number(!!b.numeric))
         const warning =
           props.value && !hasChartColumn(source, props.value)
             ? text([

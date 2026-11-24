@@ -53,6 +53,14 @@ const settings: SettingLabels = {
     'Longitude de destination',
     'Longitud de destino',
   ],
+  datePeriod: choice(
+    ['Group dates by', 'Regrouper les dates par', 'Agrupar fechas por'],
+    ['No period', 'Aucun regroupement', 'Sin agrupar'],
+    ['Day', 'Jour', 'Día'],
+    ['Week (Monday)', 'Semaine (lundi)', 'Semana (lunes)'],
+    ['Month', 'Mois', 'Mes'],
+  ),
+  countRows: ['Count rows', 'Compter les lignes', 'Contar filas'],
   categoryOrder: [
     {
       title: 'Category order',

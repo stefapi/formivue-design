@@ -1,3 +1,4 @@
+import { isDatePeriod, periodStart } from './date-period'
 import { hasFlowCycle, pairs } from './special-data'
 import type { ChartName } from './appearance'
 import type { ChartOptions } from './base'
@@ -25,6 +26,8 @@ export type MappingOptions = Partial<
     | 'valueKey'
     | 'series'
     | 'aggregation'
+    | 'datePeriod'
+    | 'countRows'
     | 'sourceKey'
     | 'targetKey'
     | 'startKey'
@@ -79,6 +82,10 @@ function mappingFor(
   props: MappingOptions,
   country: Parser,
 ): Mapping {
+  const period = props.datePeriod
+  const x = isDatePeriod(period)
+    ? check(props.xKey, (value) => periodStart(value, period), 'date')
+    : check(props.xKey, categoryValue, 'label')
   const category = check(props.xKey, label, 'label')
   const value = check(props.valueKey, num, 'number')
   const group = check(props.groupKey, label, 'label')
@@ -91,12 +98,12 @@ function mappingFor(
     case 'StackedBarChart':
     case 'LineChart':
     case 'AreaChart': {
-      const x = check(props.xKey, categoryValue, 'label')
+      const dimensions = props.groupKey
+        ? [x, check(props.groupKey, groupValue, 'label')]
+        : [x]
+      if (props.countRows) return { required: dimensions }
       if (props.groupKey)
-        return {
-          required: [x, check(props.groupKey, groupValue, 'label'), value],
-          aggregate: 'finite',
-        }
+        return { required: [...dimensions, value], aggregate: 'finite' }
       const series = Array.isArray(props.series) ? props.series : []
       return {
         required: [x],
@@ -109,10 +116,9 @@ function mappingFor(
     }
     case 'PieChart':
     case 'DonutChart':
-      return {
-        required: [check(props.xKey, categoryValue, 'label'), value],
-        aggregate: 'positive',
-      }
+      return props.countRows
+        ? { required: [x] }
+        : { required: [x, value], aggregate: 'positive' }
     case 'RadialBarChart':
     case 'CircularBarChart':
       return { required: [category, value], aggregate: 'positive' }

@@ -8,7 +8,7 @@ import VisSingleContainer from '@unovis/vue/containers/single-container'
 import VisXYContainer from '@unovis/vue/containers/xy-container'
 import { h, type VNode } from 'vue'
 import { chartData } from './categorical-data'
-import { createChart, type ChartOptions } from './base'
+import { categoricalProps, createChart, type ChartOptions } from './base'
 import { radians, type ChartName } from './appearance'
 
 type ChartPoint = ReturnType<typeof chartData>['points'][number]
@@ -25,7 +25,7 @@ export function createCategoricalChart(
     'pie' | 'donut' | ((data: Marks, options: ChartOptions) => VNode | VNode[]),
   stacked = false,
 ) {
-  return createChart(name, (props) => {
+  const render = (props: ChartOptions) => {
     const circular = typeof marks === 'string'
     const { height, valueLabel, color: chartColor, formatAxis } = props
     const { points, series: sourceSeries } = chartData({ ...props, circular })
@@ -214,5 +214,6 @@ export function createCategoricalChart(
           : h('p', { class: 'text-sm text-muted-foreground' }, props.emptyText),
       ],
     )
-  })
+  }
+  return createChart(name, render, categoricalProps)
 }

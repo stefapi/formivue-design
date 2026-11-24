@@ -1,9 +1,11 @@
 import type { TreeNode } from '@formivue-design/core'
+import { periodStart } from '@formivue-design/charts-runtime'
 
 interface Column {
   key: string
   title: string
   numeric?: boolean
+  date?: boolean
 }
 
 interface ArrayTableSource {
@@ -93,19 +95,31 @@ export const hasChartColumn = (
 
 export const chartColumns = (source: ReturnType<typeof chartSource>) => {
   const columns = new Map<string, Column>()
+  const sample = source.records.slice(0, 50)
+  const dates = new Set<string>()
+  for (const row of sample) {
+    for (const [key, value] of Object.entries(row)) {
+      if (typeof value === 'string' && periodStart(value, 'day') !== undefined)
+        dates.add(key)
+    }
+  }
   for (const field of arrayTableColumns(source.linked?.node)) {
     const key = field.props.name || field.id
     columns.set(key, {
       key,
       title: field.props.title || key,
       numeric: ['number', 'integer'].includes(field.props.type),
+      date:
+        field.props['x-component'] === 'DatePicker' ||
+        ['date', 'date-time'].includes(field.props.format) ||
+        dates.has(key),
     })
   }
 
   if (source.linked) return [...columns.values()]
 
   const inferred = new Map<string, boolean | undefined>()
-  for (const record of source.records.slice(0, 50)) {
+  for (const record of sample) {
     for (const [key, item] of Object.entries(record)) {
       if (columns.has(key)) continue
       if (item == null) {
@@ -117,7 +131,7 @@ export const chartColumns = (source: ReturnType<typeof chartSource>) => {
     }
   }
   for (const [key, numeric] of inferred)
-    columns.set(key, { key, title: key, numeric })
+    columns.set(key, { key, title: key, numeric, date: dates.has(key) })
   return [...columns.values()]
 }
 
