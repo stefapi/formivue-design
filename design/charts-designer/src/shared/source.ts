@@ -1,5 +1,5 @@
 import type { TreeNode } from '@formivue-design/core'
-import { periodStart } from '@formivue-design/charts-runtime'
+import { periodStart, type ChartFilter } from '@formivue-design/charts-runtime'
 
 interface Column {
   key: string
@@ -8,17 +8,17 @@ interface Column {
   date?: boolean
 }
 
-interface ArrayTableSource {
+interface FormSource {
   expression: string
   title: string
   node: TreeNode
 }
 
-export const arrayTableSources = (
+const formSources = (
   chart: TreeNode | undefined,
   rename?: { field: TreeNode; previousKey: string },
 ) => {
-  const sources: ArrayTableSource[] = []
+  const sources: FormSource[] = []
   const visit = (node: TreeNode, path: string[]) => {
     for (const child of node.children) {
       if (child.componentName !== 'Field') continue
@@ -27,18 +27,16 @@ export const arrayTableSources = (
           ? rename.previousKey
           : child.props.name || child.id
       const next = child.props.type === 'void' ? path : [...path, key]
-      if (child.props.type === 'array') {
-        if (child.props['x-component'] === 'ArrayTable') {
-          sources.push({
-            expression: `{{ $form.getValuesIn(${JSON.stringify(next)}) }}`,
-            title: child.props.title
-              ? `${child.props.title} (${next.join('.')})`
-              : next.join('.'),
-            node: child,
-          })
-        }
-      } else if (child.props.type === 'object' || child.props.type === 'void') {
+      if (child.props.type === 'object' || child.props.type === 'void') {
         visit(child, next)
+      } else {
+        sources.push({
+          expression: `{{ $form.getValuesIn(${JSON.stringify(next)}) }}`,
+          title: child.props.title
+            ? `${child.props.title} (${next.join('.')})`
+            : next.join('.'),
+          node: child,
+        })
       }
     }
   }
@@ -46,7 +44,62 @@ export const arrayTableSources = (
   return sources
 }
 
-export const chartSource = (rows: unknown, sources: ArrayTableSource[]) => {
+export const arrayTableSources = (
+  chart: TreeNode | undefined,
+  rename?: { field: TreeNode; previousKey: string },
+) =>
+  formSources(chart, rename).filter(
+    ({ node }) =>
+      node.props.type === 'array' && node.props['x-component'] === 'ArrayTable',
+  )
+
+export const chartFilterFields = (
+  chart: TreeNode | undefined,
+  rename?: { field: TreeNode; previousKey: string },
+) =>
+  formSources(chart, rename).flatMap<
+    FormSource & Pick<ChartFilter, 'operation'>
+  >((source) => {
+    const { props } = source.node
+    if (props['x-component'] === 'DatePicker.RangePicker')
+      return [{ ...source, operation: 'dateRange' }]
+    if (
+      ['string', 'number', 'integer', 'boolean'].includes(props.type) ||
+      (props.type === 'array' &&
+        ['Select', 'Combobox', 'Checkbox.Group', 'TagsInput'].includes(
+          props['x-component'],
+        ))
+    )
+      return [{ ...source, operation: 'matches' }]
+    return []
+  })
+
+export const chartFilterDefaults = (
+  filters: unknown,
+  chart: TreeNode | undefined,
+) => {
+  if (!Array.isArray(filters) || !filters.length) return []
+  const fields = chartFilterFields(chart)
+  return filters
+    .filter(
+      (filter): filter is ChartFilter => !!filter && typeof filter === 'object',
+    )
+    .map((filter) => {
+      if (
+        typeof filter.value !== 'string' ||
+        !filter.value.trim().startsWith('{{')
+      )
+        return filter
+      const field = fields.find(({ expression }) => expression === filter.value)
+      const props = field?.node.props
+      return {
+        ...filter,
+        value: props && ('x-value' in props ? props['x-value'] : props.default),
+      }
+    })
+}
+
+export const chartSource = (rows: unknown, sources: FormSource[]) => {
   const linked = sources.find(({ expression }) => expression === rows)
   const data = linked ? linked.node.props.default : rows
   const entries: unknown[] = Array.isArray(data) ? data : []
@@ -141,6 +194,22 @@ export function updateChartLink(
   previousKey: string,
 ) {
   const props = chart.props['x-component-props']
+  const filters: ChartFilter[] = Array.isArray(props?.filters)
+    ? props.filters
+    : []
+  if (filters.length) {
+    const fields = chartFilterFields(chart, { field, previousKey })
+    const updatedFields = chartFilterFields(chart)
+    for (const filter of filters) {
+      const linked = fields.find(
+        ({ expression }) => expression === filter?.value,
+      )
+      if (!linked) continue
+      const updated = updatedFields.find(({ node }) => node === linked.node)
+      if (updated && linked.expression !== updated.expression)
+        filter.value = updated.expression
+    }
+  }
   if (typeof props?.rows !== 'string') return
   const source = arrayTableSources(chart, { field, previousKey }).find(
     ({ expression }) => expression === props.rows,
@@ -174,6 +243,9 @@ export function updateChartLink(
     for (const series of props.series) {
       if (series?.key === previousKey) series.key = key
     }
+  }
+  for (const filter of filters) {
+    if (filter?.column === previousKey) filter.column = key
   }
 
   const rows = source.node.props.default

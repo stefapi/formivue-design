@@ -20,6 +20,7 @@ const choice = (
 
 const settings: SettingLabels = {
   rows: ['Data source', 'Source des données', 'Fuente de datos'],
+  filters: ['Form filters', 'Filtres du formulaire', 'Filtros del formulario'],
   xKey: ['Category column', 'Colonne de catégories', 'Columna de categorías'],
   sourceKey: ['Source column', 'Colonne de départ', 'Columna de origen'],
   targetKey: [

@@ -9,7 +9,12 @@ import type { ISchema } from '@formivue/json-schema'
 import { observer } from '@formivue/reactive-vue'
 import { defineComponent, h, type Component } from 'vue'
 import { designerLanguages, type materialLocales } from '../locales/shared'
-import { arrayTableSources, chartSource, updateChartLink } from './source'
+import {
+  arrayTableSources,
+  chartFilterDefaults,
+  chartSource,
+  updateChartLink,
+} from './source'
 
 export function createChartMaterial({
   name,
@@ -38,6 +43,7 @@ export function createChartMaterial({
             locale: GlobalRegistry.getDesignerLanguage(),
             ...attrs,
             rows: records,
+            filters: chartFilterDefaults(attrs.filters, node),
           })
         }
       },

@@ -7,12 +7,15 @@ import {
 import { transformToSchema } from '@formivue-design/formivue-transformer'
 import {
   ArrayTable,
+  DatePicker,
   Field,
   Form,
   Input,
   NumberPicker,
+  Select,
   Text,
 } from '@formivue-design/formivue-vue'
+import { FormProvider } from '@formivue/vue'
 import {
   DataSourceSetter,
   ReactionsSetter,
@@ -151,6 +154,8 @@ function designerFor(
                     Text,
                     Input,
                     NumberPicker,
+                    Select,
+                    DatePicker,
                     ...designerComponents,
                   },
                 }),
@@ -1183,6 +1188,208 @@ describe('advanced settings through the designer and JSON preview', () => {
       )
     },
   )
+
+  test('A status and a date range filter two charts and their data tables after JSON import', async () => {
+    measureChartInJsdom()
+    const originalRows = [
+      { ordered: '2026-01-01', status: 'paid' },
+      { ordered: '2026-01-12', status: 'paid' },
+      { ordered: '2026-01-31T23:59:59Z', status: 'paid' },
+      { ordered: '2026-01-01', status: 'pending' },
+      { ordered: '2026-02-01', status: 'pending' },
+      { ordered: '2026-02-01', status: 'paid' },
+    ]
+    const link = (...path: string[]) =>
+      `{{ $form.getValuesIn(${JSON.stringify(path)}) }}`
+    const studio = designerFor('BarChart', (node, root) => {
+      const controls = new TreeNode({
+        componentName: 'Field',
+        props: { name: 'controls', type: 'object' },
+      })
+      controls.append(
+        child('status', 'Select', {
+          type: 'string',
+          title: 'Status',
+          default: 'paid',
+          enum: [
+            { label: 'Paid', value: 'paid' },
+            { label: 'Pending', value: 'pending' },
+          ],
+          'x-decorator': 'FormItem',
+        }),
+      )
+      root.append(
+        controls,
+        child('period', 'DatePicker.RangePicker', {
+          type: 'string[]',
+          title: 'Period',
+          default: ['2026-01-01', '2026-01-31'],
+        }),
+      )
+      appendSalesTable(root, originalRows, {
+        ordered: { title: 'Order date', type: 'string' },
+        status: { title: 'Status', type: 'string' },
+      })
+      Object.assign(node.props['x-component-props'], {
+        rows: link('sales'),
+        xKey: 'ordered',
+        datePeriod: 'month',
+        countRows: true,
+      })
+      root.append(
+        child('breakdown', 'DonutChart', {
+          'x-component-props': {
+            rows: link('sales'),
+            xKey: 'status',
+            countRows: true,
+          },
+        }),
+      )
+    })
+    const { designer, root, node, operation } = studio
+    const donut = root.find((field) => field.props.name === 'breakdown')
+    const tables = (view: VueWrapper) =>
+      view
+        .findAll('figure')
+        .map((figure) =>
+          figure
+            .findAll('tbody tr')
+            .map((row) => row.findAll('td').map((cell) => cell.text())),
+        )
+    const filters = [
+      {
+        column: 'status',
+        operation: 'matches',
+        value: link('controls', 'status'),
+      },
+      { column: 'ordered', operation: 'dateRange', value: link('period') },
+    ]
+    for (const chart of [node, donut]) {
+      operation.selection.select(chart.id)
+      const path = 'label[for$="x-component-props.filters"]'
+      await vi.waitFor(() => {
+        expect(designer.find(path).exists()).toBe(true)
+        expect(
+          designer
+            .getComponent(SettingsForm)
+            .getComponent(FormProvider)
+            .props('form').values['x-component'],
+        ).toBe(chart.props['x-component'])
+      })
+      const settings = new DOMWrapper(
+        designer.get(path).element.closest('[data-slot="form-item"]'),
+      )
+      for (const [index, filter] of filters.entries()) {
+        const add = settings
+          .findAll('button')
+          .find((button) => button.text() === 'Add filter')
+        await add.trigger('click')
+        await settings
+          .findAll('select[aria-label="Filter field"]')
+          [index].setValue(filter.value)
+        await settings
+          .findAll('select[aria-label="Filter column"]')
+          [index].setValue(filter.column)
+      }
+      expect(chart.props['x-component-props'].filters).toEqual(filters)
+    }
+
+    await vi.waitFor(() =>
+      expect(tables(designer)).toEqual([[['Jan 2026', '3']], [['paid', '3']]]),
+    )
+    root
+      .find((field) => field.props.name === 'controls')
+      .setProps({ name: 'selection' })
+    const sales = root.find((field) => field.props.name === 'sales')
+    sales
+      .find((field) => field.props.name === 'status')
+      .setProps({ name: 'state' })
+    for (const chart of [node, donut]) {
+      expect(chart.props['x-component-props'].filters[0]).toEqual({
+        column: 'state',
+        operation: 'matches',
+        value: link('selection', 'status'),
+      })
+    }
+
+    const view = await previewAfterImport(studio)
+    const form = view.getComponent(FormProvider).props('form')
+    const sourceRows = JSON.parse(JSON.stringify(form.values.sales))
+    expect(sourceRows).toEqual(
+      originalRows.map(({ ordered, status }) => ({ ordered, state: status })),
+    )
+    await vi.waitFor(() => {
+      expect(tables(view)).toEqual([[['Jan 2026', '3']], [['paid', '3']]])
+      expect(
+        view.findAll('figure').every((figure) => figure.find('svg').exists()),
+      ).toBe(true)
+    })
+
+    const status = new DOMWrapper(
+      view.get('button[role="combobox"]').element.parentElement,
+    )
+    await selectSetting(status, 'Pending')
+    await vi.waitFor(() =>
+      expect(tables(view)).toEqual([[['Jan 2026', '1']], [['pending', '1']]]),
+    )
+
+    await view.get('button[data-slot="range-picker"]').trigger('click')
+    const day = (iso: string) =>
+      document.querySelector(
+        `[data-slot="range-calendar-trigger"][data-value="${iso}"]:not([data-outside-view])`,
+      )
+    await vi.waitFor(() => expect(day('2026-02-01')).not.toBeNull())
+    await new DOMWrapper(day('2026-02-01')).trigger('click')
+    await new DOMWrapper(day('2026-02-02')).trigger('click')
+    await vi.waitFor(() =>
+      expect(tables(view)).toEqual([[['Feb 2026', '1']], [['pending', '1']]]),
+    )
+
+    const clear = () =>
+      [...document.querySelectorAll('button')].find(
+        (item) => item.textContent === 'Clear',
+      )
+    await vi.waitFor(() => expect(clear()).toBeDefined())
+    await new DOMWrapper(clear()).trigger('click')
+    await vi.waitFor(() =>
+      expect(tables(view)).toEqual([
+        [
+          ['Jan 2026', '1'],
+          ['Feb 2026', '1'],
+        ],
+        [['pending', '2']],
+      ]),
+    )
+    expect(form.values.sales).toEqual(sourceRows)
+    expect(view.findAll('.dn-array-table tbody tr')).toHaveLength(
+      originalRows.length,
+    )
+    await vi.waitFor(() =>
+      expect(view.findAll('figure svg path[unovis-series-key]')).toHaveLength(
+        2,
+      ),
+    )
+
+    form.setValuesIn(['selection', 'status'], undefined)
+    await vi.waitFor(() =>
+      expect(tables(view)).toEqual([
+        [
+          ['Jan 2026', '4'],
+          ['Feb 2026', '2'],
+        ],
+        [
+          ['paid', '4'],
+          ['pending', '2'],
+        ],
+      ]),
+    )
+    expect(form.values.sales).toEqual(sourceRows)
+    await vi.waitFor(() =>
+      expect(view.findAll('figure svg path[class*="segment"][d]')).toHaveLength(
+        2,
+      ),
+    )
+  })
 
   test('Chart averages numeric series by week after JSON import', async () => {
     measureChartInJsdom()

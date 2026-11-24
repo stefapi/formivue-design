@@ -9,6 +9,7 @@ import {
 import { appearanceProps, chartAppearance, type ChartName } from './appearance'
 import type { ChartSeries } from './categorical-data'
 import type { DatePeriod } from './date-period'
+import { filterChartRows, type ChartFilter } from './filters'
 import {
   ChartLocaleKey,
   chartLabels,
@@ -32,6 +33,7 @@ const chartProps = {
     type: Array as PropType<Record<string, unknown>[]>,
     default: () => [],
   },
+  filters: { type: Array as PropType<ChartFilter[]>, default: () => [] },
   xKey: { type: String, default: '' },
   series: { type: Array as PropType<ChartSeries[]>, default: () => [] },
   groupKey: { type: String, default: '' },
@@ -127,7 +129,10 @@ export function createChart(
         return render({
           ...props,
           locale: locale.value,
-          rows: Array.isArray(props.rows) ? props.rows : [],
+          rows: filterChartRows(
+            Array.isArray(props.rows) ? props.rows : [],
+            props.filters,
+          ),
           height,
           label: props.label || chartTitles[name][language],
           dataLabel: props.dataLabel || chartLabels.dataLabel[language],

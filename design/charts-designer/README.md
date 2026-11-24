@@ -18,6 +18,14 @@ When an ArrayTable is selected as the data source, renaming the table or one
 of its fields updates the linked charts. Column renames also update the keys
 in the table's default rows. JSON exports contain the updated link and mapping.
 
+Under **Form filters**, add a filter and choose a form field and an ArrayTable
+column. Use a Select field for a status or a date range picker for a period.
+Point multiple charts to the same field to update them together in preview or
+at runtime. Multiple filters on a chart must all match. An empty selection or
+an incomplete date range leaves that filter inactive. The canvas uses the
+form field's initial value. The JSON export keeps the links, and the ArrayTable
+retains all its rows.
+
 Set a group column to create a series for each distinct group. Choose a numeric
 value column and use **Sum** or **Mean** when several rows have the same
 category and group. Clearing the group column restores the configured series.

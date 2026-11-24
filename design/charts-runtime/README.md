@@ -61,3 +61,29 @@ Set `countRows: true` to count rows in each category or period without
 mapping a numeric column. On Cartesian charts, `groupKey` gives each group
 its own count.
 Period charts that use numeric values support both sum and mean.
+
+All charts accept a `filters` array. Each filter has a `column`, `operation`,
+and `value`. A schema can bind `value` to a live form field, for example:
+
+```json
+{
+  "filters": [
+    {
+      "column": "status",
+      "operation": "matches",
+      "value": "{{ $form.getValuesIn([\"status\"]) }}"
+    },
+    {
+      "column": "ordered",
+      "operation": "dateRange",
+      "value": "{{ $form.getValuesIn([\"period\"]) }}"
+    }
+  ]
+}
+```
+
+`matches` compares a string, number or boolean by value and type. An array
+matches any selected value. `dateRange` requires two dates and includes both
+days in UTC. Empty selections and incomplete or invalid ranges are inactive.
+Active filters must all match. The filtered rows feed the plot and data
+table before aggregation. Filtering leaves the source rows intact.

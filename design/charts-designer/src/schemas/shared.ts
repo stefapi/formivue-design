@@ -140,6 +140,19 @@ export const chartSchema = <Mapping extends Record<string, ISchema>>(
       'x-component': 'ChartRows',
     },
     ...mapping,
+    filters: {
+      type: 'array',
+      'x-decorator': 'FormItem',
+      'x-component': 'ChartFilters',
+      items: {
+        type: 'object',
+        properties: {
+          column: { type: 'string' },
+          operation: { type: 'string', enum: ['matches', 'dateRange'] },
+          value: {},
+        },
+      },
+    },
     ...(numericFormat
       ? {
           valueFormat: editor(

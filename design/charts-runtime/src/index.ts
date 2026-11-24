@@ -1,6 +1,7 @@
 export * from './components'
 export { ChartMaterials } from './materials'
 export type { ChartSeries } from './shared/categorical-data'
+export type { ChartFilter } from './shared/filters'
 export {
   loadChartMappingDiagnostics,
   type MappingExample,

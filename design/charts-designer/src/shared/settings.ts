@@ -1,6 +1,7 @@
 import { defineComponent, h, useId, type PropType } from 'vue'
 import {
   isDatePeriod,
+  type ChartFilter,
   type ChartName,
   type ChartSeries,
 } from '@formivue-design/charts-runtime'
@@ -13,6 +14,7 @@ import { text } from './settings-language'
 import {
   arrayTableColumns,
   arrayTableSources,
+  chartFilterFields,
   chartColumns,
   chartSource,
   hasChartColumn,
@@ -354,8 +356,168 @@ const ChartSeriesInput = observer(
   }),
 )
 
+const ChartFilters = observer(
+  defineComponent({
+    name: 'ChartFilters',
+    inheritAttrs: false,
+    props: { value: Array as PropType<ChartFilter[]> },
+    emits: ['change'],
+    setup(props, { attrs, emit }) {
+      const operation = useOperation()
+      return () => {
+        const fields = chartFilterFields(selectedNode(operation))
+        const columns = chartColumns(currentSource(operation))
+        const entries = Array.isArray(props.value) ? props.value : []
+        const update = (index: number, patch: Partial<ChartFilter>) =>
+          emit(
+            'change',
+            entries.map((entry, i) =>
+              i === index ? { ...entry, ...patch } : entry,
+            ),
+          )
+        return h('div', { class: 'grid w-full min-w-0 gap-2' }, [
+          ...entries.map((entry, index) => {
+            const value = typeof entry?.value === 'string' ? entry.value : ''
+            const column = entry?.column ?? ''
+            const choices =
+              entry?.operation === 'dateRange'
+                ? [...columns].sort(
+                    (a, b) => Number(!!b.date) - Number(!!a.date),
+                  )
+                : columns
+            return h(
+              'div',
+              { key: index, class: 'grid gap-1 rounded-md border p-2' },
+              [
+                h(
+                  'select',
+                  {
+                    ...(index === 0 ? attrs : {}),
+                    class: controlClass,
+                    value,
+                    'aria-label': text([
+                      'Filter field',
+                      'Champ de filtre',
+                      'Campo de filtro',
+                    ]),
+                    onChange: (event: Event) => {
+                      const value = fieldValue(event)
+                      const field = fields.find(
+                        ({ expression }) => expression === value,
+                      )
+                      update(index, {
+                        value,
+                        operation: field?.operation ?? 'matches',
+                      })
+                    },
+                  },
+                  [
+                    h(
+                      'option',
+                      { value: '' },
+                      text([
+                        'Select a form field',
+                        'Choisir un champ du formulaire',
+                        'Elegir un campo del formulario',
+                      ]),
+                    ),
+                    value &&
+                    !fields.some(({ expression }) => expression === value)
+                      ? h(
+                          'option',
+                          { value },
+                          text([
+                            'Field unavailable',
+                            'Champ indisponible',
+                            'Campo no disponible',
+                          ]),
+                        )
+                      : null,
+                    ...fields.map(({ expression, title }) =>
+                      h(
+                        'option',
+                        { key: expression, value: expression },
+                        title,
+                      ),
+                    ),
+                  ],
+                ),
+                h(
+                  'select',
+                  {
+                    class: controlClass,
+                    value: column,
+                    'aria-label': text([
+                      'Filter column',
+                      'Colonne à filtrer',
+                      'Columna para filtrar',
+                    ]),
+                    onChange: (event: Event) =>
+                      update(index, { column: fieldValue(event) }),
+                  },
+                  [
+                    h(
+                      'option',
+                      { value: '' },
+                      text([
+                        'Select a column',
+                        'Choisir une colonne',
+                        'Elegir una columna',
+                      ]),
+                    ),
+                    column && !columns.some(({ key }) => key === column)
+                      ? h('option', { value: column }, column)
+                      : null,
+                    ...choices.map(({ key, title }) =>
+                      h('option', { key, value: key }, title),
+                    ),
+                  ],
+                ),
+                h(
+                  Button,
+                  {
+                    size: 'small',
+                    variant: 'ghost',
+                    onClick: () =>
+                      emit(
+                        'change',
+                        entries.filter((_, i) => i !== index),
+                      ),
+                  },
+                  () =>
+                    text([
+                      'Remove filter',
+                      'Supprimer le filtre',
+                      'Eliminar filtro',
+                    ]),
+                ),
+              ],
+            )
+          }),
+          h(
+            Button,
+            {
+              ...(entries.length ? {} : attrs),
+              size: 'small',
+              variant: 'outline',
+              disabled: !fields.length || !columns.length,
+              onClick: () =>
+                emit('change', [
+                  ...entries,
+                  { column: '', operation: 'matches' },
+                ]),
+            },
+            () => text(['Add filter', 'Ajouter un filtre', 'Añadir filtro']),
+          ),
+        ])
+      }
+    },
+  }),
+)
+
 export const ChartSettingsComponents = {
   ChartRows,
   ChartAxis,
   ChartSeriesInput,
+  ChartFilters,
 }
