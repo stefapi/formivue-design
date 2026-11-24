@@ -35,6 +35,8 @@ import {
   stringifyDocumentProject,
   type DocumentProjectArchive,
   type ProjectDraft as Draft,
+  type PendingReconciliation,
+  type ReconciliationChoices,
   type SavedDocumentProject as SavedProject,
 } from './document-project-archive'
 
@@ -45,10 +47,6 @@ type ReviewedChange = {
   confirm(): boolean
 }
 
-type ReconciliationChoices = Record<
-  string,
-  Record<string, CanvasReconciliationChoice>
->
 type Reconciliation = {
   changes: readonly CanvasBindingChange[]
   variants: readonly {
@@ -59,7 +57,13 @@ type Reconciliation = {
       draftPath?: DocumentDataPath
     }[]
   }[]
-  choices: ReconciliationChoices
+  readonly choices: ReconciliationChoices
+  readonly stale: boolean
+  selectChoice(
+    name: string,
+    id: string,
+    choice: CanvasReconciliationChoice,
+  ): void
   check(choices: ReconciliationChoices): {
     diagnostics: readonly {
       variant: string
@@ -99,6 +103,16 @@ export function useDocumentProject(
   const state = shallowRef(restore())
   const reconciliation = shallowRef<Reconciliation>()
   const update = (next: SavedProject) => {
+    const previous = state.value
+    if (
+      next.pendingReconciliation &&
+      next.pendingReconciliation === previous.pendingReconciliation &&
+      (next.project !== previous.project || next.drafts !== previous.drafts)
+    )
+      next = {
+        ...next,
+        pendingReconciliation: { ...next.pendingReconciliation, stale: true },
+      }
     state.value = next
     try {
       localStorage.setItem(storageKey, JSON.stringify(next))
@@ -146,8 +160,25 @@ export function useDocumentProject(
     })
   }
 
-  function generate(tree: TreeNode) {
+  function cancelReconciliation() {
     reconciliation.value = undefined
+    if (state.value.pendingReconciliation)
+      update({ ...state.value, pendingReconciliation: undefined })
+  }
+
+  function canvasMatches(tree: TreeNode, proposed: FormDocuments) {
+    try {
+      return isEqual(
+        transformToFormDocuments(tree, undefined, options),
+        proposed,
+      )
+    } catch {
+      return false
+    }
+  }
+
+  function generate(tree: TreeNode) {
+    cancelReconciliation()
     const documents = transformToFormDocuments(tree, undefined, options)
     const saved = state.value
     if (!saved.project) {
@@ -157,9 +188,44 @@ export function useDocumentProject(
       })
       return
     }
+    const review = createReview(tree, documents)
+    reconciliation.value = review
+    if (
+      (!review.changes.length ||
+        (!Object.keys(saved.drafts).length && !review.variants.length)) &&
+      review.check(review.choices).confirm()
+    )
+      return
+    update({
+      ...state.value,
+      pendingReconciliation: { proposed: documents, choices: review.choices },
+    })
+  }
+
+  function restoreReconciliation(tree: TreeNode) {
+    const pending = state.value.pendingReconciliation
+    if (!pending) return
+    const review = createReview(tree, pending.proposed, pending)
+    update({
+      ...state.value,
+      pendingReconciliation: {
+        ...pending,
+        choices: review.choices,
+        stale: pending.stale || !canvasMatches(tree, pending.proposed),
+      },
+    })
+    reconciliation.value = review
+  }
+
+  function createReview(
+    tree: TreeNode,
+    proposed: FormDocuments,
+    remembered?: PendingReconciliation,
+  ): Reconciliation {
+    const saved = state.value
     const prepared = prepareFormDocumentReconciliation(
       saved.project,
-      documents,
+      proposed,
       options,
     )
     const variants = saved.project.variants.map((variant) => ({
@@ -181,7 +247,7 @@ export function useDocumentProject(
             : undefined,
         })),
     }))
-    const choices = Object.fromEntries(
+    const defaultChoices = Object.fromEntries(
       variants.map(({ name, fields }) => [
         name,
         Object.fromEntries(
@@ -192,15 +258,53 @@ export function useDocumentProject(
                 (change) => change.componentId === componentId,
               ),
               draftPath ?? path,
+              remembered?.choices[name],
             ),
           ]),
         ),
       ]),
     )
+    const pending = () => {
+      const value = state.value.pendingReconciliation
+      return value?.proposed === proposed ? value : undefined
+    }
     const review: Reconciliation = {
       changes: prepared.changes,
       variants,
-      choices,
+      get choices() {
+        return reconciliation.value === review
+          ? (pending()?.choices ?? defaultChoices)
+          : defaultChoices
+      },
+      get stale() {
+        return !!pending()?.stale
+      },
+      selectChoice(name, id, choice) {
+        const open = pending()
+        const change = prepared.changes.find(
+          (change) => change.componentId === id,
+        )
+        const field = variants
+          .find((variant) => variant.name === name)
+          ?.fields.find((field) => field.componentId === id)
+        if (!open || reconciliation.value !== review || !field || !change)
+          return
+        const selected = chooseCanvasAction(
+          change,
+          field.draftPath ?? field.path,
+          { [id]: choice },
+        )
+        update({
+          ...state.value,
+          pendingReconciliation: {
+            ...open,
+            choices: {
+              ...open.choices,
+              [name]: { ...open.choices[name], [id]: selected },
+            },
+          },
+        })
+      },
       check(choices) {
         const result = prepared.resolve(choices)
         const diagnostics = [...result.diagnostics]
@@ -226,35 +330,34 @@ export function useDocumentProject(
           confirm() {
             if (
               diagnostics.length ||
+              reconciliation.value !== review ||
+              review.stale ||
               state.value.project !== saved.project ||
               state.value.drafts !== saved.drafts
             )
               return false
-            try {
-              if (
-                !isEqual(
-                  transformToFormDocuments(tree, undefined, options),
-                  documents,
-                )
-              )
-                return false
-            } catch {
+            if (!canvasMatches(tree, proposed)) {
+              const open = pending()
+              if (open)
+                update({
+                  ...state.value,
+                  pendingReconciliation: { ...open, stale: true },
+                })
               return false
             }
-            update({ ...state.value, project: result.project, drafts })
+            update({
+              ...state.value,
+              project: result.project,
+              drafts,
+              pendingReconciliation: undefined,
+            })
             reconciliation.value = undefined
             return true
           },
         }
       },
     }
-    if (
-      (!prepared.changes.length ||
-        (!Object.keys(saved.drafts).length && !variants.length)) &&
-      review.check(choices).confirm()
-    )
-      return
-    reconciliation.value = review
+    return review
   }
 
   function rebaseDraft(
@@ -490,9 +593,7 @@ export function useDocumentProject(
     selected,
     files,
     reconciliation,
-    cancelReconciliation() {
-      reconciliation.value = undefined
-    },
+    cancelReconciliation,
     storageError,
     exportArchive(canvas: ITreeNode) {
       return stringifyDocumentProject(canvas, state.value)
@@ -500,10 +601,12 @@ export function useDocumentProject(
     readArchive(source: string) {
       return parseDocumentProject(source, options)
     },
-    importArchive(archive: DocumentProjectArchive) {
-      update(archive.state)
+    importArchive(archive: DocumentProjectArchive, tree?: TreeNode) {
       reconciliation.value = undefined
+      update(archive.state)
+      if (tree) restoreReconciliation(tree)
     },
+    restoreReconciliation,
     hasDraft: computed(() =>
       Object.prototype.hasOwnProperty.call(state.value.drafts, selected.value),
     ),
@@ -522,6 +625,7 @@ export function useDocumentProject(
       update({ ...state.value, applied: undefined })
     },
     install(project: FormDocumentProject) {
+      reconciliation.value = undefined
       update({ ...emptyProject(), project })
     },
   }

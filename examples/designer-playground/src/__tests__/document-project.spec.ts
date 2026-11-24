@@ -10,6 +10,102 @@ import { TreeNode } from '@formivue-design/core'
 import { expect, test, vi } from 'vitest'
 import { useDocumentProject } from '../service/document-project'
 
+test('reopens unconfirmed reconciliation choices from a project archive', () => {
+  const sourceKey = 'test-reconciliation-archive-source'
+  const targetKey = 'test-reconciliation-archive-target'
+  const preview = vi.fn()
+  const canvas = (changed: boolean) =>
+    new TreeNode({
+      componentName: 'Form',
+      children: [
+        {
+          id: 'amount',
+          componentName: 'Field',
+          props: changed
+            ? {
+                name: 'amount',
+                type: 'string',
+                default: 'pending',
+                'x-component': 'Input',
+              }
+            : {
+                name: 'amount',
+                type: 'number',
+                default: 45,
+                'x-component': 'NumberPicker',
+              },
+        },
+      ],
+    })
+  try {
+    const model = useDocumentProject(sourceKey, {}, preview)
+    model.generate(canvas(false))
+    model.addVariant('Adopt', false)
+    model.addVariant('Retain', false)
+    model.choose('Adopt')
+    model.edit({ ...model.files.value, data: '{"amount":75}' })
+    const draft = model.files.value
+    const proposed = canvas(true)
+    model.generate(proposed)
+    model.reconciliation.value.selectChoice('Adopt', 'amount', 'adopt')
+    const source = model.exportArchive(proposed.serialize())
+
+    const target = useDocumentProject(targetKey, {}, preview)
+    const archive = target.readArchive(source)
+    const tree = new TreeNode(archive.canvas)
+    target.importArchive(archive, tree)
+    expect(target.selected.value).toBe('Adopt')
+    expect(target.files.value).toEqual(draft)
+    expect(target.project.value).toEqual(model.project.value)
+    expect(target.project.value.base.data).toEqual({ amount: 45 })
+    expect(preview).not.toHaveBeenCalled()
+
+    const reloaded = useDocumentProject(targetKey, {}, preview)
+    reloaded.restoreReconciliation(tree)
+    const review = reloaded.reconciliation.value
+    expect(review.choices).toEqual({
+      Adopt: { amount: 'adopt' },
+      Retain: { amount: 'retain' },
+    })
+    expect(review.stale).toBe(false)
+    const result = review.check(review.choices)
+    expect(result.diagnostics).toEqual([])
+    expect(result.confirm()).toBe(true)
+    expect(reloaded.reconciliation.value).toBeUndefined()
+    expect(parseFormDocuments(reloaded.files.value).data).toEqual({
+      amount: 'pending',
+      amount_previous: 75,
+    })
+    reloaded.choose('Retain')
+    expect(parseFormDocuments(reloaded.files.value).ui.nodes[0].component).toBe(
+      'NumberPicker',
+    )
+    expect(
+      reloaded.readArchive(reloaded.exportArchive(tree.serialize())).state
+        .pendingReconciliation,
+    ).toBeUndefined()
+
+    proposed.children[0].setProps({ name: 'revised_amount' })
+    const staleArchive = target.readArchive(
+      model.exportArchive(proposed.serialize()),
+    )
+    target.importArchive(staleArchive, new TreeNode(staleArchive.canvas))
+    const stale = target.reconciliation.value
+    expect(stale.choices).toEqual(review.choices)
+    expect(stale.stale).toBe(true)
+    expect(stale.check(stale.choices).confirm()).toBe(false)
+    expect(target.files.value).toEqual(draft)
+    target.cancelReconciliation()
+    expect(
+      target.readArchive(target.exportArchive(staleArchive.canvas)).state
+        .pendingReconciliation,
+    ).toBeUndefined()
+  } finally {
+    localStorage.removeItem(sourceKey)
+    localStorage.removeItem(targetKey)
+  }
+})
+
 test('restores pending path changes and invalid JSON beside the last applied variant', () => {
   const storageKey = 'test-formivue-document-project'
   const base: FormDocuments = {

@@ -106,9 +106,9 @@ export const CanvasReconciliationWidget = defineComponent({
   },
   setup(props) {
     const id = useId()
-    const choices = ref(props.review.choices)
-    const stale = ref(false)
-    const resolution = computed(() => props.review.check(choices.value))
+    const rejected = ref(false)
+    const stale = computed(() => rejected.value || props.review.stale)
+    const resolution = computed(() => props.review.check(props.review.choices))
     const changeById = computed(
       () =>
         new Map(
@@ -117,9 +117,8 @@ export const CanvasReconciliationWidget = defineComponent({
     )
     watch(
       () => props.review,
-      (review) => {
-        choices.value = review.choices
-        stale.value = false
+      () => {
+        rejected.value = false
       },
       { flush: 'sync' },
     )
@@ -203,7 +202,7 @@ export const CanvasReconciliationWidget = defineComponent({
                   h('legend', { class: 'px-1 text-sm font-medium' }, name),
                   ...fields.map(({ componentId, path, draftPath }) => {
                     const change = changeById.value.get(componentId)
-                    const selected = choices.value[name][componentId]
+                    const selected = props.review.choices[name][componentId]
                     const resulting = (current: DocumentDataPath) =>
                       selected !== 'follow'
                         ? current
@@ -261,13 +260,11 @@ export const CanvasReconciliationWidget = defineComponent({
                                 const choice = (
                                   event.target as HTMLSelectElement
                                 ).value as CanvasReconciliationChoice
-                                choices.value = {
-                                  ...choices.value,
-                                  [name]: {
-                                    ...choices.value[name],
-                                    [componentId]: choice,
-                                  },
-                                }
+                                props.review.selectChoice(
+                                  name,
+                                  componentId,
+                                  choice,
+                                )
                               },
                             },
                             canvasReconciliationChoices[change.kind].map(
@@ -380,7 +377,7 @@ export const CanvasReconciliationWidget = defineComponent({
               ],
               () => {
                 if (resolution.value.confirm()) props.onApplied()
-                else stale.value = true
+                else rejected.value = true
               },
               !!resolution.value.diagnostics.length || stale.value,
               true,

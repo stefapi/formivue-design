@@ -1,8 +1,10 @@
 import type { ITreeNode } from '@formivue-design/core'
 import {
+  canvasReconciliationChoices,
   createFormDocument,
   exportFormDocumentVariant,
   materializeFormDocumentVariant,
+  type CanvasReconciliationChoice,
   type CompileFormDocumentOptions,
   type FormDocumentJson,
   type FormDocumentProject,
@@ -29,6 +31,18 @@ export interface SavedDocumentProject {
   selected: string
   drafts: Record<string, ProjectDraft>
   applied?: FormDocuments
+  pendingReconciliation?: PendingReconciliation
+}
+
+export type ReconciliationChoices = Record<
+  string,
+  Record<string, CanvasReconciliationChoice>
+>
+
+export interface PendingReconciliation {
+  proposed: FormDocuments
+  choices: ReconciliationChoices
+  stale?: boolean
 }
 
 const archiveFormat = 'formivue.designer-project'
@@ -262,6 +276,26 @@ export function parseDocumentProject(
   }
   if (state.applied !== undefined)
     readDocuments(state.applied, '/state/applied', options)
+  if (state.pendingReconciliation !== undefined) {
+    const path = '/state/pendingReconciliation'
+    const pending = objectAt(state.pendingReconciliation, path)
+    if (!project) invalidArchive(path)
+    if (pending.stale !== undefined && typeof pending.stale !== 'boolean')
+      invalidArchive(path + '/stale')
+    readDocuments(pending.proposed, path + '/proposed', options)
+    const choicesPath = path + '/choices'
+    const choices = objectAt(pending.choices, choicesPath)
+    const actions = new Set<string>(
+      Object.values(canvasReconciliationChoices).flat(),
+    )
+    for (const [name, value] of Object.entries(choices)) {
+      const location = choicesPath + jsonPointer([name])
+      if (!variants.has(name)) invalidArchive(location)
+      for (const [id, choice] of Object.entries(objectAt(value, location)))
+        if (!id || typeof choice !== 'string' || !actions.has(choice))
+          invalidArchive(location + jsonPointer([id]))
+    }
+  }
   return {
     format: archiveFormat,
     version: 1,

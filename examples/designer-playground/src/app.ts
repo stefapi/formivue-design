@@ -330,7 +330,7 @@ export const App = defineComponent({
       }
       clearDocument()
       previewDocument.value = next
-      model.importArchive(archive)
+      model.importArchive(archive, engine.getCurrentTree())
     }
     onMounted(() => {
       const restored = loadInitialSchema(engine, advanced, profile)
@@ -345,6 +345,7 @@ export const App = defineComponent({
           // Older canvas saves remain editable and generation can report incompatibilities.
         }
       }
+      model.restoreReconciliation(engine.getCurrentTree())
       model.restorePreview()
       if (demo) engine.workbench.setWorkbenchType('DATAMODEL')
     })

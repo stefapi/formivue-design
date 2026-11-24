@@ -239,6 +239,11 @@ stored as text so unfinished JSON can be edited after import. Confirmed
 reconciliation decisions travel with variant and draft path changes,
 UI overrides, and preserved data properties.
 
+An open reconciliation review travels with its proposed canvas and
+unconfirmed choices. Import reopens it for confirmation. A review made
+against an older version of the project or canvas requires regeneration
+before its choices can be applied.
+
 Use **Import project** to validate the archive and review the replacement
 before opening it. The archive is meant for resuming work in the designer.
 The three individual JSON documents remain the format for rendering or
