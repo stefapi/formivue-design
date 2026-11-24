@@ -206,6 +206,21 @@ Collisions, shared definitions on the affected path, editable array key moves
 into nested objects and rules that cannot be migrated produce diagnostics
 before the project is updated.
 
+### Review canvas renames in the playground
+
+Generate from the canvas to compare the current bindings by stable component
+ID. For a field renamed in the same canvas object, each variant can retain
+its key or use the canvas key inside its current object. The review replays
+previous moves before applying the choice. It checks all saved variants
+before adopting the canvas and reports additions, removals and incompatible
+bindings by path.
+
+The playground updates the corresponding drafts independently. Keeping a
+variant key preserves the draft schema and values. Following the canvas key
+migrates them with the UI binding. The last applied preview stays available
+until the draft is applied. The three JSON documents export the current
+valid draft and can be imported again for editing or rendering.
+
 ### Project constraints onto the form
 
 The document compiler projects numeric ranges, integer input, increments,

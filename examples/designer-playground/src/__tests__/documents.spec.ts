@@ -9,6 +9,7 @@ import {
   reconcileFormDocumentProject,
   renameFormDocumentProperty,
   moveFormDocumentProperty,
+  prepareFormDocumentReconciliation,
   parseFormDocuments,
   stringifyFormDocuments,
   splitFormSchema,
@@ -921,6 +922,84 @@ describe('separate UI, schema and data documents', () => {
       expect(exportFormDocumentVariant(project, 'API', { contracts })).toEqual(
         initial,
       )
+    }
+  })
+
+  test('replays a variant move after the canvas renames a chart measure in a row', async () => {
+    const initial = documents()
+    const row = (
+      initial.dataSchema.$defs as Record<string, FormDocuments['dataSchema']>
+    ).sale
+    initial.dataSchema.properties.sales = { type: 'array', items: row }
+    delete initial.dataSchema.$defs
+    initial.ui.nodes[0].item.children.push(
+      makeNode('amountColumn', {
+        component: 'ArrayTable.Column',
+        children: [
+          makeNode('amount', {
+            kind: 'field',
+            component: 'NumberPicker',
+            bind: '/amount',
+          }),
+        ],
+      }),
+    )
+    const base = createFormDocumentProject(initial, { contracts })
+    const variant = createFormDocumentVariant(base, 'API')
+    const moved = moveFormDocumentProperty(
+      variant,
+      'API',
+      {
+        path: ['sales', null, 'amount'],
+        to: ['sales', null, 'metrics', 'amount'],
+      },
+      { contracts },
+    ).project
+    const canvas = renameFormDocumentProperty(
+      createFormDocumentVariant(base, 'Canvas'),
+      'Canvas',
+      {
+        path: ['sales', null, 'amount'],
+        key: 'subtotal',
+      },
+      { contracts },
+    ).project
+    const revised = exportFormDocumentVariant(canvas, 'Canvas', { contracts })
+    const review = prepareFormDocumentReconciliation(moved, revised, {
+      contracts,
+    })
+    expect(review.changes).toMatchObject([
+      { componentId: 'amount', kind: 'rename' },
+    ])
+    const result = review.resolve()
+    expect(result.diagnostics).toEqual([])
+    const imported = parseFormDocuments(
+      stringifyFormDocuments(
+        exportFormDocumentVariant(result.project, 'API', { contracts }),
+      ),
+    )
+    expect(imported.data.sales[0]).toMatchObject({
+      id: 'jan',
+      metrics: { amount: 10 },
+    })
+    const chart = imported.ui.nodes.find(({ id }) => id === 'chart')
+    expect(chart.props.series).toEqual([{ key: 'subtotal' }])
+    expect(chart.bindings.rows.columnPaths).toEqual({
+      subtotal: '/metrics/amount',
+    })
+    const document = createDocument(imported)
+    try {
+      const projected = () =>
+        document.scope.$document.read('/sales', [], {
+          subtotal: ['metrics', 'amount'],
+        })
+      expect(projected()[0]).toMatchObject({ subtotal: 10 })
+      document.form.setValuesIn(['sales', '0', 'metrics', 'amount'], 24)
+      await vi.waitFor(() =>
+        expect(projected()[0]).toMatchObject({ subtotal: 24 }),
+      )
+    } finally {
+      document.dispose()
     }
   })
 

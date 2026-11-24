@@ -1,6 +1,31 @@
 import { exampleLanguage, message, type Message } from './language'
 
 const contractIssues: Record<string, Message> = {
+  removed_ui_binding: [
+    'This canvas field was removed. Resolve its existing bindings.',
+    'Ce champ a été supprimé du canevas. Réconciliez ses liaisons existantes.',
+    'Este campo se eliminó del lienzo. Concilia sus vínculos existentes.',
+  ],
+  changed_ui_binding: [
+    'This canvas field has an incompatible change.',
+    'La modification de ce champ du canevas est incompatible.',
+    'El cambio de este campo del lienzo es incompatible.',
+  ],
+  reconciliation_path_conflict: [
+    'This field’s variant destination cannot be replayed.',
+    'La destination de ce champ dans la variante ne peut pas être réappliquée.',
+    'No se puede volver a aplicar el destino de este campo en la variante.',
+  ],
+  reconciliation_draft_json: [
+    'Correct this draft JSON before migrating it.',
+    'Corrigez ce brouillon JSON avant de le migrer.',
+    'Corrige este borrador JSON antes de migrarlo.',
+  ],
+  reconciliation_draft_ui: [
+    'The draft UI has independent edits. Reconcile them before changing the canvas version.',
+    'Le brouillon UI contient des modifications indépendantes. Réconciliez-les avant de changer la version du canevas.',
+    'La interfaz del borrador tiene cambios independientes. Concilia estos cambios antes de cambiar la versión del lienzo.',
+  ],
   cross_record_move: [
     'The source and destination must belong to the same record',
     'La source et la destination doivent appartenir au même enregistrement',

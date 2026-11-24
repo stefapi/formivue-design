@@ -163,11 +163,21 @@ export type { DocumentDataPath } from './document-paths'
 export type { DocumentPropertyRename } from './document-rename'
 export type { DocumentPropertyMove } from './document-move'
 export {
+  defaultCanvasRenameChoice,
+  materializedCanvasPath,
+  planVariantReconciliation,
+  reconcileVariantData,
+  reconcileVariantSchema,
+  type CanvasBindingChange,
+  type CanvasRenameChoice,
+} from './document-reconciliation'
+export {
   createFormDocumentProject,
   createFormDocumentVariant,
   exportFormDocumentVariant,
   materializeFormDocumentVariant,
   moveFormDocumentProperty,
+  prepareFormDocumentReconciliation,
   reconcileFormDocumentProject,
   renameFormDocumentProperty,
   type FormDocumentProject,

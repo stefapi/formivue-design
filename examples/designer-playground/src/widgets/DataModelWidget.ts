@@ -28,6 +28,7 @@ import { exampleLocale, message, type Message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
 import type { DocumentProject } from '../service/document-project'
 import { TestDataWidget } from './TestDataWidget'
+import { CanvasReconciliationWidget } from './CanvasReconciliationWidget'
 
 const schemaTab: Message = ['Schema', 'Schéma', 'Esquema']
 const testTab: Message = ['Test data', 'Données d’essai', 'Datos de prueba']
@@ -346,6 +347,7 @@ export const DataModelWidget = defineComponent({
     const name = ref('')
     const error = ref<unknown>()
     const applied = ref(false)
+    const reconciled = ref(false)
     const files = props.model.files
     const schemaSource = computed(() => files.value?.dataSchema)
     const uiSource = computed(() => files.value?.ui)
@@ -400,6 +402,7 @@ export const DataModelWidget = defineComponent({
     const run = (work: () => void) => {
       error.value = undefined
       applied.value = false
+      reconciled.value = false
       try {
         work()
       } catch (cause) {
@@ -569,6 +572,28 @@ export const DataModelWidget = defineComponent({
               )
             : null,
           issue(['Project', 'Projet', 'Proyecto'], error.value),
+          props.model.reconciliation.value
+            ? h(CanvasReconciliationWidget, {
+                review: props.model.reconciliation.value,
+                componentLabel: props.componentLabel,
+                onCancel: props.model.cancelReconciliation,
+                onNavigate: props.onNavigate,
+                onApplied: () => {
+                  reconciled.value = true
+                },
+              })
+            : null,
+          reconciled.value
+            ? h(
+                'p',
+                { role: 'status', class: 'text-sm' },
+                message([
+                  'Variants reconciled',
+                  'Variantes réconciliées',
+                  'Variantes conciliadas',
+                ]),
+              )
+            : null,
           files.value
             ? [
                 h(

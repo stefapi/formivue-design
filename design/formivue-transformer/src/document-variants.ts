@@ -27,6 +27,14 @@ import {
   type FormDocuments,
   type UiDocument,
 } from './documents'
+import {
+  describeCanvasChanges,
+  planVariantReconciliation,
+  reconcileVariantData,
+  reconcileVariantSchema,
+  reconciliationIssues,
+  type CanvasRenameChoice,
+} from './document-reconciliation'
 
 export interface FormDocumentVariant {
   readonly name: string
@@ -331,4 +339,87 @@ export function reconcileFormDocumentProject(
       diagnostics.push({ variant: variant.name, issues: conflicts })
   }
   return { project: diagnostics.length ? project : candidate, diagnostics }
+}
+
+/** Compare a canvas generation with the canonical UI before adopting it. */
+export function prepareFormDocumentReconciliation(
+  project: FormDocumentProject,
+  documents: FormDocuments,
+  options: CompileFormDocumentOptions = {},
+) {
+  const base = validateDocuments(documents, options)
+  const changes = describeCanvasChanges(project.base, base, options)
+  const blockers: DocumentIssue[] = changes.flatMap((change) =>
+    change.kind === 'removed' || change.kind === 'incompatible'
+      ? [
+          {
+            path: documentPath(change.to ?? change.from),
+            component: change.component,
+            componentId: change.componentId,
+            code:
+              change.kind === 'removed'
+                ? 'removed_ui_binding'
+                : 'changed_ui_binding',
+            message:
+              change.kind === 'removed'
+                ? 'This canvas field was removed. Resolve its existing bindings before adopting the canvas.'
+                : 'This canvas field changed type, component or object. Restore a compatible binding before adopting the canvas.',
+          },
+        ]
+      : [],
+  )
+  return {
+    changes,
+    resolve(
+      choices: Readonly<
+        Record<string, Readonly<Record<string, CanvasRenameChoice>>>
+      > = {},
+    ) {
+      const diagnostics: {
+        variant: string
+        issues: readonly DocumentIssue[]
+      }[] = []
+      const next: FormDocumentProject = { ...project, base }
+      const variants = project.variants.map((variant) => {
+        if (blockers.length) {
+          diagnostics.push({ variant: variant.name, issues: blockers })
+          return variant
+        }
+        try {
+          const plan = planVariantReconciliation(
+            variant.renames,
+            changes,
+            Object.prototype.hasOwnProperty.call(choices, variant.name)
+              ? choices[variant.name]
+              : undefined,
+          )
+          const updated = {
+            ...variant,
+            renames: plan.renames,
+            dataSchema: reconcileVariantSchema(variant.dataSchema, plan),
+            data: reconcileVariantData(variant.data, plan),
+          }
+          validateDocuments(
+            {
+              ui: materializeUi(next, updated, options),
+              dataSchema: updated.dataSchema,
+              data: updated.data,
+            },
+            options,
+          )
+          return updated
+        } catch (cause) {
+          diagnostics.push({
+            variant: variant.name,
+            issues: reconciliationIssues(cause),
+          })
+          return variant
+        }
+      })
+      return {
+        project: diagnostics.length ? project : { base, variants },
+        diagnostics,
+      }
+    },
+  }
 }

@@ -4,14 +4,22 @@ import type { TreeNode } from '@formivue-design/core'
 import {
   createFormDocumentProject,
   createFormDocumentVariant,
+  defaultCanvasRenameChoice,
+  materializedCanvasPath,
   materializeFormDocumentVariant,
   moveFormDocumentProperty,
   parseFormDocuments,
-  reconcileFormDocumentProject,
+  planVariantReconciliation,
+  prepareFormDocumentReconciliation,
+  reconcileVariantData,
+  reconcileVariantSchema,
   renameFormDocumentProperty,
   stringifyFormDocuments,
   transformToFormDocuments,
   type CompileFormDocumentOptions,
+  type CanvasRenameChoice,
+  type CanvasBindingChange,
+  type DocumentDataPath,
   type DocumentPropertyMove,
   type DocumentPropertyRename,
   type FormDocumentJson,
@@ -19,7 +27,11 @@ import {
   type FormDocumentVariant,
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
-import { DocumentValidationError } from '@formivue/json-schema'
+import {
+  DocumentValidationError,
+  isJsonObject,
+  type DocumentIssue,
+} from '@formivue/json-schema'
 
 interface Draft {
   files: FormDocumentJson
@@ -39,6 +51,27 @@ interface SavedProject {
   selected: string
   drafts: Record<string, Draft>
   applied?: FormDocuments
+}
+
+type ReconciliationChoices = Record<string, Record<string, CanvasRenameChoice>>
+type Reconciliation = {
+  changes: readonly CanvasBindingChange[]
+  variants: readonly {
+    name: string
+    fields: readonly {
+      componentId: string
+      path: DocumentDataPath
+      draftPath?: DocumentDataPath
+    }[]
+  }[]
+  choices: ReconciliationChoices
+  check(choices: ReconciliationChoices): {
+    diagnostics: readonly {
+      variant: string
+      issues: readonly DocumentIssue[]
+    }[]
+    confirm(): boolean
+  }
 }
 
 const emptyProject = (): SavedProject => ({
@@ -69,6 +102,7 @@ export function useDocumentProject(
     return emptyProject()
   }
   const state = shallowRef(restore())
+  const reconciliation = shallowRef<Reconciliation>()
   const update = (next: SavedProject) => {
     state.value = next
     try {
@@ -113,6 +147,7 @@ export function useDocumentProject(
   }
 
   function generate(tree: TreeNode) {
+    reconciliation.value = undefined
     const documents = transformToFormDocuments(tree, undefined, options)
     const saved = state.value
     if (!saved.project) {
@@ -122,21 +157,175 @@ export function useDocumentProject(
       })
       return
     }
-    const result = reconcileFormDocumentProject(
+    const prepared = prepareFormDocumentReconciliation(
       saved.project,
       documents,
       options,
     )
-    if (result.diagnostics.length)
-      throw new DocumentValidationError(
-        result.diagnostics.flatMap(({ variant, issues }) =>
-          issues.map((issue) => ({
-            ...issue,
-            component: [variant, issue.component].filter(Boolean).join(' · '),
-          })),
+    const renames = prepared.changes.filter(({ kind }) => kind === 'rename')
+    const variants = saved.project.variants.map((variant) => ({
+      name: variant.name,
+      fields: renames.map((change) => ({
+        componentId: change.componentId,
+        path: materializedCanvasPath(change, variant.renames),
+        draftPath: Object.prototype.hasOwnProperty.call(
+          saved.drafts,
+          variant.name,
+        )
+          ? materializedCanvasPath(change, saved.drafts[variant.name].renames)
+          : undefined,
+      })),
+    }))
+    const choices = Object.fromEntries(
+      variants.map(({ name, fields }) => [
+        name,
+        Object.fromEntries(
+          fields.map(({ path, draftPath, componentId }, index) => [
+            componentId,
+            defaultCanvasRenameChoice(draftPath ?? path, renames[index]),
+          ]),
         ),
+      ]),
+    )
+    const review: Reconciliation = {
+      changes: prepared.changes,
+      variants,
+      choices,
+      check(choices) {
+        const result = prepared.resolve(choices)
+        const diagnostics = [...result.diagnostics]
+        let drafts = saved.drafts
+        if (!diagnostics.length) {
+          drafts = Object.fromEntries(
+            Object.entries(saved.drafts).map(([name, draft]) => {
+              try {
+                return [
+                  name,
+                  rebaseDraft(
+                    saved.project,
+                    result.project,
+                    prepared.changes,
+                    choices,
+                    name,
+                    draft,
+                  ),
+                ]
+              } catch (cause) {
+                if (!(cause instanceof DocumentValidationError)) throw cause
+                diagnostics.push({ variant: name, issues: cause.issues })
+                return [name, draft]
+              }
+            }),
+          )
+        }
+        return {
+          diagnostics,
+          confirm() {
+            if (
+              diagnostics.length ||
+              state.value.project !== saved.project ||
+              state.value.drafts !== saved.drafts
+            )
+              return false
+            try {
+              if (
+                !isEqual(
+                  transformToFormDocuments(tree, undefined, options),
+                  documents,
+                )
+              )
+                return false
+            } catch {
+              return false
+            }
+            update({ ...state.value, project: result.project, drafts })
+            reconciliation.value = undefined
+            return true
+          },
+        }
+      },
+    }
+    if (!Object.keys(saved.drafts).length && !variants.length) {
+      review.check(choices).confirm()
+    } else if (!prepared.changes.length && review.check(choices).confirm()) {
+      return
+    } else {
+      reconciliation.value = review
+    }
+  }
+
+  function rebaseDraft(
+    before: FormDocumentProject,
+    after: FormDocumentProject,
+    changes: readonly CanvasBindingChange[],
+    choices: ReconciliationChoices,
+    name: string,
+    draft: Draft,
+  ): Draft {
+    const plan = planVariantReconciliation(
+      draft.renames,
+      changes,
+      name ? choices[name] : undefined,
+    )
+    const materialize = (
+      project: FormDocumentProject,
+      renames: Draft['renames'],
+    ) =>
+      name
+        ? materializeFormDocumentVariant(
+            {
+              ...project,
+              variants: project.variants.map((variant) =>
+                variant.name === name ? { ...variant, renames } : variant,
+              ),
+            },
+            name,
+            options,
+          ).ui
+        : project.base.ui
+    const oldUi = materialize(before, draft.renames)
+    const nextUi = materialize(after, plan.renames)
+    const files = { ...draft.files }
+    const json = (part: keyof FormDocumentJson) => {
+      try {
+        const value = JSON.parse(files[part])
+        if (isJsonObject(value)) return value
+      } catch {
+        // Keep the original text intact for correction.
+      }
+      throw new DocumentValidationError([
+        {
+          path: '/' + part,
+          code: 'reconciliation_draft_json',
+          message: 'Correct this draft JSON before migrating it.',
+        },
+      ])
+    }
+    if (!isEqual(oldUi, nextUi)) {
+      if (!isEqual(oldUi, json('ui')))
+        throw new DocumentValidationError([
+          {
+            path: '/ui',
+            code: 'reconciliation_draft_ui',
+            message:
+              'The draft UI has independent edits. Reconcile them before changing the canvas version.',
+          },
+        ])
+      files.ui = JSON.stringify(nextUi, null, 2)
+    }
+    if (plan.keys.length) {
+      files.dataSchema = JSON.stringify(
+        reconcileVariantSchema(json('dataSchema'), plan),
+        null,
+        2,
       )
-    update({ ...saved, project: result.project })
+      files.data = JSON.stringify(
+        reconcileVariantData(json('data'), plan),
+        null,
+        2,
+      )
+    }
+    return { files, renames: plan.renames }
   }
 
   function choose(name: string) {
@@ -279,6 +468,10 @@ export function useDocumentProject(
     project,
     selected,
     files,
+    reconciliation,
+    cancelReconciliation() {
+      reconciliation.value = undefined
+    },
     storageError,
     hasDraft: computed(() =>
       Object.prototype.hasOwnProperty.call(state.value.drafts, selected.value),
