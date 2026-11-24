@@ -115,18 +115,27 @@ function materializeUi(
   )
 }
 
-export function exportFormDocumentVariant(
+/** Resolves a draft variant's UI without validating its example values. */
+export function materializeFormDocumentVariant(
   project: FormDocumentProject,
   name: string,
   options: CompileFormDocumentOptions = {},
 ): FormDocuments {
   const variant = variantByName(project, name)
+  return {
+    ui: materializeUi(project, variant, options),
+    dataSchema: variant.dataSchema,
+    data: variant.data,
+  }
+}
+
+export function exportFormDocumentVariant(
+  project: FormDocumentProject,
+  name: string,
+  options: CompileFormDocumentOptions = {},
+): FormDocuments {
   return validateDocuments(
-    {
-      ui: materializeUi(project, variant, options),
-      dataSchema: variant.dataSchema,
-      data: variant.data,
-    },
+    materializeFormDocumentVariant(project, name, options),
     options,
   )
 }

@@ -10,21 +10,30 @@ import {
 
 export const STORAGE_KEY = 'formivue-vue-schema'
 
-const storageKey = (advanced: boolean) =>
-  advanced ? `${STORAGE_KEY}-advanced` : STORAGE_KEY
+const storageKey = (advanced: boolean, profile: string) =>
+  [STORAGE_KEY, advanced ? 'advanced' : '', profile].filter(Boolean).join('-')
 
-export const saveSchema = (designer: Engine, advanced = false) => {
+export const saveSchema = (
+  designer: Engine,
+  advanced = false,
+  profile = '',
+) => {
   localStorage.setItem(
-    storageKey(advanced),
+    storageKey(advanced, profile),
     JSON.stringify(transformToSchema(designer.getCurrentTree())),
   )
 }
 
-export const loadInitialSchema = (designer: Engine, advanced = false) => {
+export const loadInitialSchema = (
+  designer: Engine,
+  advanced = false,
+  profile = '',
+) => {
   try {
-    const storedSchema = localStorage.getItem(storageKey(advanced))
+    const storedSchema = localStorage.getItem(storageKey(advanced, profile))
     designer.setCurrentTree(
       transformToTreeNode(storedSchema ? JSON.parse(storedSchema) : undefined),
     )
+    return !!storedSchema
   } catch {}
 }

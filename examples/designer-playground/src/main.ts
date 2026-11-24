@@ -23,10 +23,6 @@ async function mountPlayground() {
     createApp(App).mount('#root')
     return
   }
-  const viewport = document.createElement('meta')
-  viewport.name = 'viewport'
-  viewport.content = 'width=device-width, initial-scale=1'
-  document.head.append(viewport)
   const [
     { AdvancedDesignerComponents, AdvancedSources },
     { AdvancedMaterials, AdvancedPreviewFrame },

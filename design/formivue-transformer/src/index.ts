@@ -165,6 +165,7 @@ export {
   createFormDocumentProject,
   createFormDocumentVariant,
   exportFormDocumentVariant,
+  materializeFormDocumentVariant,
   reconcileFormDocumentProject,
   renameFormDocumentProperty,
   type FormDocumentProject,

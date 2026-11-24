@@ -1,6 +1,7 @@
 import { Button } from '@formivue-design/vue-ui'
 import type {
   DataSchema,
+  DocumentDependency,
   FormDocuments,
 } from '@formivue-design/formivue-transformer'
 import {
@@ -21,6 +22,7 @@ import {
   type PropType,
   type VNodeChild,
 } from 'vue'
+export { DataValuesEditor } from './values'
 
 type Model = FormDocuments['dataSchema']
 type Message = readonly [string, string, string]
@@ -90,6 +92,15 @@ const booleans: Record<string, Message> = {
     'Propiedades adicionales',
   ],
 }
+const families = {
+  types: ['Types and values', 'Types et valeurs', 'Tipos y valores'],
+  numbers: ['Numbers', 'Nombres', 'Números'],
+  strings: ['Strings', 'Chaînes', 'Cadenas'],
+  objects: ['Objects', 'Objets', 'Objetos'],
+  arrays: ['Arrays', 'Listes', 'Listas'],
+  annotations: ['Annotations', 'Annotations', 'Anotaciones'],
+} satisfies Record<string, Message>
+type Family = keyof typeof families
 const control =
   'min-w-0 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ring'
 const valueFrom = (event: Event) => (event.target as HTMLInputElement).value
@@ -138,15 +149,99 @@ function schemaLocations(schema: DataSchema, path: string[] = []): string[][] {
   return [path, ...children]
 }
 
+function dataPath(path: string[]) {
+  if (path[0] === '$defs') return
+  const result: (string | null)[] = []
+  for (let index = 0; index < path.length; index++) {
+    const part = path[index]
+    if (part === 'items') result.push(null)
+    else if (part === 'properties' || part === 'prefixItems')
+      result.push(path[++index])
+    else if (['allOf', 'anyOf', 'oneOf'].includes(part)) index++
+    else return
+  }
+  return result
+}
+
+function localReference(ref: unknown) {
+  try {
+    if (typeof ref === 'string' && (ref === '#' || ref.startsWith('#/')))
+      return pointerSegments(decodeURIComponent(ref.slice(1)))
+  } catch {
+    // The inspector still shows the reference location when the URI is incomplete.
+  }
+}
+
+function schemaUsages(
+  model: Model,
+  dependencies: readonly DocumentDependency[],
+) {
+  const usages = new Map<string, DocumentDependency[]>()
+  for (const dependency of dependencies) {
+    const seen = new Map<string, Set<number>>()
+    const visit = (path: string[], depth: number) => {
+      const schema = valueAt(model, path)
+      if (schema === undefined) return
+      const pointer = jsonPointer(path)
+      const levels = seen.get(pointer) ?? new Set<number>()
+      if (levels.has(depth)) return
+      levels.add(depth)
+      seen.set(pointer, levels)
+      if (depth === dependency.path.length) {
+        const entries = usages.get(pointer) ?? []
+        if (
+          !entries.some(
+            ({ componentId, property }) =>
+              componentId === dependency.componentId &&
+              property === dependency.property,
+          )
+        )
+          entries.push(dependency)
+        usages.set(pointer, entries)
+      }
+      if (!isJsonObject(schema)) return
+      const reference = localReference(schema.$ref)
+      if (reference) visit(reference, depth)
+      for (const keyword of ['allOf', 'anyOf', 'oneOf']) {
+        const branches = schema[keyword]
+        if (Array.isArray(branches))
+          branches.forEach((_, index) =>
+            visit([...path, keyword, String(index)], depth),
+          )
+      }
+      if (depth === dependency.path.length) return
+      const step = dependency.path[depth]
+      if (step === null) visit([...path, 'items'], depth + 1)
+      else {
+        visit([...path, 'properties', step], depth + 1)
+        if (/^(0|[1-9]\d*)$/u.test(step))
+          visit([...path, 'prefixItems', step], depth + 1)
+      }
+    }
+    visit([], 0)
+  }
+  return usages
+}
+
 export const DataSchemaEditor = defineComponent({
   name: 'DataSchemaEditor',
   props: {
     modelValue: { type: Object as PropType<Model>, required: true },
     locale: { type: String, default: 'en' },
+    tree: Boolean,
+    dependencies: {
+      type: Array as PropType<readonly DocumentDependency[]>,
+      default: () => [],
+    },
+    componentLabel: Function as PropType<(id: string) => string | undefined>,
   },
-  emits: { 'update:modelValue': (_value: Model) => true },
-  setup(props, { emit }) {
+  emits: {
+    'update:modelValue': (_value: Model) => true,
+    navigate: (id: string) => !!id,
+  },
+  setup(props, { emit, slots }) {
     const selected = ref('')
+    const inspecting = ref(false)
     const example = ref('')
     const propertyName = ref('')
     const localError = ref('')
@@ -155,6 +250,7 @@ export const DataSchemaEditor = defineComponent({
       schemaLocations(props.modelValue).map((path) => ({
         path,
         pointer: jsonPointer(path),
+        data: dataPath(path),
       })),
     )
     const location = computed(
@@ -182,11 +278,23 @@ export const DataSchemaEditor = defineComponent({
       )
     const label = (text: string, input: VNodeChild) =>
       h('label', { class: 'grid min-w-0 gap-1 text-sm' }, [text, input])
-    const group = (heading: Message, contents: VNodeChild[]) =>
-      h('fieldset', { class: 'grid min-w-0 gap-3 rounded-md border p-3' }, [
-        h('legend', { class: 'px-1 text-sm font-semibold' }, t(heading)),
-        ...contents,
-      ])
+    const group = (family: Family, contents: VNodeChild[]) =>
+      h(
+        'fieldset',
+        {
+          id: id + '-' + family,
+          tabindex: -1,
+          class: 'grid min-w-0 gap-3 rounded-md border p-3',
+        },
+        [
+          h(
+            'legend',
+            { class: 'px-1 text-sm font-semibold' },
+            t(families[family]),
+          ),
+          ...contents,
+        ],
+      )
 
     function edit(keyword: string, value?: unknown) {
       const next = copyJson(props.modelValue) as Model
@@ -319,6 +427,7 @@ export const DataSchemaEditor = defineComponent({
           'select',
           {
             class: control,
+            'aria-label': t(booleans[key]),
             value:
               typeof schema.value[key] === 'boolean'
                 ? String(schema.value[key])
@@ -436,17 +545,15 @@ export const DataSchemaEditor = defineComponent({
       }
     })
     const reference = computed(() => {
-      try {
-        const ref = schema.value.$ref
-        return ref === '#' || ref?.startsWith('#/')
-          ? jsonPointer(pointerSegments(decodeURIComponent(ref.slice(1))))
-          : undefined
-      } catch {
-        return undefined
-      }
+      const path = localReference(schema.value.$ref)
+      return path && jsonPointer(path)
     })
+    const usages = computed(() =>
+      schemaUsages(props.modelValue, props.dependencies),
+    )
     function select(pointer: string) {
       selected.value = pointer
+      inspecting.value = true
       example.value = ''
       propertyName.value = ''
       localError.value = ''
@@ -461,50 +568,175 @@ export const DataSchemaEditor = defineComponent({
           : []
       const relevant = (type: string) =>
         !selectedTypes.length || selectedTypes.includes(type)
+      const enabledFamilies: Record<Family, boolean> = {
+        types: true,
+        numbers: relevant('number') || relevant('integer'),
+        strings: relevant('string'),
+        objects: relevant('object'),
+        arrays: relevant('array'),
+        annotations: true,
+      }
       const refTarget = reference.value
       const properties = current.properties ?? {}
       const candidate = propertyName.value.trim()
-      return h('div', { class: 'min-h-0 flex-1 overflow-auto space-y-3' }, [
-        h('div', { class: 'flex flex-wrap items-end gap-2' }, [
-          label(
-            t(['Schema node', 'Nœud du schéma', 'Nodo del esquema']),
+      const inspector = h(
+        'div',
+        {
+          class: props.tree
+            ? 'schema-inspector min-w-0 space-y-3'
+            : 'min-h-0 flex-1 overflow-auto space-y-3',
+        },
+        [
+          h('div', { class: 'flex flex-wrap items-end gap-2' }, [
+            props.tree
+              ? h(
+                  'div',
+                  { class: 'flex min-w-0 flex-wrap items-center gap-2' },
+                  [
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        class:
+                          'schema-tree-back rounded border px-2 py-1 text-sm',
+                        onClick: () => {
+                          inspecting.value = false
+                        },
+                      },
+                      t([
+                        'Schema tree',
+                        'Arbre du schéma',
+                        'Árbol del esquema',
+                      ]),
+                    ),
+                    h(
+                      'h3',
+                      { class: 'font-semibold break-all' },
+                      location.value.data
+                        ? jsonPointer(
+                            location.value.data.map((part) => part ?? '*'),
+                          ) || '/'
+                        : location.value.pointer,
+                    ),
+                  ],
+                )
+              : label(
+                  t(['Schema node', 'Nœud du schéma', 'Nodo del esquema']),
+                  h(
+                    'select',
+                    {
+                      class: control,
+                      value: location.value.pointer,
+                      onChange: (event: Event) => select(valueFrom(event)),
+                    },
+                    locations.value.map(({ pointer }) =>
+                      h(
+                        'option',
+                        { value: pointer },
+                        pointer || t(['Root', 'Racine', 'Raíz']),
+                      ),
+                    ),
+                  ),
+                ),
+            refTarget !== undefined &&
+            locations.value.some(({ pointer }) => pointer === refTarget)
+              ? button(
+                  ['Open reference', 'Ouvrir la référence', 'Abrir referencia'],
+                  () => select(refTarget),
+                )
+              : null,
+          ]),
+          props.tree &&
+            h('div', { class: 'grid gap-2' }, [
+              ...(usages.value.get(location.value.pointer) ?? []).map(
+                ({ componentId, property, types }) => {
+                  const component = props.componentLabel?.(componentId)
+                  return h(
+                    'div',
+                    {
+                      key: componentId + property,
+                      class: 'flex flex-wrap items-center gap-2 text-sm',
+                    },
+                    [
+                      h('span', [
+                        component ?? componentId,
+                        ' · ',
+                        property,
+                        ' · ',
+                        types
+                          .map((type) =>
+                            typeNames[type] ? t(typeNames[type]) : type,
+                          )
+                          .join(' / '),
+                      ]),
+                      (!props.componentLabel || component) &&
+                        button(
+                          [
+                            'Select on canvas',
+                            'Sélectionner sur le canevas',
+                            'Seleccionar en el lienzo',
+                          ],
+                          () => emit('navigate', componentId),
+                        ),
+                    ],
+                  )
+                },
+              ),
+              slots.inspector?.({
+                path: location.value.data,
+                pointer: location.value.pointer,
+              }),
+            ]),
+          props.tree &&
+            isJsonObject(node.value) &&
             h(
               'select',
               {
                 class: control,
-                value: location.value.pointer,
-                onChange: (event: Event) => select(valueFrom(event)),
+                'aria-label': t([
+                  'Add a rule',
+                  'Ajouter une règle',
+                  'Añadir una regla',
+                ]),
+                value: '',
+                onChange: (event: Event) => {
+                  const control = event.target as HTMLSelectElement
+                  const target = document.getElementById(
+                    id + '-' + control.value,
+                  )
+                  control.value = ''
+                  target?.focus()
+                  target?.scrollIntoView?.({ block: 'nearest' })
+                },
               },
-              locations.value.map(({ pointer }) =>
+              [
                 h(
                   'option',
-                  { value: pointer },
-                  pointer || t(['Root', 'Racine', 'Raíz']),
+                  { value: '' },
+                  t(['Add a rule', 'Ajouter une règle', 'Añadir una regla']),
                 ),
-              ),
+                ...(Object.keys(families) as Family[])
+                  .filter((family) => enabledFamilies[family])
+                  .map((family) =>
+                    h(
+                      'option',
+                      { value: family, key: family },
+                      t(families[family]),
+                    ),
+                  ),
+              ],
             ),
-          ),
-          refTarget !== undefined &&
-          locations.value.some(({ pointer }) => pointer === refTarget)
-            ? button(
-                ['Open reference', 'Ouvrir la référence', 'Abrir referencia'],
-                () => select(refTarget),
+          localError.value
+            ? h(
+                'p',
+                { role: 'alert', class: 'text-destructive text-sm' },
+                localError.value,
               )
             : null,
-        ]),
-        localError.value
-          ? h(
-              'p',
-              { role: 'alert', class: 'text-destructive text-sm' },
-              localError.value,
-            )
-          : null,
-        !isJsonObject(node.value)
-          ? h('p', { class: 'text-sm' }, String(node.value))
-          : h('div', { class: 'grid gap-3 xl:grid-cols-2' }, [
-              group(
-                ['Types and values', 'Types et valeurs', 'Tipos y valores'],
-                [
+          !isJsonObject(node.value)
+            ? h('p', { class: 'text-sm' }, String(node.value))
+            : h('div', { class: 'grid gap-3 xl:grid-cols-2' }, [
+                group('types', [
                   h(
                     'div',
                     { class: 'flex flex-wrap gap-3' },
@@ -535,12 +767,9 @@ export const DataSchemaEditor = defineComponent({
                     'Constante',
                     'Constante',
                   ]),
-                ],
-              ),
-              relevant('number') || relevant('integer')
-                ? group(
-                    ['Numbers', 'Nombres', 'Números'],
-                    [
+                ]),
+                enabledFamilies.numbers
+                  ? group('numbers', [
                       numberControls([
                         'minimum',
                         'maximum',
@@ -548,13 +777,10 @@ export const DataSchemaEditor = defineComponent({
                         'exclusiveMaximum',
                         'multipleOf',
                       ]),
-                    ],
-                  )
-                : null,
-              relevant('string')
-                ? group(
-                    ['Strings', 'Chaînes', 'Cadenas'],
-                    [
+                    ])
+                  : null,
+                enabledFamilies.strings
+                  ? group('strings', [
                       numberControls(['minLength', 'maxLength']),
                       annotation('pattern', [
                         'Regular expression',
@@ -591,13 +817,10 @@ export const DataSchemaEditor = defineComponent({
                             patternResult.value,
                           )
                         : null,
-                    ],
-                  )
-                : null,
-              relevant('object')
-                ? group(
-                    ['Objects', 'Objets', 'Objetos'],
-                    [
+                    ])
+                  : null,
+                enabledFamilies.objects
+                  ? group('objects', [
                       numberControls(['minProperties', 'maxProperties']),
                       flag('additionalProperties'),
                       ...Object.keys(properties).map((name) =>
@@ -674,13 +897,10 @@ export const DataSchemaEditor = defineComponent({
                             ),
                         ),
                       ]),
-                    ],
-                  )
-                : null,
-              relevant('array')
-                ? group(
-                    ['Arrays', 'Listes', 'Listas'],
-                    [
+                    ])
+                  : null,
+                enabledFamilies.arrays
+                  ? group('arrays', [
                       numberControls(['minItems', 'maxItems']),
                       flag('uniqueItems'),
                       current.items === undefined
@@ -703,12 +923,9 @@ export const DataSchemaEditor = defineComponent({
                             ),
                           ])
                         : null,
-                    ],
-                  )
-                : null,
-              group(
-                ['Annotations', 'Annotations', 'Anotaciones'],
-                [
+                    ])
+                  : null,
+                group('annotations', [
                   annotation('title', ['Title', 'Titre', 'Título']),
                   annotation('description', [
                     'Description',
@@ -724,10 +941,70 @@ export const DataSchemaEditor = defineComponent({
                     'Valor predeterminado',
                   ]),
                   ...list('examples', ['Examples', 'Exemples', 'Ejemplos']),
-                ],
-              ),
-            ]),
-      ])
+                ]),
+              ]),
+        ],
+      )
+      if (!props.tree) return inspector
+      const title = t(['Schema tree', 'Arbre du schéma', 'Árbol del esquema'])
+      return h(
+        'div',
+        {
+          class: 'data-schema-tree-layout',
+          'data-inspecting': inspecting.value,
+        },
+        [
+          h('nav', { class: 'schema-tree min-w-0', 'aria-label': title }, [
+            h('h3', { class: 'mb-2 text-sm font-semibold' }, title),
+            h(
+              'ul',
+              { class: 'space-y-1' },
+              locations.value.map(({ path, pointer, data }) => {
+                const linked = usages.value.get(pointer)?.length ?? 0
+                const name = data
+                  ? jsonPointer(data.map((part) => part ?? '*'))
+                  : pointer
+                return h('li', { key: pointer }, [
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      class:
+                        'w-full rounded px-2 py-1 text-left text-sm break-all hover:bg-muted aria-current:bg-accent',
+                      'aria-current':
+                        location.value.pointer === pointer ? 'true' : undefined,
+                      'data-schema-node': pointer,
+                      style: {
+                        paddingInlineStart:
+                          Math.min(path.length, 8) * 4 + 8 + 'px',
+                      },
+                      onClick: () => select(pointer),
+                    },
+                    [
+                      name || t(['Root', 'Racine', 'Raíz']),
+                      linked
+                        ? h(
+                            'span',
+                            {
+                              class: 'ms-2 text-xs text-muted-foreground',
+                              title: t([
+                                'Bound components',
+                                'Composants liés',
+                                'Componentes vinculados',
+                              ]),
+                            },
+                            String(linked),
+                          )
+                        : null,
+                    ],
+                  ),
+                ])
+              }),
+            ),
+          ]),
+          inspector,
+        ],
+      )
     }
   },
 })

@@ -122,6 +122,19 @@ The `examples/` apps and the playground consume the packages'
 rebuild it (`pnpm --filter <pkg> build`) to see the change in the demos —
 the Vite server re-reads the dist.
 
+### Data model in the designer playground
+
+Start with `pnpm start:playground` and open **Data model** from the workspace
+toolbar. The **Variants demo** link opens `?demo=variants` in a separate local
+workspace. It includes two variants with renamed JSON keys, validation rules
+and a read-only field. Add `mode=advanced` to enable the chart and advanced
+component contracts in the same editor.
+
+Generate from the canvas, choose or create a variant, and edit its schema or
+test values. JSON edits and graphical edits share a locally persisted draft.
+Applying a valid draft updates the preview. In **JSON documents**, download
+and import `ui.json`, `data.schema.json` and `data.json` to move a variant.
+
 ## Tests
 
 **Vitest** tests (root config [`vitest.config.mts`](./vitest.config.mts),

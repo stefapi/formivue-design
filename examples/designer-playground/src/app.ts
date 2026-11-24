@@ -11,6 +11,8 @@
 import {
   defineComponent,
   h,
+  nextTick,
+  onMounted,
   onUnmounted,
   ref,
   shallowRef,
@@ -34,7 +36,11 @@ import {
   SettingsPanel,
   ComponentTreeWidget,
   TextWidget,
+  useWorkbench,
 } from '@formivue-design/vue'
+import { observer } from '@formivue/reactive-vue'
+import { Button } from '@formivue-design/vue-ui'
+import { message } from '../../shared/language'
 import {
   createFormDocument,
   type DocumentContractRegistry,
@@ -90,7 +96,10 @@ import {
   DocumentEditorWidget,
   MarkupSchemaWidget,
 } from './widgets'
-import { saveSchema } from './service'
+import { loadInitialSchema, saveSchema } from './service'
+import { useDocumentProject } from './service/document-project'
+import { createVariantsDemo } from './service/variants-demo'
+import { DataModelWidget } from './widgets/DataModelWidget'
 import type {
   AdvancedDesignerComponents,
   AdvancedSources,
@@ -220,6 +229,24 @@ const components = {
   ObjectContainer,
 } as any
 
+const DataModelViewButton = observer(
+  defineComponent({
+    setup() {
+      const workbench = useWorkbench()
+      return () =>
+        h(
+          Button,
+          {
+            size: 'small',
+            disabled: workbench.type === 'DATAMODEL',
+            onClick: () => workbench.setWorkbenchType('DATAMODEL'),
+          },
+          () => message(['Data model', 'Modèle de données', 'Modelo de datos']),
+        )
+    },
+  }),
+)
+
 export const App = defineComponent({
   name: 'FormivueDesignPlayground',
   props: {
@@ -227,6 +254,14 @@ export const App = defineComponent({
   },
   setup(props) {
     const registry = { ...components, ...props.advanced?.components }
+    const materials = { ...Materials, ...props.advanced?.materials }
+    const documentOptions = {
+      contracts: props.advanced?.documentContracts,
+      hasComponent: (name: string) =>
+        name
+          .split('.')
+          .reduce((value, key) => value?.[key], materials as any) != null,
+    }
     const previewDocument = shallowRef<ReturnType<typeof createFormDocument>>()
     const clearDocument = () => {
       previewDocument.value?.dispose()
@@ -246,19 +281,23 @@ export const App = defineComponent({
         triggerRef(previewDocument)
         return result.conflicts
       } else {
-        const materials = { ...Materials, ...props.advanced?.materials }
-        const next = createFormDocument(documents, {
-          contracts: props.advanced?.documentContracts,
-          hasComponent: (name) =>
-            name
-              .split('.')
-              .reduce((value, key) => value?.[key], materials as any) != null,
-        })
+        const next = createFormDocument(documents, documentOptions)
         clearDocument()
         previewDocument.value = next
       }
     }
     const advanced = !!props.advanced
+    const url = new URL(window.location.href)
+    const demo = url.searchParams.get('demo') === 'variants'
+    const profile = demo ? 'variants-demo' : ''
+    url.searchParams.set('demo', 'variants')
+    const model = useDocumentProject(
+      ['formivue-document-project', advanced ? 'advanced' : '', profile]
+        .filter(Boolean)
+        .join('-'),
+      documentOptions,
+      applyDocument,
+    )
     const panes = ['workspace', 'palette', 'settings'] as const
     const activePane = ref<(typeof panes)[number]>('workspace')
     // useMemo(() => createDesigner(...), []) d'ère → création au setup
@@ -270,12 +309,39 @@ export const App = defineComponent({
             [KeyCode.Control, KeyCode.S],
           ],
           handler(ctx) {
-            saveSchema(ctx.engine, advanced)
+            saveSchema(ctx.engine, advanced, profile)
           },
         }),
       ],
       rootComponentName: 'Form',
     })
+    onMounted(() => {
+      const restored = loadInitialSchema(engine, advanced, profile)
+      if (demo && !restored) {
+        const project = createVariantsDemo(engine, documentOptions)
+        if (!model.project.value) model.install(project)
+        saveSchema(engine, advanced, profile)
+      } else if (restored && !model.project.value && !model.files.value) {
+        try {
+          model.generate(engine.getCurrentTree())
+        } catch {
+          // Older canvas saves remain editable and generation can report incompatibilities.
+        }
+      }
+      model.restorePreview()
+      if (demo) engine.workbench.setWorkbenchType('DATAMODEL')
+    })
+    const navigateToCanvas = async (id?: string) => {
+      engine.workbench.setWorkbenchType('FORMIVUEDESIGN')
+      activePane.value = 'workspace'
+      if (!id) return
+      await nextTick()
+      const { operation, viewport } = engine.workbench.currentWorkspace
+      const node = operation.tree.find((node) => node.id === id)
+      if (!node) return
+      operation.selection.select(node)
+      viewport.findElementById(id)?.scrollIntoView?.({ block: 'nearest' })
+    }
     const addAdvancedSource = ({ node }: IResource) => {
       const workspace = engine.workbench.currentWorkspace
       if (!workspace || !node) return
@@ -293,44 +359,41 @@ export const App = defineComponent({
         {
           engine,
           'data-advanced-pane': advanced ? activePane.value : undefined,
+          'data-playground-pane': activePane.value,
         },
         {
           default: () =>
             h(StudioPanel, null, {
               logo: () => h(LogoWidget),
-              actions: () => h(ActionsWidget, { advanced }),
+              actions: () => h(ActionsWidget, { advanced, profile }),
               default: () => [
-                advanced
-                  ? h(
-                      'nav',
+                h(
+                  'nav',
+                  {
+                    class: 'advanced-pane-navigation hidden',
+                    'aria-label': GlobalRegistry.getDesignerMessage(
+                      'advancedPanes.label',
+                    ),
+                  },
+                  panes.map((pane) =>
+                    h(
+                      'button',
                       {
-                        class: 'advanced-pane-navigation hidden',
-                        'aria-label': GlobalRegistry.getDesignerMessage(
-                          'advancedPanes.label',
-                        ),
+                        key: pane,
+                        type: 'button',
+                        'aria-pressed': activePane.value === pane,
+                        class:
+                          'min-w-0 rounded-md px-2 py-2 text-sm font-medium wrap-anywhere aria-pressed:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
+                        onClick: () => {
+                          activePane.value = pane
+                          if (pane !== 'workspace')
+                            engine.workbench.setWorkbenchType('FORMIVUEDESIGN')
+                        },
                       },
-                      panes.map((pane) =>
-                        h(
-                          'button',
-                          {
-                            key: pane,
-                            type: 'button',
-                            'aria-pressed': activePane.value === pane,
-                            class:
-                              'min-w-0 rounded-md px-2 py-2 text-sm font-medium wrap-anywhere aria-pressed:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
-                            onClick: () => {
-                              activePane.value = pane
-                              if (pane !== 'workspace')
-                                engine.workbench.setWorkbenchType(
-                                  'FORMIVUEDESIGN',
-                                )
-                            },
-                          },
-                          [h(TextWidget, { token: `advancedPanes.${pane}` })],
-                        ),
-                      ),
-                    )
-                  : null,
+                      [h(TextWidget, { token: `advancedPanes.${pane}` })],
+                    ),
+                  ),
+                ),
                 h(CompositePanel, null, {
                   default: () => [
                     h(
@@ -454,6 +517,7 @@ export const App = defineComponent({
                                   'PREVIEW',
                                 ],
                               }),
+                              h(DataModelViewButton),
                             ],
                           }),
                           h(
@@ -461,6 +525,40 @@ export const App = defineComponent({
                             { style: { height: '100%' } },
                             {
                               default: () => [
+                                h(
+                                  ViewPanel,
+                                  { type: 'DATAMODEL', scrollable: false },
+                                  {
+                                    default: ({ tree }: { tree: any }) =>
+                                      h(DataModelWidget, {
+                                        tree,
+                                        model,
+                                        options: documentOptions,
+                                        materials: props.advanced?.materials,
+                                        demoHref: demo ? undefined : url.href,
+                                        onGenerate: () => {
+                                          model.generate(tree)
+                                          saveSchema(engine, advanced, profile)
+                                        },
+                                        onJson: () =>
+                                          engine.workbench.setWorkbenchType(
+                                            'JSONTREE',
+                                          ),
+                                        onNavigate: navigateToCanvas,
+                                        componentLabel: (id) => {
+                                          const node = tree.find(
+                                            (node: { id: string }) =>
+                                              node.id === id,
+                                          )
+                                          return (
+                                            node?.props.title ??
+                                            node?.props.name ??
+                                            node?.props['x-component']
+                                          )
+                                        },
+                                      }),
+                                  },
+                                ),
                                 h(
                                   ViewPanel,
                                   { type: 'FORMIVUEDESIGN' },
@@ -487,10 +585,24 @@ export const App = defineComponent({
                                         onChange,
                                         contracts:
                                           props.advanced?.documentContracts,
+                                        hasComponent:
+                                          documentOptions.hasComponent,
                                         documents:
                                           previewDocument.value?.exportDocuments(),
-                                        onApply: applyDocument,
-                                        onCanvas: clearDocument,
+                                        draft: model.files.value,
+                                        onDraft: model.edit,
+                                        onModel: () =>
+                                          engine.workbench.setWorkbenchType(
+                                            'DATAMODEL',
+                                          ),
+                                        onReload: model.project.value
+                                          ? model.resetDraft
+                                          : undefined,
+                                        onApply: model.apply,
+                                        onCanvas: () => {
+                                          model.clearPreview()
+                                          clearDocument()
+                                        },
                                       }),
                                   },
                                 ),

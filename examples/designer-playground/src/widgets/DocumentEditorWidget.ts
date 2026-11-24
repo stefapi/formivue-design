@@ -1,4 +1,12 @@
-import { computed, defineComponent, h, ref, type PropType } from 'vue'
+import {
+  computed,
+  defineComponent,
+  h,
+  onBeforeUnmount,
+  ref,
+  watch,
+  type PropType,
+} from 'vue'
 import type { ITreeNode, TreeNode } from '@formivue-design/core'
 import {
   createFormDocument,
@@ -6,6 +14,7 @@ import {
   stringifyFormDocuments,
   transformToFormDocuments,
   type DocumentContractRegistry,
+  type CompileFormDocumentOptions,
   type FormDocumentJson,
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
@@ -26,7 +35,14 @@ export const DocumentEditorWidget = defineComponent({
   props: {
     tree: { type: Object as PropType<TreeNode>, required: true },
     contracts: Object as PropType<DocumentContractRegistry>,
+    hasComponent: Function as PropType<
+      CompileFormDocumentOptions['hasComponent']
+    >,
     documents: Object as PropType<FormDocuments>,
+    draft: Object as PropType<FormDocumentJson>,
+    onDraft: Function as PropType<(draft: FormDocumentJson) => void>,
+    onReload: Function as PropType<() => void>,
+    onModel: Function as PropType<() => void>,
     onApply: {
       type: Function as PropType<
         (documents: FormDocuments) => readonly string[] | void
@@ -50,6 +66,10 @@ export const DocumentEditorWidget = defineComponent({
       }
     })
     const error = ref('')
+    let mounted = true
+    onBeforeUnmount(() => {
+      mounted = false
+    })
     const canvasDocuments = () =>
       transformToFormDocuments(props.tree, undefined, {
         contracts: props.contracts,
@@ -63,31 +83,53 @@ export const DocumentEditorWidget = defineComponent({
       }
     }
     setDocuments(() => props.documents ?? canvasDocuments())
+    watch(
+      () => props.draft,
+      (draft) => {
+        if (draft) contents.value = { ...draft }
+      },
+      { immediate: true },
+    )
+    const write = (key: keyof FormDocuments, value: string) => {
+      contents.value = { ...contents.value, [key]: value }
+      props.onDraft?.(contents.value)
+    }
 
     const download = (key: keyof FormDocuments) => {
       try {
-        createFormDocument(parseFormDocuments(contents.value), {
+        const session = createFormDocument(parseFormDocuments(contents.value), {
           contracts: props.contracts,
-        }).dispose()
+          hasComponent: props.hasComponent,
+        })
+        const canonical = stringifyFormDocuments(session.exportDocuments())
+        session.dispose()
+        const url = URL.createObjectURL(
+          new Blob([canonical[key]], { type: 'application/json' }),
+        )
+        const link = document.createElement('a')
+        link.href = url
+        link.download = files[key]
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 0)
         error.value = ''
       } catch (cause) {
         error.value = documentError(cause)
         return
       }
-      const url = URL.createObjectURL(
-        new Blob([contents.value[key]], { type: 'application/json' }),
-      )
-      const link = document.createElement('a')
-      link.href = url
-      link.download = files[key]
-      link.click()
-      setTimeout(() => URL.revokeObjectURL(url), 0)
     }
 
     return () => {
       const selected = part.value
       return h('section', { class: 'flex h-full min-h-0 flex-col gap-3 p-3' }, [
         h('div', { class: 'flex flex-wrap items-center gap-2' }, [
+          props.onModel &&
+            h(Button, { size: 'small', onClick: props.onModel }, () =>
+              message([
+                'Back to data model',
+                'Retour au modèle de données',
+                'Volver al modelo de datos',
+              ]),
+            ),
           h(
             'select',
             {
@@ -145,8 +187,14 @@ export const DocumentEditorWidget = defineComponent({
                   Button,
                   {
                     size: 'small',
-                    onClick: () =>
-                      setDocuments(() => props.documents ?? canvasDocuments()),
+                    onClick: () => {
+                      if (props.onReload) props.onReload()
+                      else {
+                        setDocuments(() => props.documents ?? canvasDocuments())
+                        props.onDraft?.(contents.value)
+                      }
+                      error.value = ''
+                    },
                   },
                   () =>
                     message([
@@ -174,7 +222,9 @@ export const DocumentEditorWidget = defineComponent({
                     const file = input.files?.[0]
                     if (!file) return
                     try {
-                      contents.value[selected] = await file.text()
+                      const source = await file.text()
+                      if (!mounted) return
+                      write(selected, source)
                       error.value = ''
                     } catch (cause) {
                       error.value = documentError(cause)
@@ -223,7 +273,7 @@ export const DocumentEditorWidget = defineComponent({
                           size: 'small',
                           onClick: () => {
                             props.onCanvas()
-                            setDocuments(canvasDocuments)
+                            if (!props.onDraft) setDocuments(canvasDocuments)
                           },
                         },
                         () =>
@@ -261,7 +311,7 @@ export const DocumentEditorWidget = defineComponent({
                 modelValue: schema.value,
                 locale: exampleLocale.value,
                 'onUpdate:modelValue': (value) => {
-                  contents.value.dataSchema = JSON.stringify(value, null, 2)
+                  write('dataSchema', JSON.stringify(value, null, 2))
                   error.value = ''
                 },
               })
@@ -273,9 +323,7 @@ export const DocumentEditorWidget = defineComponent({
                 class:
                   'min-h-0 flex-1 resize-none rounded border border-input bg-background p-3 font-mono text-sm',
                 onInput: (event: Event) => {
-                  contents.value[selected] = (
-                    event.target as HTMLTextAreaElement
-                  ).value
+                  write(selected, (event.target as HTMLTextAreaElement).value)
                 },
               }),
       ])

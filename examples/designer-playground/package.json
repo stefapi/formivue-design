@@ -30,6 +30,7 @@
     "@formivue-design/data-schema-editor": "workspace:*",
     "@formivue-design/formivue-vue": "workspace:*",
     "@formivue/core": "workspace:*",
+    "@formivue/json-schema": "workspace:*",
     "@formivue/reactive-vue": "workspace:*",
     "@formivue/shared": "workspace:*",
     "@formivue/vue": "workspace:*",

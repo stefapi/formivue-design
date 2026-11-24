@@ -3,7 +3,7 @@
 // Save/Publish → saveSchema (service, localStorage). Écarts V1 documentés :
 // Space/Button/Radio antd + GithubOutlined → vue-ui + lucide ; le toast
 // `message.success` antd devient un indicateur « Saved » inline (tokens V6).
-import { defineComponent, h, onMounted, ref } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import { observer } from '@formivue/reactive-vue'
 import { GlobalRegistry } from '@formivue-design/core'
 import { useDesigner, TextWidget } from '@formivue-design/vue'
@@ -34,12 +34,12 @@ const Github = defineComponent({
 })
 import { LanguagePicker, message } from '../../../shared/language'
 import { syncDesignerLanguage } from '../../../shared/designer-language'
-import { loadInitialSchema, saveSchema } from '../service'
+import { saveSchema } from '../service'
 
 export const ActionsWidget = observer(
   defineComponent({
     name: 'ActionsWidget',
-    props: { advanced: Boolean },
+    props: { advanced: Boolean, profile: String },
     setup(props) {
       const designer = useDesigner()
       const saved = ref(false)
@@ -49,11 +49,8 @@ export const ActionsWidget = observer(
         'Formivue · Designer',
         'Formivue · Diseñador',
       ])
-      onMounted(() => {
-        loadInitialSchema(designer, props.advanced)
-      })
       const onSave = () => {
-        saveSchema(designer, props.advanced)
+        saveSchema(designer, props.advanced, props.profile)
         saved.value = true
         clearTimeout(savedTimer)
         savedTimer = setTimeout(() => (saved.value = false), 1500)
@@ -65,7 +62,7 @@ export const ActionsWidget = observer(
         return url.href
       }
       return () =>
-        h('div', { class: 'mr-2 flex items-center gap-2' }, [
+        h('div', { class: 'mr-2 flex flex-wrap items-center gap-2' }, [
           h(
             'nav',
             {
@@ -89,7 +86,8 @@ export const ActionsWidget = observer(
                       'rounded px-2 py-1 text-xs font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
                       current && 'bg-accent text-accent-foreground',
                     ],
-                    onClick: () => saveSchema(designer, props.advanced),
+                    onClick: () =>
+                      saveSchema(designer, props.advanced, props.profile),
                   },
                   message(
                     (

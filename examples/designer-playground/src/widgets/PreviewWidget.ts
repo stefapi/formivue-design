@@ -11,6 +11,7 @@ import { observer } from '@formivue/reactive-vue'
 import { TreeNode } from '@formivue-design/core'
 import {
   transformToSchema,
+  type compileFormDocuments,
   type createFormDocument,
 } from '@formivue-design/formivue-transformer'
 // ATTENTION piège du port : le barrel de @formivue-design/formivue-vue exporte le
@@ -20,6 +21,12 @@ import { message } from '../../../shared/language'
 import { validationMessage } from '../../../shared/document-messages'
 import { Materials } from '@formivue-design/formivue-vue'
 
+export interface DraftFormPreview {
+  form: ReturnType<typeof createForm>
+  compiled: ReturnType<typeof compileFormDocuments>
+  scope: Record<string, unknown>
+}
+
 export const PreviewWidget = observer(
   defineComponent({
     name: 'PreviewWidget',
@@ -28,6 +35,7 @@ export const PreviewWidget = observer(
       materials: Object as PropType<Record<string, Component>>,
       frame: Object as PropType<Component>,
       document: Object as PropType<ReturnType<typeof createFormDocument>>,
+      draft: Object as PropType<DraftFormPreview>,
     },
     setup(props) {
       // sémantique useMemo(() => createForm(), []) d'ère : un form par
@@ -40,16 +48,18 @@ export const PreviewWidget = observer(
         const active = props.document
         const conflicts = active?.conflicts ?? []
         const issues = active?.issues ?? []
+        const draft = props.draft
         const { form: formProps, schema } = active
           ? { form: active.formProps, schema: active.schema }
-          : transformToSchema(props.tree)
+          : (draft?.compiled ?? transformToSchema(props.tree))
+        const currentForm = active?.form ?? draft?.form ?? form
         const renderForm = () =>
           h(
             FormProvider as any,
             {
-              form: active?.form ?? form,
-              key: active?.form.id ?? form.id,
-              retain: !!active,
+              form: currentForm,
+              key: currentForm.id,
+              retain: !!active || !!draft,
             },
             {
               default: () =>
@@ -97,7 +107,7 @@ export const PreviewWidget = observer(
                       h(SchemaField as any, {
                         key: 'fields',
                         schema,
-                        scope: active?.scope,
+                        scope: active?.scope ?? draft?.scope,
                       }),
                     ],
                   },
