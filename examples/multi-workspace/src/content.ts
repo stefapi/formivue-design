@@ -1,6 +1,7 @@
 // Phase 7 (7.1) — port Vue de content.tsx (multi-workspace) : la Card d'ère
 // s'élargit à son contenu (height auto quand elle a des enfants, 150 sinon).
 import { defineComponent, h } from 'vue'
+import { message } from '../../shared/language'
 import {
   ComponentTreeWidget,
   TextWidget,
@@ -28,7 +29,13 @@ const Field = observer(
             },
           },
           [
-            h('span', { 'data-content-editable': 'title' }, node?.props?.title),
+            h(
+              'span',
+              { 'data-content-editable': 'title' },
+              node?.props?.title === 'Input'
+                ? message(['Input', 'Champ de saisie', 'Campo de entrada'])
+                : node?.props?.title,
+            ),
             slots.default?.(),
           ],
         )

@@ -2,20 +2,22 @@
   <DemoSection
     id="demo-designer-schema"
     :index="5"
-    kicker="Designer · JSON Schema"
-    title="Render a designer form"
+    :kicker="t('Designer · JSON Schema')"
+    :title="t('Render a designer form')"
     :apis="['Materials', 'createSchemaField', 'x-component-props']"
     :code="JSON.stringify(exportedForm, null, 2)"
   >
     <template #description>
-      This form uses the same components as the designer preview. Try the nested
-      choices, panel defaults and repeating-list controls. The inspector shows
-      the values managed by Formivue.
+      {{
+        t(
+          'This form uses the same components as the designer preview. Try the nested choices, panel defaults and repeating-list controls.',
+        )
+      }}
     </template>
 
     <FormProvider :form="form">
       <FormLayout v-bind="exportedForm.form">
-        <SchemaField :schema="exportedForm.schema" />
+        <SchemaField :schema="translatedSchema" :scope="languageScope" />
       </FormLayout>
     </FormProvider>
 
@@ -26,6 +28,12 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import {
+  createExampleSchemaScope,
+  translateExampleSchema,
+} from '../../shared/schema-language'
+import { copy, t } from './copy'
 import { createForm } from '@formivue/core'
 import { createSchemaField, FormProvider, type ISchema } from '@formivue/vue'
 import { Materials } from '@formivue-design/formivue-vue'
@@ -261,4 +269,8 @@ const exportedForm = {
     },
   } satisfies ISchema,
 }
+const languageScope = createExampleSchemaScope(copy)
+const translatedSchema = computed(() =>
+  translateExampleSchema(exportedForm.schema, copy),
+)
 </script>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 import { ref } from 'vue'
 
 defineProps<{
@@ -56,7 +57,7 @@ const showCode = ref(false)
             :aria-expanded="showCode"
             @click="showCode = !showCode"
           >
-            <span>{{ showCode ? 'Hide code' : 'Show code' }}</span>
+            <span>{{ t(showCode ? 'Hide code' : 'Show code') }}</span>
             <span aria-hidden="true">{{ showCode ? '−' : '+' }}</span>
           </button>
           <pre

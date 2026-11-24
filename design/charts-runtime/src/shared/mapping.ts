@@ -1,3 +1,4 @@
+import { hasFlowCycle, pairs } from './special-data'
 import type { ChartName } from './appearance'
 import type { ChartOptions } from './base'
 import {
@@ -16,7 +17,7 @@ import {
   type Total,
 } from './row-data'
 
-type MappingOptions = Partial<
+export type MappingOptions = Partial<
   Pick<
     ChartOptions,
     | 'xKey'
@@ -63,7 +64,7 @@ interface ColumnCheck {
 interface Mapping {
   required: ColumnCheck[]
   series?: ColumnCheck[]
-  optional?: string[]
+  optional?: ColumnCheck[]
   aggregate?: 'finite' | 'positive'
 }
 
@@ -151,7 +152,7 @@ function mappingFor(
       }
     }
     case 'PointMap':
-      return { required: coordinates, optional: [props.xKey, props.valueKey] }
+      return { required: coordinates, optional: [category, value] }
     case 'FlowMap':
       return {
         required: [
@@ -159,7 +160,7 @@ function mappingFor(
           check(props.destinationLatitudeKey, latitude, 'latitude'),
           check(props.destinationLongitudeKey, longitude, 'longitude'),
         ],
-        optional: [props.xKey, props.valueKey],
+        optional: [category, value],
       }
     case 'ChoroplethMap':
       return {
@@ -190,7 +191,7 @@ function inspectMapping(
   const mapped = [
     ...required.map(({ column }) => column),
     ...(series?.map(({ column }) => column) ?? []),
-    ...(optional ?? []),
+    ...(optional?.map(({ column }) => column) ?? []),
   ]
   const missingColumns =
     declaredColumns || rows.some(isChartRow)
@@ -287,6 +288,48 @@ function inspectMapping(
     .sort((a, b) => a.row - b.row)
     .slice(0, exampleLimit)
   return report
+}
+
+export function chartDataColumns(name: ChartName, props: MappingOptions) {
+  const { required, series, optional } = mappingFor(name, props, label)
+  return {
+    columns: [
+      ...required,
+      ...(series ?? []),
+      ...(optional?.filter(({ column }) => column) ?? []),
+    ].map(({ column, parse, reason }) => ({
+      column,
+      types:
+        reason === 'number' || reason === 'latitude' || reason === 'longitude'
+          ? ['number']
+          : reason === 'country'
+            ? ['string']
+            : parse === categoryValue || reason === 'date'
+              ? ['string', 'number']
+              : ['string', 'number', 'boolean'],
+    })),
+    incomplete: required.some(({ column }) => !column) || series?.length === 0,
+  }
+}
+
+export function validateChartRows(
+  name: ChartName,
+  props: MappingOptions,
+  rows: ChartOptions['rows'],
+  country: Parser,
+) {
+  const report = inspectMapping(name, props, rows, undefined, country)
+  const links =
+    name === 'SankeyChart' && !report.ignored
+      ? pairs(
+          { rows, aggregation: props.aggregation, valueKey: props.valueKey },
+          props.sourceKey,
+          props.targetKey,
+        )
+          .filter(({ value }) => value > 0)
+          .map(({ first: source, second: target }) => ({ source, target }))
+      : []
+  return { ...report, cyclic: hasFlowCycle(links) }
 }
 
 export async function loadChartMappingDiagnostics(name: ChartName) {

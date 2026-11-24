@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 /** reka-ui switch driven by formivue. */
 import { SwitchRoot, SwitchThumb } from 'reka-ui'
 import { useField } from '@formivue/vue'
@@ -38,7 +39,7 @@ const fieldRef = useField<Field>()
       />
     </SwitchRoot>
     <span v-if="label" class="text-sm text-slate-600" aria-hidden="true">{{
-      label
+      t(label)
     }}</span>
   </div>
 </template>

@@ -1,6 +1,7 @@
-import { ISchema, Schema } from '@formivue/json-schema'
+import { ISchema, Schema, type JsonObject } from '@formivue/json-schema'
 import { ITreeNode } from '@formivue-design/core'
 import { clone, uid } from '@formivue-design/shared'
+import { splitFormSchema } from './document-migration'
 
 export interface ITransformerOptions {
   designableFieldName?: string
@@ -134,4 +135,12 @@ export const transformToTreeNode = (
     appendTreeNode(root, schema)
   })
   return root
+}
+
+export * from './documents'
+export type { DataSchema } from './document-schema'
+export { splitFormSchema } from './document-migration'
+
+export function transformToFormDocuments(tree: ITreeNode, values?: JsonObject) {
+  return splitFormSchema(transformToSchema(tree), values)
 }

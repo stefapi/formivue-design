@@ -41,21 +41,14 @@
         <h1
           class="mt-5 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl"
         >
-          Forms that are
-          <span
-            class="bg-gradient-to-r from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent"
-          >
-            reactive</span
-          >, no glue.
+          {{ t('Forms that are reactive, no glue.') }}
         </h1>
         <p class="mt-4 max-w-2xl text-base leading-relaxed text-slate-300">
-          formivue separates the
-          <strong class="text-white">form state</strong> (an observable,
-          field-by-field model) from its
-          <strong class="text-white">rendering</strong>. Each demo below shows
-          the live reactive state of
-          <code class="font-mono text-indigo-200">form</code>
-          on the right — type, break things, observe.
+          {{
+            t(
+              'Formivue separates the form state from its rendering. Each demo shows the form state updating as you type.',
+            )
+          }}
         </p>
         <div class="mt-6 flex flex-wrap gap-2 text-[12px] text-slate-300">
           <span
@@ -77,10 +70,10 @@
               >0{{ i + 1 }}</span
             >
             <span class="mt-1 block font-semibold text-white">{{
-              d.label
+              t(d.label)
             }}</span>
             <span class="mt-1 block text-[13px] leading-snug text-slate-400">{{
-              d.pitch
+              t(d.pitch)
             }}</span>
           </a>
         </div>
@@ -90,7 +83,7 @@
     <!-- Sticky navigation -->
     <nav
       class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/80 backdrop-blur"
-      aria-label="Demos"
+      :aria-label="t('Demos')"
     >
       <div
         class="mx-auto flex max-w-6xl items-center gap-1 overflow-x-auto px-5 py-2.5 sm:px-8"
@@ -102,13 +95,14 @@
           height="40"
           class="mr-3 h-6 w-auto shrink-0"
         />
+        <LanguagePicker class="mr-2 shrink-0" />
         <a
           v-for="(d, i) in demos"
           :key="d.id"
           :href="`#${d.id}`"
           class="shrink-0 rounded-md px-2.5 py-1 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
         >
-          <span class="text-slate-400">{{ i + 1 }}.</span> {{ d.label }}
+          <span class="text-slate-400">{{ i + 1 }}.</span> {{ t(d.label) }}
         </a>
       </div>
     </nav>
@@ -118,8 +112,8 @@
       <DemoSection
         id="demo-locataire"
         :index="1"
-        kicker="Fields · validation · effects"
-        title="Tenant"
+        :kicker="t('Fields · validation · effects')"
+        :title="t('Tenant')"
         :apis="[
           'createForm',
           '<Field>',
@@ -130,19 +124,21 @@
         :code="codeLocataire"
       >
         <template #description>
-          Each <code class="font-mono text-indigo-700">&lt;Field&gt;</code> is
-          an observable model: title, required, errors, validation state. The
-          rules come from the <strong>same zod schema</strong> as vee-validate.
-          Switch the display mode to watch the same form become read-only or
-          "read pretty".
+          {{
+            t(
+              'Each Field has observable state. The rules come from the same Zod schema as vee-validate. Switch the display mode to see one form in different modes.',
+            )
+          }}
         </template>
 
         <FormProvider :form="locataireForm">
           <div
             class="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4"
           >
-            <h3 class="text-sm font-semibold text-slate-900">Tenant profile</h3>
-            <div class="seg" role="group" aria-label="Form display mode">
+            <h3 class="text-sm font-semibold text-slate-900">
+              {{ t('Tenant profile') }}
+            </h3>
+            <div class="seg" role="group" :aria-label="t('Form display mode')">
               <button
                 v-for="p in patterns"
                 :key="p"
@@ -150,7 +146,7 @@
                 :aria-pressed="pattern === p"
                 @click="setPattern(p)"
               >
-                {{ p }}
+                {{ t(p) }}
               </button>
             </div>
           </div>
@@ -207,13 +203,13 @@
             class="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5"
           >
             <button type="button" class="btn-primary" @click="submitLocataire">
-              Submit
+              {{ t('Submit') }}
             </button>
             <button type="button" class="btn-ghost" @click="resetLocataire">
-              Reset
+              {{ t('Reset') }}
             </button>
             <button type="button" class="btn-ghost" @click="fillLocataire">
-              Fill in a sample
+              {{ t('Fill in a sample') }}
             </button>
             <p
               v-if="submitResult"
@@ -225,7 +221,16 @@
               "
               role="status"
             >
-              {{ submitResult.text }}
+              {{
+                submitResult.ok
+                  ? t('Form is valid ✓')
+                  : t(
+                      submitResult.count === 1
+                        ? '{count} error to fix'
+                        : '{count} errors to fix',
+                      { count: submitResult.count },
+                    )
+              }}
             </p>
           </div>
         </FormProvider>
@@ -243,8 +248,8 @@
       <DemoSection
         id="demo-loyers"
         :index="2"
-        kicker="Array fields · computed field"
-        title="Rent schedule"
+        :kicker="t('Array fields · computed field')"
+        :title="t('Rent schedule')"
         :apis="[
           '<ArrayField>',
           'field.push / remove / moveUp',
@@ -254,11 +259,11 @@
         :code="codeLoyers"
       >
         <template #description>
-          <code class="font-mono text-indigo-700">&lt;ArrayField&gt;</code>
-          manages rows (add, remove, move) while keeping each field's state. The
-          total is a field computed by a <em>reaction</em>: it updates on its
-          own, with no Vue <code class="font-mono">watch</code> or
-          <code class="font-mono">computed</code>.
+          {{
+            t(
+              'ArrayField manages additions, deletions and moves while preserving each field’s state. A reaction updates the total automatically.',
+            )
+          }}
         </template>
 
         <FormProvider :form="loyersForm">
@@ -304,7 +309,9 @@
                     type="button"
                     class="btn-icon"
                     :disabled="index === 0"
-                    :aria-label="`Move installment ${index + 1} up`"
+                    :aria-label="
+                      t('Move installment {count} up', { count: index + 1 })
+                    "
                     @click="(field as ArrayFieldModel).moveUp(index)"
                   >
                     <svg
@@ -323,7 +330,9 @@
                   <button
                     type="button"
                     class="btn-icon hover:text-rose-600"
-                    :aria-label="`Remove installment ${index + 1}`"
+                    :aria-label="
+                      t('Remove installment {count}', { count: index + 1 })
+                    "
                     @click="(field as ArrayFieldModel).remove(index)"
                   >
                     <svg
@@ -344,7 +353,7 @@
               v-if="!field.value?.length"
               class="rounded-xl border-2 border-dashed border-slate-200 p-6 text-center text-sm text-slate-500"
             >
-              No installments yet — add one.
+              {{ t('No installments yet — add one.') }}
             </p>
 
             <div class="mt-4 flex flex-wrap gap-2">
@@ -354,14 +363,14 @@
                 data-testid="add-echeance"
                 @click="pushEcheance(field as ArrayFieldModel)"
               >
-                <span aria-hidden="true">+</span> Add an installment
+                <span aria-hidden="true">+</span> {{ t('Add an installment') }}
               </button>
               <button
                 type="button"
                 class="btn-ghost"
                 @click="indexer(field as ArrayFieldModel)"
               >
-                Apply +3.5% rent index
+                {{ t('Apply +3.5% rent index') }}
               </button>
             </div>
           </ArrayField>
@@ -400,8 +409,8 @@
       <DemoSection
         id="demo-dynamique"
         :index="3"
-        kicker="Reactions · dependent fields"
-        title="Lease terms"
+        :kicker="t('Reactions · dependent fields')"
+        :title="t('Lease terms')"
         :apis="[
           'reactions',
           'field.query()',
@@ -412,10 +421,11 @@
         :code="codeBail"
       >
         <template #description>
-          Fields drive each other: the lease type sets the duration, the legal
-          cap for the security deposit (1 month unfurnished, 2 months furnished)
-          and reveals the inventory, which becomes required. Try a €2,000
-          deposit, then switch to furnished.
+          {{
+            t(
+              'The lease type controls the duration, the deposit cap and the furniture inventory. Try a €2,000 deposit, then switch to furnished.',
+            )
+          }}
         </template>
 
         <FormProvider :form="bailForm">
@@ -483,8 +493,8 @@
       <DemoSection
         id="demo-schema"
         :index="4"
-        kicker="JSON Schema · expressions"
-        title="Solvency simulator"
+        :kicker="t('JSON Schema · expressions')"
+        :title="t('Solvency simulator')"
         :apis="[
           'createSchemaField',
           '<SchemaField>',
@@ -494,11 +504,11 @@
         :code="codeSchema"
       >
         <template #description>
-          The same engine, described as <strong>JSON Schema</strong>: the form
-          is data (storable, versionable, generatable server-side). Dependencies
-          are written as
-          <code class="font-mono text-indigo-700">x-reactions</code>
-          expressions.
+          {{
+            t(
+              'The same engine, described as JSON Schema. The form can be stored, versioned or generated server-side. Dependencies use x-reactions expressions.',
+            )
+          }}
         </template>
 
         <FormProvider :form="schemaForm">
@@ -522,19 +532,18 @@
           <span class="font-mono font-semibold text-slate-800">
             Formivue v{{ version }}
           </span>
-          · fork Vue 3.5 · ESM-only
+          · Vue 3.5 · ESM
         </p>
-        <p>
-          Vite · TypeScript strict · Tailwind 4 · reka-ui · zod · axe 0
-          violation
-        </p>
+        <p>Vite · TypeScript strict · Tailwind 4 · reka-ui · zod · axe-core</p>
       </div>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { exampleLocale, LanguagePicker } from '../../shared/language'
+import { t } from './copy'
 import { z } from 'zod'
 import { batch } from '@formivue/reactive'
 import {
@@ -608,12 +617,12 @@ const demos = [
 ]
 
 const euro = (v: unknown) =>
-  Number(v).toLocaleString('en', {
+  Number(v).toLocaleString(exampleLocale.value, {
     style: 'currency',
     currency: 'EUR',
     maximumFractionDigits: 0,
   })
-const time = () => new Date().toLocaleTimeString('en-GB')
+const time = () => new Date().toLocaleTimeString(exampleLocale.value)
 
 // ---------------------------------------------------------------------------
 // 1. Tenant — Field + zod + effects + pattern
@@ -634,7 +643,9 @@ const effectsLog = ref<string[]>([])
 const log = (s: string) => {
   effectsLog.value = [`${time()}  ${s}`, ...effectsLog.value].slice(0, 40)
 }
-const submitResult = ref<{ ok: boolean; text: string } | null>(null)
+const submitResult = ref<{ ok: true } | { ok: false; count: number } | null>(
+  null,
+)
 
 const locataireForm = createForm({
   validateFirst: true, // one error at a time: required, then zod rules
@@ -642,9 +653,9 @@ const locataireForm = createForm({
     onFieldInputValueChange('*', (f) => {
       log(`input  ${f.address} = ${JSON.stringify((f as FieldModel).value)}`)
     })
-    onFormSubmitSuccess(() => log('submit ✓ success'))
-    onFormSubmitFailed(() => log('submit ✕ validation failed'))
-    onFormReset(() => log('reset'))
+    onFormSubmitSuccess(() => log(t('submit ✓ success')))
+    onFormSubmitFailed(() => log(t('submit ✕ validation failed')))
+    onFormReset(() => log(t('reset')))
   },
 })
 
@@ -657,14 +668,14 @@ function setPattern(p: Pattern) {
 async function submitLocataire() {
   try {
     await locataireForm.submit()
-    submitResult.value = { ok: true, text: 'Form is valid ✓' }
+    submitResult.value = { ok: true }
   } catch (errors) {
     const n = Array.isArray(errors)
       ? errors.length
       : locataireForm.errors.length
     submitResult.value = {
       ok: false,
-      text: `${n} error${n > 1 ? 's' : ''} to fix`,
+      count: n,
     }
   }
 }
@@ -681,7 +692,7 @@ function fillLocataire() {
     revenus: 3200,
     garant: true,
   })
-  log('setValues  sample loaded')
+  log('setValues  ' + t('sample loaded'))
 }
 
 const codeLocataire = `const schema = z.object({
@@ -778,14 +789,22 @@ const typesBail = [
 const bailForm = createForm()
 const isMeuble = (f: FieldModel) => f.query('type').value() === 'meuble'
 const dureeReaction = (f: FieldModel) => {
-  f.value = isMeuble(f) ? '1 year (9 months for students)' : '3 years'
+  f.value = t(isMeuble(f) ? '1 year (9 months for students)' : '3 years')
 }
 const depotReaction = (f: FieldModel) => {
   const mois = isMeuble(f) ? 2 : 1
   const plafond = (Number(f.query('loyer').value()) || 0) * mois
-  f.description = `Legal cap: ${euro(plafond)} (${mois} months of rent excluding charges)`
+  f.description = t(
+    'Legal cap: {amount} ({months} months of rent excluding charges)',
+    { amount: euro(plafond), months: mois },
+  )
   f.validator = [
-    { maximum: plafond, message: `Exceeds the legal cap of ${euro(plafond)}` },
+    {
+      maximum: plafond,
+      message: t('Exceeds the legal cap of {amount}', {
+        amount: euro(plafond),
+      }),
+    },
   ]
   if (f.modified || f.value != null) void f.validate().catch(() => {})
 }
@@ -794,6 +813,17 @@ const inventaireReaction = (f: FieldModel) => {
   f.display = meuble ? 'visible' : 'none'
   f.required = meuble
 }
+
+watch(
+  exampleLocale,
+  () => {
+    const duration = bailForm.query('duree').take()
+    const deposit = bailForm.query('depot').take()
+    if (duration) dureeReaction(duration as FieldModel)
+    if (deposit) depotReaction(deposit as FieldModel)
+  },
+  { flush: 'sync' },
+)
 
 const codeBail = `<Field name="depot" :reactions="(f) => {
   const meuble = f.query('type').value() === 'meuble'
@@ -856,7 +886,7 @@ const simulateurSchema = {
     },
     garant: {
       type: 'boolean',
-      title: 'Garant',
+      title: 'Guarantor',
       'x-decorator': 'FormItem',
       'x-component': 'FSwitch',
       'x-component-props': { label: 'Offer a guarantor' },

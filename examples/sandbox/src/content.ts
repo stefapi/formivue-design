@@ -2,6 +2,7 @@
 // canvas rendu DANS l'iframe (inline styles d'ère — pas de tokens requis
 // dans l'iframe, V6). Card non-observer comme l'ère.
 import { defineComponent, h } from 'vue'
+import { message } from '../../shared/language'
 import {
   ComponentTreeWidget,
   TextWidget,
@@ -29,7 +30,13 @@ const Field = observer(
             },
           },
           [
-            h('span', { 'data-content-editable': 'title' }, node?.props?.title),
+            h(
+              'span',
+              { 'data-content-editable': 'title' },
+              node?.props?.title === 'Input'
+                ? message(['Input', 'Champ de saisie', 'Campo de entrada'])
+                : node?.props?.title,
+            ),
             slots.default?.(),
           ],
         )

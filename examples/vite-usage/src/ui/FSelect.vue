@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 /** Dropdown fed by `field.dataSource` (formivue prop). */
 import { useField } from '@formivue/vue'
 import { useObserver } from '@formivue/reactive-vue'
@@ -24,7 +25,7 @@ const options = () =>
     :id="fieldId(fieldRef)"
     class="py-1.5 text-sm font-medium text-slate-900"
   >
-    {{ options().find((o) => o.value === value)?.label ?? '—' }}
+    {{ t(options().find((o) => o.value === value)?.label ?? '—') }}
   </p>
   <div v-else class="relative">
     <select
@@ -38,7 +39,7 @@ const options = () =>
       @blur="emit('blur', $event)"
     >
       <option v-for="o in options()" :key="o.value" :value="o.value">
-        {{ o.label }}
+        {{ t(o.label) }}
       </option>
     </select>
     <svg

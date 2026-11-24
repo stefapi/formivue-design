@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 /**
  * Field decorator: reads the formivue state (title, required, errors,
  * validating) — `useObserver` makes the component reactive to the
@@ -28,7 +29,7 @@ const fieldRef = useField<Field>()
         :for="fieldId(fieldRef)"
         class="text-[13px] font-medium text-slate-700"
       >
-        {{ fieldRef.title }}
+        {{ t(String(fieldRef.title ?? '')) }}
         <span
           v-if="fieldRef.required && fieldRef.pattern === 'editable'"
           class="text-rose-500"
@@ -41,10 +42,10 @@ const fieldRef = useField<Field>()
         class="inline-flex items-center gap-1 text-[11px] text-indigo-500"
       >
         <span class="size-2 animate-ping rounded-full bg-indigo-400" />
-        validating…
+        {{ t('validating…') }}
       </span>
       <span v-else-if="hint" class="text-[11px] text-slate-400">{{
-        hint
+        t(hint)
       }}</span>
     </div>
     <slot />
@@ -65,13 +66,13 @@ const fieldRef = useField<Field>()
           clip-rule="evenodd"
         />
       </svg>
-      {{ fieldRef.selfErrors[0] }}
+      {{ t(fieldRef.selfErrors[0]) }}
     </p>
     <p
       v-else-if="fieldRef.description && fieldRef.pattern !== 'readPretty'"
       class="mt-1.5 text-xs text-slate-500"
     >
-      {{ fieldRef.description }}
+      {{ t(String(fieldRef.description ?? '')) }}
     </p>
   </div>
 </template>

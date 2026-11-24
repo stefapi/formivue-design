@@ -30,3 +30,49 @@ const tree = transformToTreeNode(schema, form)
 Used by the playground of
 [`@formivue-design/formivue-vue`](../formivue-vue) (JSON export/import). Version,
 repository and license: see [`package-meta.json`](../../package-meta.json).
+
+## Separate UI, schema and data documents
+
+`transformToFormDocuments(tree)` migrates the designer tree to three separate
+documents. For a saved `{ form, schema }` export, use `splitFormSchema(export)`.
+The old import and export APIs are also available. A custom expression used as a
+data source needs an explicit binding when migrating. The JSON tab in the
+designer imports, validates, previews and downloads the three documents.
+
+- `ui.json` contains a versioned component tree. Editors use `bind`, a JSON
+  Pointer in their current object or row. Display props use
+  `bindings: { rows: { path: '/sales' } }`. Prop paths start at the document root
+  unless `scope: 'parent'` is set. Custom prop bindings declare their expected
+  JSON types in `types`.
+- `data.schema.json` contains a JSON Schema 2020-12 object schema. Table columns
+  and chart mappings refer to properties declared in the row schema.
+- `data.json` contains the values and may have properties that are used only by
+  a display component.
+
+```ts
+const session = createFormDocument(
+  parseFormDocuments({ ui: uiJson, dataSchema: schemaJson, data: dataJson }),
+)
+
+// Render under FormProvider with { form: session.form, retain: true }.
+// Pass session.schema and session.scope to SchemaField, and session.formProps
+// to the enclosing form layout.
+session.replaceData(snapshot, 5)
+session.applyPatch({
+  baseRevision: 5,
+  revision: 6,
+  operations: [{ op: 'replace', path: '/sales/0/amount', value: 1350 }],
+})
+
+const files = stringifyFormDocuments(session.exportDocuments())
+session.dispose()
+```
+
+The application supplies the transport. A patch applies to the last accepted
+remote revision and publishes only if its entire result is valid. Display
+bindings read the latest valid data. Editors keep their draft and track
+overlapping changes in `session.conflicts`. Configure a `rowKey` on editable
+arrays to match records across remote insertions, deletions and moves.
+`resolveConflicts(true)` keeps the draft. `resolveConflicts(false)` resets the
+draft to the latest remote snapshot. `session.form.validate()` and
+`session.form.submit()` check the complete draft.

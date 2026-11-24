@@ -34,11 +34,12 @@ export const NumberPicker = defineComponent({
   },
   emits: ['update:value'],
   setup(props, { attrs, emit }) {
-    return () =>
-      h(
+    return () => {
+      const { onFocus, onBlur, ...rootAttrs } = attrs
+      return h(
         UiNumberField,
         {
-          ...attrs,
+          ...rootAttrs,
           modelValue:
             typeof props.value === 'string' ? Number(props.value) : props.value,
           min: props.min,
@@ -62,6 +63,8 @@ export const NumberPicker = defineComponent({
             h(UiNumberFieldInput, {
               class: 'h-8 pl-2 pr-7 text-left',
               placeholder: props.placeholder,
+              onFocus,
+              onBlur,
             }),
             h(
               'div',
@@ -88,5 +91,6 @@ export const NumberPicker = defineComponent({
           ],
         },
       )
+    }
   },
 })

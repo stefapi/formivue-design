@@ -28,6 +28,8 @@ export type VueComponentProps<T extends VueComponent> =
   T extends VueComponentOptionsWithProps ? T['props'] : T
 
 export interface IProviderProps {
+  /** Keep the form alive when this provider unmounts. The owner disposes it. */
+  retain?: boolean
   form: Form
 }
 

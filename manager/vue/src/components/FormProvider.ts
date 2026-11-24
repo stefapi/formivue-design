@@ -16,9 +16,9 @@ import { Fragment } from '../shared/fragment'
 export default defineComponent({
   name: 'FormProvider',
   inheritAttrs: false,
-  props: ['form'],
+  props: ['form', 'retain'],
   setup(props: IProviderProps, { slots }) {
-    const formRef = useAttach(toRef(props, 'form'))
+    const formRef = useAttach(toRef(props, 'form'), () => props.retain)
     provide(FormSymbol, formRef)
     useInjectionCleaner([
       FieldSymbol,

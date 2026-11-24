@@ -8,7 +8,15 @@
 // la phase 6 résolus PAR NOM via la prop `components` (registre extensible) ;
 // styles : entrée Tailwind fournie par main.ts (V6) — l'app elle-même est testable
 // sans CSS.
-import { defineComponent, h, ref, type PropType } from 'vue'
+import {
+  defineComponent,
+  h,
+  onUnmounted,
+  ref,
+  shallowRef,
+  triggerRef,
+  type PropType,
+} from 'vue'
 import {
   Designer,
   DesignerToolsWidget,
@@ -27,6 +35,10 @@ import {
   ComponentTreeWidget,
   TextWidget,
 } from '@formivue-design/vue'
+import {
+  createFormDocument,
+  type FormDocuments,
+} from '@formivue-design/formivue-transformer'
 import { SettingsForm } from '@formivue-design/vue-settings-form'
 import {
   createDesigner,
@@ -42,6 +54,7 @@ import {
 } from '@formivue-design/formivue-setters'
 import {
   Form,
+  Materials,
   Field,
   Input,
   Select,
@@ -73,7 +86,7 @@ import {
   LogoWidget,
   ActionsWidget,
   PreviewWidget,
-  SchemaEditorWidget,
+  DocumentEditorWidget,
   MarkupSchemaWidget,
 } from './widgets'
 import { saveSchema } from './service'
@@ -212,6 +225,36 @@ export const App = defineComponent({
   },
   setup(props) {
     const registry = { ...components, ...props.advanced?.components }
+    const previewDocument = shallowRef<ReturnType<typeof createFormDocument>>()
+    const clearDocument = () => {
+      previewDocument.value?.dispose()
+      previewDocument.value = undefined
+    }
+    onUnmounted(clearDocument)
+    const applyDocument = (documents: FormDocuments) => {
+      const current = previewDocument.value
+      const currentDocuments = current?.exportDocuments()
+      if (
+        current &&
+        JSON.stringify(currentDocuments.ui) === JSON.stringify(documents.ui) &&
+        JSON.stringify(currentDocuments.dataSchema) ===
+          JSON.stringify(documents.dataSchema)
+      ) {
+        const result = current.replaceData(documents.data)
+        triggerRef(previewDocument)
+        return result.conflicts
+      } else {
+        const materials = { ...Materials, ...props.advanced?.materials }
+        const next = createFormDocument(documents, {
+          hasComponent: (name) =>
+            name
+              .split('.')
+              .reduce((value, key) => value?.[key], materials as any) != null,
+        })
+        clearDocument()
+        previewDocument.value = next
+      }
+    }
     const advanced = !!props.advanced
     const panes = ['workspace', 'palette', 'settings'] as const
     const activePane = ref<(typeof panes)[number]>('workspace')
@@ -436,7 +479,14 @@ export const App = defineComponent({
                                       tree: any
                                       onChange: any
                                     }) =>
-                                      h(SchemaEditorWidget, { tree, onChange }),
+                                      h(DocumentEditorWidget, {
+                                        tree,
+                                        onChange,
+                                        documents:
+                                          previewDocument.value?.exportDocuments(),
+                                        onApply: applyDocument,
+                                        onCanvas: clearDocument,
+                                      }),
                                   },
                                 ),
                                 h(
@@ -456,6 +506,7 @@ export const App = defineComponent({
                                         tree,
                                         materials: props.advanced?.materials,
                                         frame: props.advanced?.previewFrame,
+                                        document: previewDocument.value,
                                       }),
                                   },
                                 ),

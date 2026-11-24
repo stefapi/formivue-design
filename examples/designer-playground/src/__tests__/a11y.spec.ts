@@ -181,6 +181,27 @@ describe('playground formivue-vue — a11y (V8)', () => {
     expect(document.querySelector('[data-slot="calendar-grid"]')).toBeTruthy()
     await runAxe()
 
+    engine.workbench.setWorkbenchType('JSONTREE')
+    const documents = 'select[aria-label="JSON document"]'
+    await vi.waitFor(() => expect(wrapper.find(documents).exists()).toBe(true))
+    await wrapper.get(documents).setValue('data')
+    await wrapper
+      .get('textarea[aria-label="data.json"]')
+      .setValue(JSON.stringify({ 'fld-name': 'Imported customer' }))
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Apply to preview')
+      .trigger('click')
+    await runAxe()
+    engine.workbench.setWorkbenchType('PREVIEW')
+    await vi.waitFor(() => {
+      expect(
+        wrapper
+          .findAll('input')
+          .some((input) => input.element.value === 'Imported customer'),
+      ).toBe(true)
+    })
+
     wrapper.unmount()
     engine.unmount()
   }, 30000)

@@ -21,6 +21,10 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
+    "./data-contract": {
+      "types": "./dist/data-contract.d.mts",
+      "import": "./dist/data-contract.mjs"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,

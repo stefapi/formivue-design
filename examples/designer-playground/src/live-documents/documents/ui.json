@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "sales-chart",
+      "key": "chart",
+      "kind": "void",
+      "component": "BarChart",
+      "props": {
+        "label": "Chiffre d’affaires et objectif par boutique",
+        "locale": "fr-FR",
+        "valueFormat": "euro",
+        "decimalPlaces": 0,
+        "height": 252,
+        "barRadius": 4,
+        "xKey": "boutique",
+        "series": [
+          {
+            "key": "ventes",
+            "title": "Ventes",
+            "color": "#008a76"
+          },
+          {
+            "key": "objectif",
+            "title": "Objectif",
+            "color": "#bfd4dd"
+          }
+        ]
+      },
+      "bindings": {
+        "rows": {
+          "path": "/boutiques"
+        }
+      }
+    },
+    {
+      "id": "editable-sales",
+      "key": "editor",
+      "kind": "array",
+      "component": "ArrayTable",
+      "bind": "/boutiques",
+      "rowKey": "id",
+      "item": {
+        "id": "sales-row",
+        "key": "row",
+        "kind": "object",
+        "children": [
+          {
+            "id": "shop-column",
+            "key": "shopColumn",
+            "kind": "void",
+            "component": "ArrayTable.Column",
+            "props": {
+              "title": "Boutique"
+            },
+            "children": [
+              {
+                "id": "shop-input",
+                "key": "shop",
+                "kind": "field",
+                "component": "Input",
+                "bind": "/boutique",
+                "props": {
+                  "aria-label": "Nom de la boutique"
+                }
+              }
+            ]
+          },
+          {
+            "id": "sales-column",
+            "key": "salesColumn",
+            "kind": "void",
+            "component": "ArrayTable.Column",
+            "props": {
+              "title": "Ventes en €"
+            },
+            "children": [
+              {
+                "id": "sales-input",
+                "key": "amount",
+                "kind": "field",
+                "component": "NumberPicker",
+                "bind": "/ventes",
+                "props": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "field": {
+                  "title": "Ventes en euros",
+                  "x-decorator": "FormItem"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "published-sales",
+      "key": "published",
+      "kind": "void",
+      "component": "DataTable",
+      "props": {
+        "label": "Ventes publiées par boutique",
+        "columns": [
+          {
+            "key": "boutique",
+            "title": "Boutique"
+          },
+          {
+            "key": "ventes",
+            "title": "Ventes (€)",
+            "sortable": true
+          },
+          {
+            "key": "objectif",
+            "title": "Objectif (€)"
+          }
+        ],
+        "rowKey": "id",
+        "searchable": false,
+        "previousText": "Précédent",
+        "nextText": "Suivant",
+        "emptyText": "Aucun résultat"
+      },
+      "bindings": {
+        "rows": {
+          "path": "/boutiques"
+        }
+      }
+    }
+  ]
+}

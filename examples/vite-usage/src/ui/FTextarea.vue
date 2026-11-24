@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 import { useField } from '@formivue/vue'
 import { useObserver } from '@formivue/reactive-vue'
 import type { Field } from '@formivue/core'
@@ -35,7 +36,7 @@ const fieldRef = useField<Field>()
     :value="value ?? ''"
     :disabled="disabled"
     :readonly="readOnly"
-    :placeholder="placeholder"
+    :placeholder="placeholder && t(placeholder)"
     @input="emit('change', ($event.target as HTMLTextAreaElement).value)"
     @focus="emit('focus', $event)"
     @blur="emit('blur', $event)"

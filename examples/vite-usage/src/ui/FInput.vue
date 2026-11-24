@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 /** Text/number control — ReactiveField contract: value + change/focus/blur. */
 import { useField } from '@formivue/vue'
 import { useObserver } from '@formivue/reactive-vue'
@@ -54,7 +55,7 @@ function pretty() {
       :value="value ?? ''"
       :disabled="disabled"
       :readonly="readOnly"
-      :placeholder="placeholder"
+      :placeholder="placeholder && t(placeholder)"
       :aria-invalid="fieldRef?.selfErrors?.length ? 'true' : undefined"
       @input="onInput"
       @focus="emit('focus', $event)"

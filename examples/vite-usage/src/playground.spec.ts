@@ -31,6 +31,34 @@ describe('formivue playground — previimmo stack', () => {
     wrapper.unmount()
   })
 
+  test('changes example and schema labels without clearing the form', async () => {
+    const wrapper = mount(FormDemo, { attachTo: document.body })
+    const picker = wrapper.get('select[aria-label="Language"]')
+    try {
+      const name = wrapper.get<HTMLInputElement>('#demo-locataire input')
+      await name.setValue('Camille Martin')
+      await picker.setValue('fr')
+      expect(wrapper.text()).toContain('Profil du locataire')
+      expect(
+        wrapper
+          .get('#demo-designer-schema [role="tab"][aria-selected="true"]')
+          .text(),
+      ).toBe('Détails')
+      await picker.setValue('es')
+      expect(wrapper.text()).toContain('Perfil del inquilino')
+      expect(
+        wrapper
+          .get('#demo-designer-schema [role="tab"][aria-selected="true"]')
+          .text(),
+      ).toBe('Detalles')
+      expect(name.element.value).toBe('Camille Martin')
+    } finally {
+      await picker.setValue('en')
+      localStorage.removeItem('formivue-example-language')
+      wrapper.unmount()
+    }
+  })
+
   test('a11y — axe reports 0 violations on the playground', async () => {
     document.body.innerHTML = ''
     const { default: Axe } = await import('axe-core')

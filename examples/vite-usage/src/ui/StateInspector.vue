@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translate } from '../copy'
 /**
  * Live formivue state inspector: reads the form observables
  * (values, errors, valid, modified, pattern) — automatic re-render via
@@ -50,7 +51,7 @@ const errors = () =>
           class="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px] shadow-emerald-400/70"
         />
         <span class="font-mono text-[11px] tracking-wide text-slate-400">
-          {{ title ?? 'form' }} · live state
+          {{ title ?? 'form' }} · {{ translate('live state') }}
         </span>
       </div>
       <div class="flex gap-1">
@@ -62,7 +63,7 @@ const errors = () =>
               : 'bg-rose-500/15 text-rose-300'
           "
         >
-          {{ form.valid ? 'valid' : 'invalid' }}
+          {{ translate(form.valid ? 'valid' : 'invalid') }}
         </span>
         <span
           class="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
@@ -72,7 +73,7 @@ const errors = () =>
               : 'bg-white/5 text-slate-500'
           "
         >
-          {{ form.modified ? 'modified' : 'pristine' }}
+          {{ translate(form.modified ? 'modified' : 'pristine') }}
         </span>
       </div>
     </div>
@@ -80,7 +81,7 @@ const errors = () =>
     <div
       class="flex gap-1 border-b border-white/10 px-2 pt-2"
       role="tablist"
-      aria-label="State view"
+      :aria-label="translate('State view')"
     >
       <button
         v-for="t in log
@@ -100,10 +101,10 @@ const errors = () =>
       >
         {{
           t === 'values'
-            ? 'values'
+            ? translate('values')
             : t === 'errors'
-              ? `errors (${form.errors.length})`
-              : `effects (${log?.length ?? 0})`
+              ? translate('errors ({count})', { count: form.errors.length })
+              : translate('effects ({count})', { count: log?.length ?? 0 })
         }}
       </button>
     </div>
@@ -118,19 +119,21 @@ const errors = () =>
       />
       <template v-else-if="tab === 'errors'">
         <p v-if="!form.errors.length" class="text-emerald-300/80">
-          ✓ no errors
+          {{ translate('✓ no errors') }}
         </p>
         <ul v-else class="space-y-2">
           <li v-for="e in errors()" :key="e.path">
             <span class="text-sky-300">{{ e.path }}</span>
             <span class="text-slate-600"> → </span>
-            <span class="text-rose-300">{{ e.messages.join(', ') }}</span>
+            <span class="text-rose-300">{{
+              e.messages.map((text) => translate(text)).join(', ')
+            }}</span>
           </li>
         </ul>
       </template>
       <template v-else>
         <p v-if="!log?.length" class="text-slate-500">
-          Type a value to see the effects…
+          {{ translate('Type a value to see the effects…') }}
         </p>
         <ol v-else class="space-y-1">
           <li

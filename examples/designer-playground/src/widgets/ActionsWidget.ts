@@ -7,7 +7,7 @@ import { defineComponent, h, onMounted, ref } from 'vue'
 import { observer } from '@formivue/reactive-vue'
 import { GlobalRegistry } from '@formivue-design/core'
 import { useDesigner, TextWidget } from '@formivue-design/vue'
-import { Button, Radio } from '@formivue-design/vue-ui'
+import { Button } from '@formivue-design/vue-ui'
 // lucide a retiré les icônes de marque (@lucide/vue n'expose plus Github) :
 // SVG inline du tracé d'origine lucide — mêmes attrs qu'une icône lucide.
 const Github = defineComponent({
@@ -32,6 +32,8 @@ const Github = defineComponent({
       ],
     ),
 })
+import { LanguagePicker, message } from '../../../shared/language'
+import { syncDesignerLanguage } from '../../../shared/designer-language'
 import { loadInitialSchema, saveSchema } from '../service'
 
 export const ActionsWidget = observer(
@@ -42,12 +44,13 @@ export const ActionsWidget = observer(
       const designer = useDesigner()
       const saved = ref(false)
       let savedTimer: ReturnType<typeof setTimeout>
+      syncDesignerLanguage(GlobalRegistry, [
+        'Formivue · Designer',
+        'Formivue · Designer',
+        'Formivue · Diseñador',
+      ])
       onMounted(() => {
         loadInitialSchema(designer, props.advanced)
-        const supportLocales = ['en-us', 'fr-fr', 'es-es']
-        if (!supportLocales.includes(GlobalRegistry.getDesignerLanguage())) {
-          GlobalRegistry.setDesignerLanguage('en-us')
-        }
       })
       const onSave = () => {
         saveSchema(designer, props.advanced)
@@ -55,10 +58,10 @@ export const ActionsWidget = observer(
         clearTimeout(savedTimer)
         savedTimer = setTimeout(() => (saved.value = false), 1500)
       }
-      const modeUrl = (advanced: boolean) => {
+      const modeUrl = (mode: 'standard' | 'advanced' | 'live-documents') => {
         const url = new URL(window.location.href)
-        if (advanced) url.searchParams.set('mode', 'advanced')
-        else url.searchParams.delete('mode')
+        if (mode === 'standard') url.searchParams.delete('mode')
+        else url.searchParams.set('mode', mode)
         return url.href
       }
       return () =>
@@ -66,38 +69,46 @@ export const ActionsWidget = observer(
           h(
             'nav',
             {
-              'aria-label': 'Designer mode',
+              'aria-label': message([
+                'Designer mode',
+                'Mode du designer',
+                'Modo del diseñador',
+              ]),
               class: 'flex gap-1 rounded-md border p-0.5',
             },
-            [false, true].map((advanced) =>
-              h(
-                'a',
-                {
-                  href: modeUrl(advanced),
-                  'aria-current':
-                    props.advanced === advanced ? 'page' : undefined,
-                  class: [
-                    'rounded px-2 py-1 text-xs font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
-                    props.advanced === advanced &&
-                      'bg-accent text-accent-foreground',
-                  ],
-                  onClick: () => saveSchema(designer, props.advanced),
-                },
-                advanced ? 'Advanced' : 'Standard',
-              ),
+            (['standard', 'advanced', 'live-documents'] as const).map(
+              (mode) => {
+                const current =
+                  mode === (props.advanced ? 'advanced' : 'standard')
+                return h(
+                  'a',
+                  {
+                    href: modeUrl(mode),
+                    'aria-current': current ? 'page' : undefined,
+                    class: [
+                      'rounded px-2 py-1 text-xs font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
+                      current && 'bg-accent text-accent-foreground',
+                    ],
+                    onClick: () => saveSchema(designer, props.advanced),
+                  },
+                  message(
+                    (
+                      {
+                        standard: ['Standard', 'Standard', 'Estándar'],
+                        advanced: ['Advanced', 'Avancé', 'Avanzado'],
+                        'live-documents': [
+                          'Live demo',
+                          'Démo en direct',
+                          'Demo en directo',
+                        ],
+                      } as const
+                    )[mode],
+                  ),
+                )
+              },
             ),
           ),
-          h(Radio, {
-            class: 'text-xs',
-            options: [
-              { label: 'English', value: 'en-us' },
-              { label: 'Français', value: 'fr-fr' },
-              { label: 'Español', value: 'es-es' },
-            ],
-            value: GlobalRegistry.getDesignerLanguage(),
-            onChange: (value: string | number) =>
-              GlobalRegistry.setDesignerLanguage(String(value)),
-          }),
+          h(LanguagePicker),
           h(
             'a',
             {
@@ -122,7 +133,7 @@ export const ActionsWidget = observer(
             ? h(
                 'span',
                 { class: 'text-xs text-muted-foreground', role: 'status' },
-                h(TextWidget, { token: 'saved', defaultMessage: 'Saved ✓' }),
+                message(['Saved ✓', 'Enregistré ✓', 'Guardado ✓']),
               )
             : null,
         ])

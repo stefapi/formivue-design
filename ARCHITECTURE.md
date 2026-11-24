@@ -43,7 +43,7 @@ flowchart LR
 | Reusable controls, layout primitives and accessibility                                          | `design/vue-ui`                                                |
 | Canvas materials, `Behavior` and `Resource` metadata, settings schemas, and runtime `Materials` | `design/formivue-vue`                                          |
 | Property panel and specialized editors such as data sources and reactions                       | `design/vue-settings-form`, `design/formivue-setters`          |
-| Import and export of `{ form, schema }`                                                         | `design/formivue-transformer`                                  |
+| Import and export of UI, data schema and data documents                                         | `design/formivue-transformer`                                  |
 | Sandbox iframe and its communication                                                            | `design/vue-sandbox`                                           |
 
 ## Advanced components
@@ -88,6 +88,18 @@ runtime binding that consumes it. Check whether the canvas wrapper needs the
 same change. Choose a default that preserves the rendering of exports created
 before the setting existed. For a bug in values, validation or field identity,
 fix the engine behavior in `manager/` so all renderers share the correction.
+
+## Separate form documents
+
+The versioned public contract uses `ui.json`, `data.schema.json` and
+`data.json`. The transformer verifies UI bindings and compiles the UI against
+the data schema for the existing renderer. The headless data document in
+`manager/json-schema` validates complete snapshots and JSON Patch results
+before publishing them. It reconciles editable rows by key and keeps local
+drafts when remote updates overlap. Chart validation reuses the runtime
+mapping rules through the charts runtime's data contract export. Applications
+own remote subscriptions and revisions. The combined `{ form, schema }`
+format remains available for existing integrations.
 
 ## Verification
 

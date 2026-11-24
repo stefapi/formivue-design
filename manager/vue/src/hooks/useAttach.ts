@@ -5,19 +5,24 @@ interface IRecycleTarget {
   onUnmount: () => void
 }
 
-export const useAttach = <T extends IRecycleTarget>(target: Ref<T>): Ref<T> => {
+export const useAttach = <T extends IRecycleTarget>(
+  target: Ref<T>,
+  retain: () => boolean = () => false,
+): Ref<T> => {
   watch(target, (v, old, onInvalidate) => {
     if (v && v !== old) {
-      old?.onUnmount()
+      if (!retain()) old?.onUnmount()
       nextTick(() => v.onMount())
-      onInvalidate(() => v.onUnmount())
+      onInvalidate(() => {
+        if (!retain()) v.onUnmount()
+      })
     }
   })
   onMounted(() => {
     target.value?.onMount()
   })
   onUnmounted(() => {
-    target.value?.onUnmount()
+    if (!retain()) target.value?.onUnmount()
   })
   return target
 }

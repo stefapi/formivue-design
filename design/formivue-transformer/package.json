@@ -28,6 +28,7 @@
     "@formivue/json-schema": "^3.0.3"
   },
   "dependencies": {
+    "@formivue-design/charts-runtime": "workspace:*",
     "@formivue-design/core": "workspace:*",
     "@formivue-design/shared": "workspace:*"
   },

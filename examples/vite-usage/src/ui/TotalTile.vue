@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '../copy'
 /** "KPI tile" decorator for computed fields in readPretty mode. */
 import { useField } from '@formivue/vue'
 import { useObserver } from '@formivue/reactive-vue'
@@ -22,7 +23,7 @@ const fieldRef = useField<Field>()
       class="text-[11px] font-semibold tracking-widest uppercase"
       :class="tone === 'emerald' ? 'text-emerald-700' : 'text-indigo-700'"
     >
-      {{ fieldRef.title }}
+      {{ t(String(fieldRef.title ?? '')) }}
     </p>
     <div class="[&_p]:text-2xl [&_p]:font-bold [&_p]:tracking-tight">
       <slot />

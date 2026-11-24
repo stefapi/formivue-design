@@ -4,15 +4,22 @@
 // en isolation par la suite a11y 7.3), ici createApp(...).mount('#root') —
 // l'ère faisait ReactDOM.render(<App/>, #root).
 import { createApp, h } from 'vue'
-import { setNpmCDNRegistry } from '@formivue-design/vue-settings-form'
-import { App } from './app'
 import './styles.css'
+import { localizedMaterials } from './localized-materials'
 
-setNpmCDNRegistry(`${import.meta.env.BASE_URL}editor-assets`, 'monaco/vs')
 async function mountPlayground() {
-  const advanced =
-    new URLSearchParams(window.location.search).get('mode') === 'advanced'
-  if (!advanced) {
+  const mode = new URLSearchParams(window.location.search).get('mode')
+  if (mode === 'live-documents') {
+    const { mountLiveDocuments } = await import('./live-documents/main')
+    mountLiveDocuments()
+    return
+  }
+  const [{ App }, { setNpmCDNRegistry }] = await Promise.all([
+    import('./app'),
+    import('@formivue-design/vue-settings-form'),
+  ])
+  setNpmCDNRegistry(`${import.meta.env.BASE_URL}editor-assets`, 'monaco/vs')
+  if (mode !== 'advanced') {
     createApp(App).mount('#root')
     return
   }
@@ -36,6 +43,10 @@ async function mountPlayground() {
     import('@formivue-design/charts-designer'),
     import('@formivue-design/charts-runtime'),
   ])
+  const materials = {
+    ...localizedMaterials(AdvancedMaterials),
+    ...ChartMaterials,
+  }
   const render = () =>
     h(App, {
       advanced: {
@@ -46,7 +57,7 @@ async function mountPlayground() {
         settings: ChartSettingsComponents,
         chartSources: ChartSources,
         sources: AdvancedSources,
-        materials: { ...AdvancedMaterials, ...ChartMaterials },
+        materials,
         previewFrame: AdvancedPreviewFrame,
       },
     })

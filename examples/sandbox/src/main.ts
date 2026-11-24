@@ -7,7 +7,9 @@
 // build IIFE de src/sandbox.ts, qui externalise vue/@formivue-design/core/
 // @formivue/reactive — le <Sandbox> injecte window.FormivueDesign/Formivue de la
 // page parente : registre, TreeNode et tracking réactif restent uniques).
-import { createApp, defineComponent, h, onMounted } from 'vue'
+import { LanguagePicker, message } from '../../shared/language'
+import { syncDesignerLanguage } from '../../shared/designer-language'
+import { createApp, defineComponent, h } from 'vue'
 import vueRuntimeUrl from 'vue/dist/vue.global.prod.js?url&no-inline'
 import {
   Designer,
@@ -39,7 +41,7 @@ import {
   createBehavior,
   GlobalRegistry,
 } from '@formivue-design/core'
-import { Button, Radio } from '@formivue-design/vue-ui'
+import { Button } from '@formivue-design/vue-ui'
 // lucide a retiré les icônes de marque (@lucide/vue n'expose plus Github) :
 // SVG inline du tracé d'origine lucide — mêmes attrs qu'une icône lucide.
 const Github = defineComponent({
@@ -343,25 +345,9 @@ const Actions = observer(
   defineComponent({
     name: 'Actions',
     setup() {
-      const supportLocales = ['en-us', 'fr-fr', 'es-es']
-      onMounted(() => {
-        if (!supportLocales.includes(GlobalRegistry.getDesignerLanguage())) {
-          GlobalRegistry.setDesignerLanguage('en-us')
-        }
-      })
       return () =>
         h('div', { class: 'mr-2 flex items-center gap-2' }, [
-          h(Radio, {
-            class: 'text-xs',
-            options: [
-              { label: 'English', value: 'en-us' },
-              { label: 'Français', value: 'fr-fr' },
-              { label: 'Español', value: 'es-es' },
-            ],
-            value: GlobalRegistry.getDesignerLanguage(),
-            onChange: (value: string | number) =>
-              GlobalRegistry.setDesignerLanguage(String(value)),
-          }),
+          h(LanguagePicker),
           h(
             'a',
             {
@@ -446,6 +432,11 @@ const App = defineComponent({
                             {
                               default: () =>
                                 h(Sandbox, {
+                                  title: message([
+                                    'Designer canvas',
+                                    'Canevas du designer',
+                                    'Lienzo del diseñador',
+                                  ]),
                                   jsAssets: [
                                     vueRuntimeUrl,
                                     `${import.meta.env.BASE_URL}sandbox.bundle.js`,
@@ -504,4 +495,10 @@ const App = defineComponent({
 }
 
 setNpmCDNRegistry(`${import.meta.env.BASE_URL}editor-assets`, 'monaco/vs')
+syncDesignerLanguage(GlobalRegistry, [
+  'Formivue · Sandbox',
+  'Formivue · Bac à sable',
+  'Formivue · Entorno aislado',
+])
+
 createApp(App).mount('#root')

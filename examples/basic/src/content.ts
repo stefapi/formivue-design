@@ -2,6 +2,7 @@
 // canvas (inline styles d'ère conservés — V6 : pas de tokens antd ici).
 // `observer` vient de @formivue/reactive-vue ; `useTreeNode` résolu au setup.
 import { defineComponent, h } from 'vue'
+import { message } from '../../shared/language'
 import {
   ComponentTreeWidget,
   TextWidget,
@@ -29,7 +30,13 @@ const Field = observer(
             },
           },
           [
-            h('span', { 'data-content-editable': 'title' }, node?.props?.title),
+            h(
+              'span',
+              { 'data-content-editable': 'title' },
+              node?.props?.title === 'Input'
+                ? message(['Input', 'Champ de saisie', 'Campo de entrada'])
+                : node?.props?.title,
+            ),
             slots.default?.(),
           ],
         )

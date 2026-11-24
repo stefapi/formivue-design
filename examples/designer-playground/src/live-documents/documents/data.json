@@ -1,0 +1,14 @@
+{
+  "boutiques": [
+    { "id": "paris", "boutique": "Paris", "ventes": 12450, "objectif": 14000 },
+    { "id": "lyon", "boutique": "Lyon", "ventes": 9800, "objectif": 10500 },
+    { "id": "nantes", "boutique": "Nantes", "ventes": 7640, "objectif": 8500 },
+    {
+      "id": "bordeaux",
+      "boutique": "Bordeaux",
+      "ventes": 10800,
+      "objectif": 10000
+    },
+    { "id": "lille", "boutique": "Lille", "ventes": 6420, "objectif": 8000 }
+  ]
+}

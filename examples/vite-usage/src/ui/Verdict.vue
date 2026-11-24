@@ -1,26 +1,33 @@
 <script setup lang="ts">
+import { t } from '../copy'
 /** "void" component driven by x-reactions (componentProps.taux). */
 const props = defineProps<{ taux?: number }>()
 const level = () => {
-  const t = props.taux ?? 0
-  if (!t)
-    return { tone: 'idle', title: 'Pending', text: 'Enter income and rent.' }
-  if (t <= 33)
+  const rate = props.taux ?? 0
+  if (!rate)
+    return {
+      tone: 'idle',
+      title: t('Pending'),
+      text: t('Enter income and rent.'),
+    }
+  if (rate <= 33)
     return {
       tone: 'ok',
-      title: 'Solid application',
-      text: `Effort rate of ${t}% — below the usual 33% threshold.`,
+      title: t('Solid application'),
+      text: t('Effort rate of {rate}% — below the usual 33% threshold.', {
+        rate,
+      }),
     }
-  if (t <= 40)
+  if (rate <= 40)
     return {
       tone: 'warn',
-      title: 'Needs review',
-      text: `Effort rate of ${t}% — a guarantor is recommended.`,
+      title: t('Needs review'),
+      text: t('Effort rate of {rate}% — a guarantor is recommended.', { rate }),
     }
   return {
     tone: 'ko',
-    title: 'High risk',
-    text: `Effort rate of ${t}% — above 40%.`,
+    title: t('High risk'),
+    text: t('Effort rate of {rate}% — above 40%.', { rate }),
   }
 }
 </script>

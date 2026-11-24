@@ -4,6 +4,8 @@
 // (form-1 / form-2) rendus simultanément (chacun son canvas via le contexte
 // Workspace), behaviors/resources inline d'ère conservés verbatim, hook de
 // debug window.engine conservé. createApp au lieu de ReactDOM.render.
+import { LanguagePicker } from '../../shared/language'
+import { syncDesignerLanguage } from '../../shared/designer-language'
 import { createApp, defineComponent, h } from 'vue'
 import {
   Designer,
@@ -36,7 +38,7 @@ import {
   createBehavior,
   GlobalRegistry,
 } from '@formivue-design/core'
-import { Button, Radio } from '@formivue-design/vue-ui'
+import { Button } from '@formivue-design/vue-ui'
 // lucide a retiré les icônes de marque (@lucide/vue n'expose plus Github) :
 // SVG inline du tracé d'origine lucide — mêmes attrs qu'une icône lucide.
 const Github = defineComponent({
@@ -341,17 +343,7 @@ const Actions = observer(
     setup() {
       return () =>
         h('div', { class: 'mr-2 flex items-center gap-2' }, [
-          h(Radio, {
-            class: 'text-xs',
-            options: [
-              { label: 'English', value: 'en-us' },
-              { label: 'Français', value: 'fr-fr' },
-              { label: 'Español', value: 'es-es' },
-            ],
-            value: GlobalRegistry.getDesignerLanguage(),
-            onChange: (value: string | number) =>
-              GlobalRegistry.setDesignerLanguage(String(value)),
-          }),
+          h(LanguagePicker),
           h(
             'a',
             {
@@ -487,4 +479,10 @@ const App = defineComponent({
 })
 
 setNpmCDNRegistry(`${import.meta.env.BASE_URL}editor-assets`, 'monaco/vs')
+syncDesignerLanguage(GlobalRegistry, [
+  'Formivue · Multiple workspaces',
+  'Formivue · Plusieurs espaces de travail',
+  'Formivue · Varios espacios de trabajo',
+])
+
 createApp(App).mount('#root')

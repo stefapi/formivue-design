@@ -68,11 +68,7 @@ export class ArrayField<
       if (items.length === 0) {
         return
       }
-      spliceArrayState(this, {
-        startIndex: index,
-        insertCount: items.length,
-      })
-      this.value.splice(index, 0, ...items)
+      this.spliceValue(index, 0, items)
       return this.onInput(this.value)
     })
   }
@@ -80,11 +76,7 @@ export class ArrayField<
   remove = (index: number) => {
     if (!hasIndex(this.value, index)) return
     return action(() => {
-      spliceArrayState(this, {
-        startIndex: index,
-        deleteCount: 1,
-      })
-      this.value.splice(index, 1)
+      this.spliceValue(index, 1)
       return this.onInput(this.value)
     })
   }
@@ -113,12 +105,31 @@ export class ArrayField<
     )
       return
     return action(() => {
-      move(this.value, fromIndex, toIndex)
-      exchangeArrayState(this, {
-        fromIndex,
-        toIndex,
-      })
+      this.moveValue(fromIndex, toIndex)
       return this.onInput(this.value)
+    })
+  }
+
+  /** Synchronize data and field addresses without emitting a user input event. */
+  spliceValue = (
+    startIndex: number,
+    deleteCount: number,
+    items: any[] = [],
+  ) => {
+    action(() => {
+      spliceArrayState(this, {
+        startIndex,
+        deleteCount,
+        insertCount: items.length,
+      })
+      this.value.splice(startIndex, deleteCount, ...items)
+    })
+  }
+
+  moveValue = (fromIndex: number, toIndex: number) => {
+    action(() => {
+      move(this.value, fromIndex, toIndex)
+      exchangeArrayState(this, { fromIndex, toIndex })
     })
   }
 
