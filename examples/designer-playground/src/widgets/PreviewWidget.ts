@@ -11,21 +11,15 @@ import { observer } from '@formivue/reactive-vue'
 import { TreeNode } from '@formivue-design/core'
 import {
   transformToSchema,
-  type compileFormDocuments,
   type createFormDocument,
 } from '@formivue-design/formivue-transformer'
+import type { DraftFormPreview } from '@formivue-design/data-model/ui'
 // ATTENTION piège du port : le barrel de @formivue-design/formivue-vue exporte le
 // MATÉRIAU DESIGNER FormLayout (= withContainer → DroppableWidget du chrome) ;
 // la binding réelle vit dans la carte Materials (FormLayout vue-ui pur).
 import { message } from '../../../shared/language'
-import { validationMessage } from '../../../shared/document-messages'
+import { validationMessage } from '../document-messages'
 import { Materials } from '@formivue-design/formivue-vue'
-
-export interface DraftFormPreview {
-  form: ReturnType<typeof createForm>
-  compiled: ReturnType<typeof compileFormDocuments>
-  scope: Record<string, unknown>
-}
 
 export const PreviewWidget = observer(
   defineComponent({

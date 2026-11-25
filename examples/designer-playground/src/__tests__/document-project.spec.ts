@@ -16,13 +16,14 @@ import { DataTable } from '@formivue-design/shadcn-advanced-designer'
 import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
 import { pointerSegments, type JsonObject } from '@formivue/json-schema'
 import { mount, type VueWrapper } from '@vue/test-utils'
+import { h } from 'vue'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
 import {
   useDocumentProject,
   type DocumentProjectOptions,
 } from '@formivue-design/data-model'
 import { localProjectPersistence } from '../service'
-import { DataModelWidget } from '../widgets/DataModelWidget'
+import { DataModelWidget } from '@formivue-design/data-model/ui'
 import { PreviewWidget } from '../widgets/PreviewWidget'
 
 function openProject(
@@ -282,6 +283,14 @@ test('reconciles generated chart rows and restores deleted chart fields in draft
         onNavigate: vi.fn(),
         componentLabel: vi.fn(),
       },
+      slots: {
+        preview: ({ form }) =>
+          h(
+            'output',
+            { 'data-test': 'draft-preview' },
+            JSON.stringify(form.values[rowsKey]),
+          ),
+      },
     })
     const button = (label: string) =>
       editor.findAll('button').find((button) => button.text() === label)
@@ -331,6 +340,12 @@ test('reconciles generated chart rows and restores deleted chart fields in draft
       expect(restored.data[rowsKey]).toEqual(name ? customRows : rows)
       createFormDocument(restored, options).dispose()
     }
+
+    await button('Test data').trigger('click')
+    expect(editor.get('[data-test="draft-preview"]').text()).toBe(
+      JSON.stringify(customRows),
+    )
+    await button('Schema').trigger('click')
 
     const incompatible = parseFormDocuments(model.files.value)
     incompatible.dataSchema.properties[rowsKey] = { type: 'string' }

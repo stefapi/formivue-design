@@ -21,8 +21,8 @@ import {
 import { Button } from '@formivue-design/vue-ui'
 import { DataSchemaEditor } from '@formivue-design/data-schema-editor'
 import { exampleLocale, message } from '../../../shared/language'
-import { documentError } from '../../../shared/document-messages'
-import { downloadJson } from '../service/download-json'
+import { documentError } from '../document-messages'
+import { downloadJson } from '@formivue-design/data-model/ui'
 import { SchemaEditorWidget } from './SchemaEditorWidget'
 
 const files = {

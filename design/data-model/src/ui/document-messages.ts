@@ -1,4 +1,8 @@
-import { exampleLanguage, message, type Message } from './language'
+export type Message = readonly [
+  english: string,
+  french: string,
+  spanish: string,
+]
 
 const contractIssues: Record<string, Message> = {
   project_archive_invalid: [
@@ -284,229 +288,253 @@ const structuralRules: Record<string, Message> = {
   ],
 }
 
-function displayValue(value: unknown) {
-  return JSON.stringify(value) ?? message(['missing', 'absente', 'ausente'])
-}
-
-const has = (object: object, key: string) =>
-  Object.prototype.hasOwnProperty.call(object, key)
-
-function detailedValidationMessage(
-  detail: string,
-  code: string | undefined,
-  {
-    keyword,
-    expected,
-    actual,
-  }: { keyword: string; expected?: unknown; actual: unknown },
-) {
-  if (
-    keyword === 'required' ||
-    keyword === 'dependentRequired' ||
-    keyword === 'dependencies'
-  )
-    return message([
-      'This field is required. No value was entered.',
-      'Champ obligatoire. Aucune valeur saisie.',
-      'Campo obligatorio. No se ha introducido ningún valor.',
-    ])
-  const current = displayValue(actual)
-  if (keyword === 'const')
-    return message(
-      [
-        'Expected {expected}, current value {actual}.',
-        'Valeur attendue {expected}, valeur actuelle {actual}.',
-        'Valor esperado {expected}, valor actual {actual}.',
-      ],
-      { expected: displayValue(expected), actual: current },
-    )
-  if (keyword === 'enum' && Array.isArray(expected))
-    return expected.length
-      ? message(
-          [
-            'Current value {actual}. Allowed values: {allowed}.',
-            'Valeur actuelle {actual}. Valeurs autorisées : {allowed}.',
-            'Valor actual {actual}. Valores permitidos: {allowed}.',
-          ],
-          { actual: current, allowed: expected.map(displayValue).join(', ') },
-        )
-      : message(
-          [
-            'Current value {actual}. No value is allowed.',
-            'Valeur actuelle {actual}. Aucune valeur autorisée.',
-            'Valor actual {actual}. No se permite ningún valor.',
-          ],
-          { actual: current },
-        )
-
-  let rule = validationMessage(detail, code)
-  if (has(structuralRules, keyword)) rule = message(structuralRules[keyword])
-  if (expected !== undefined && has(valueRules, keyword)) {
-    const label =
-      keyword === 'type'
-        ? (Array.isArray(expected) ? expected : [expected])
-            .map((type) =>
-              has(typeLabels, type) ? message(typeLabels[type]) : String(type),
-            )
-            .join(' / ')
-        : displayValue(expected)
-    rule = message(valueRules[keyword], { expected: label })
+export function createDocumentMessages(locale: () => string = () => 'en') {
+  function languageIndex() {
+    const language = locale()?.toLowerCase().split('-')[0]
+    return language === 'fr' ? 1 : language === 'es' ? 2 : 0
   }
-  if (keyword === 'contains' && expected && typeof expected === 'object') {
-    const { minContains, maxContains, itemSchema } = expected as {
-      minContains?: number
-      maxContains?: number
-      itemSchema?: unknown
-    }
-    const min = minContains ?? 1
-    rule =
-      maxContains === undefined
+
+  function message(text: Message, params?: Record<string, string | number>) {
+    const translated = text[languageIndex()]
+    return params
+      ? translated.replace(/\{(\w+)\}/gu, (placeholder, key) =>
+          Object.prototype.hasOwnProperty.call(params, key)
+            ? String(params[key])
+            : placeholder,
+        )
+      : translated
+  }
+
+  function displayValue(value: unknown) {
+    return JSON.stringify(value) ?? message(['missing', 'absente', 'ausente'])
+  }
+
+  const has = (object: object, key: string) =>
+    Object.prototype.hasOwnProperty.call(object, key)
+
+  function detailedValidationMessage(
+    detail: string,
+    code: string | undefined,
+    {
+      keyword,
+      expected,
+      actual,
+    }: { keyword: string; expected?: unknown; actual: unknown },
+  ) {
+    if (
+      keyword === 'required' ||
+      keyword === 'dependentRequired' ||
+      keyword === 'dependencies'
+    )
+      return message([
+        'This field is required. No value was entered.',
+        'Champ obligatoire. Aucune valeur saisie.',
+        'Campo obligatorio. No se ha introducido ningún valor.',
+      ])
+    const current = displayValue(actual)
+    if (keyword === 'const')
+      return message(
+        [
+          'Expected {expected}, current value {actual}.',
+          'Valeur attendue {expected}, valeur actuelle {actual}.',
+          'Valor esperado {expected}, valor actual {actual}.',
+        ],
+        { expected: displayValue(expected), actual: current },
+      )
+    if (keyword === 'enum' && Array.isArray(expected))
+      return expected.length
         ? message(
             [
-              'At least {min} matching items expected',
-              'Au moins {min} éléments correspondants attendus',
-              'Se requieren al menos {min} elementos coincidentes',
+              'Current value {actual}. Allowed values: {allowed}.',
+              'Valeur actuelle {actual}. Valeurs autorisées : {allowed}.',
+              'Valor actual {actual}. Valores permitidos: {allowed}.',
             ],
-            { min },
+            { actual: current, allowed: expected.map(displayValue).join(', ') },
           )
         : message(
             [
-              'Between {min} and {max} matching items expected',
-              'Entre {min} et {max} éléments correspondants attendus',
-              'Se requieren entre {min} y {max} elementos coincidentes',
+              'Current value {actual}. No value is allowed.',
+              'Valeur actuelle {actual}. Aucune valeur autorisée.',
+              'Valor actual {actual}. No se permite ningún valor.',
             ],
-            { min, max: maxContains },
+            { actual: current },
           )
-    if (itemSchema !== undefined)
-      rule += message(
-        [
-          ' for the rule {schema}',
-          ' pour la règle {schema}',
-          ' para la regla {schema}',
-        ],
-        { schema: displayValue(itemSchema) },
+
+    let rule = validationMessage(detail, code)
+    if (has(structuralRules, keyword)) rule = message(structuralRules[keyword])
+    if (expected !== undefined && has(valueRules, keyword)) {
+      const label =
+        keyword === 'type'
+          ? (Array.isArray(expected) ? expected : [expected])
+              .map((type) =>
+                has(typeLabels, type)
+                  ? message(typeLabels[type])
+                  : String(type),
+              )
+              .join(' / ')
+          : displayValue(expected)
+      rule = message(valueRules[keyword], { expected: label })
+    }
+    if (keyword === 'contains' && expected && typeof expected === 'object') {
+      const { minContains, maxContains, itemSchema } = expected as {
+        minContains?: number
+        maxContains?: number
+        itemSchema?: unknown
+      }
+      const min = minContains ?? 1
+      rule =
+        maxContains === undefined
+          ? message(
+              [
+                'At least {min} matching items expected',
+                'Au moins {min} éléments correspondants attendus',
+                'Se requieren al menos {min} elementos coincidentes',
+              ],
+              { min },
+            )
+          : message(
+              [
+                'Between {min} and {max} matching items expected',
+                'Entre {min} et {max} éléments correspondants attendus',
+                'Se requieren entre {min} y {max} elementos coincidentes',
+              ],
+              { min, max: maxContains },
+            )
+      if (itemSchema !== undefined)
+        rule += message(
+          [
+            ' for the rule {schema}',
+            ' pour la règle {schema}',
+            ' para la regla {schema}',
+          ],
+          { schema: displayValue(itemSchema) },
+        )
+    }
+    return message(
+      [
+        '{rule}. Current value {actual}.',
+        '{rule}. Valeur actuelle {actual}.',
+        '{rule}. Valor actual {actual}.',
+      ],
+      { rule: rule.trimEnd().replace(/[.!?]$/u, ''), actual: current },
+    )
+  }
+
+  function documentError(error: unknown) {
+    if (!(
+      error &&
+      typeof error === 'object' &&
+      'issues' in error &&
+      Array.isArray(error.issues)
+    )) {
+      return error instanceof Error ? error.message : String(error)
+    }
+    return error.issues
+      .map(
+        ({
+          component,
+          path,
+          property,
+          code,
+          message: detail,
+          constantMismatch,
+          validationDetails,
+        }) => {
+          const details =
+            validationDetails ??
+            (constantMismatch && { keyword: 'const', ...constantMismatch })
+          const explanation = details
+            ? detailedValidationMessage(detail, code, details)
+            : validationMessage(detail, code)
+          return `${component ? component + ' ' : ''}${path || '/'}${property ? ' · ' + property : ''}: ${explanation}`
+        },
       )
+      .join('\n')
   }
-  return message(
-    [
-      '{rule}. Current value {actual}.',
-      '{rule}. Valeur actuelle {actual}.',
-      '{rule}. Valor actual {actual}.',
-    ],
-    { rule: rule.trimEnd().replace(/[.!?]$/u, ''), actual: current },
-  )
-}
 
-export function documentError(error: unknown) {
-  if (!(
-    error &&
-    typeof error === 'object' &&
-    'issues' in error &&
-    Array.isArray(error.issues)
-  )) {
-    return error instanceof Error ? error.message : String(error)
-  }
-  return error.issues
-    .map(
-      ({
-        component,
-        path,
-        property,
-        code,
-        message: detail,
-        constantMismatch,
-        validationDetails,
-      }) => {
-        const details =
-          validationDetails ??
-          (constantMismatch && { keyword: 'const', ...constantMismatch })
-        const explanation = details
-          ? detailedValidationMessage(detail, code, details)
-          : validationMessage(detail, code)
-        return `${component ? component + ' ' : ''}${path || '/'}${property ? ' · ' + property : ''}: ${explanation}`
-      },
+  function validationMessage(detail: string, code?: string) {
+    if (
+      code &&
+      Object.prototype.hasOwnProperty.call(contractIssues, code) &&
+      languageIndex() !== 0
     )
-    .join('\n')
-}
+      return message(contractIssues[code])
+    if (/^must have required property /u.test(detail))
+      return message([
+        'A value is required',
+        'Une valeur est obligatoire',
+        'Se requiere un valor',
+      ])
+    if (detail === 'must be equal to one of the allowed values')
+      return message([
+        'Choose an allowed value',
+        'Choisir une valeur autorisée',
+        'Elige un valor permitido',
+      ])
+    const pattern = /^must match pattern (.+)$/u.exec(detail)?.[1]
+    if (pattern)
+      return message(
+        [
+          'Must match {pattern}',
+          'Doit correspondre à {pattern}',
+          'Debe coincidir con {pattern}',
+        ],
+        { pattern },
+      )
+    const type =
+      /^must be (integer|number|string|array|boolean|object|null)$/u.exec(
+        detail,
+      )?.[1]
+    if (type) {
+      return message(
+        ['Must be {type}', 'Valeur attendue : {type}', 'Se esperaba {type}'],
+        { type: message(typeLabels[type]) },
+      )
+    }
+    const limit =
+      /^must (NOT have fewer|NOT have more) than (\d+) characters$/u.exec(
+        detail,
+      )
+    if (limit)
+      return limit[1] === 'NOT have fewer'
+        ? message(
+            [
+              'Must contain at least {count} characters',
+              'Au moins {count} caractères attendus',
+              'Se requieren al menos {count} caracteres',
+            ],
+            { count: limit[2] },
+          )
+        : message(
+            [
+              'Must contain at most {count} characters',
+              'Au plus {count} caractères attendus',
+              'Se permiten como máximo {count} caracteres',
+            ],
+            { count: limit[2] },
+          )
+    const minimum = /^must be >= (\S+)$/u.exec(detail)?.[1]
+    if (minimum)
+      return message(
+        [
+          'Must be at least {min}',
+          'Valeur minimale attendue : {min}',
+          'Valor mínimo esperado: {min}',
+        ],
+        { min: minimum },
+      )
+    const maximum = /^must be <= (\S+)$/u.exec(detail)?.[1]
+    if (maximum)
+      return message(
+        [
+          'Must be at most {max}',
+          'Valeur maximale attendue : {max}',
+          'Valor máximo esperado: {max}',
+        ],
+        { max: maximum },
+      )
+    return detail
+  }
 
-export function validationMessage(detail: string, code?: string) {
-  if (
-    code &&
-    Object.prototype.hasOwnProperty.call(contractIssues, code) &&
-    exampleLanguage.value !== 'en'
-  )
-    return message(contractIssues[code])
-  if (/^must have required property /u.test(detail))
-    return message([
-      'A value is required',
-      'Une valeur est obligatoire',
-      'Se requiere un valor',
-    ])
-  if (detail === 'must be equal to one of the allowed values')
-    return message([
-      'Choose an allowed value',
-      'Choisir une valeur autorisée',
-      'Elige un valor permitido',
-    ])
-  const pattern = /^must match pattern (.+)$/u.exec(detail)?.[1]
-  if (pattern)
-    return message(
-      [
-        'Must match {pattern}',
-        'Doit correspondre à {pattern}',
-        'Debe coincidir con {pattern}',
-      ],
-      { pattern },
-    )
-  const type =
-    /^must be (integer|number|string|array|boolean|object|null)$/u.exec(
-      detail,
-    )?.[1]
-  if (type) {
-    return message(
-      ['Must be {type}', 'Valeur attendue : {type}', 'Se esperaba {type}'],
-      { type: message(typeLabels[type]) },
-    )
-  }
-  const limit =
-    /^must (NOT have fewer|NOT have more) than (\d+) characters$/u.exec(detail)
-  if (limit)
-    return limit[1] === 'NOT have fewer'
-      ? message(
-          [
-            'Must contain at least {count} characters',
-            'Au moins {count} caractères attendus',
-            'Se requieren al menos {count} caracteres',
-          ],
-          { count: limit[2] },
-        )
-      : message(
-          [
-            'Must contain at most {count} characters',
-            'Au plus {count} caractères attendus',
-            'Se permiten como máximo {count} caracteres',
-          ],
-          { count: limit[2] },
-        )
-  const minimum = /^must be >= (\S+)$/u.exec(detail)?.[1]
-  if (minimum)
-    return message(
-      [
-        'Must be at least {min}',
-        'Valeur minimale attendue : {min}',
-        'Valor mínimo esperado: {min}',
-      ],
-      { min: minimum },
-    )
-  const maximum = /^must be <= (\S+)$/u.exec(detail)?.[1]
-  if (maximum)
-    return message(
-      [
-        'Must be at most {max}',
-        'Valeur maximale attendue : {max}',
-        'Valor máximo esperado: {max}',
-      ],
-      { max: maximum },
-    )
-  return detail
+  return { message, documentError, validationMessage }
 }

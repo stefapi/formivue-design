@@ -1,0 +1,67 @@
+@import '@formivue-design/data-schema-editor/styles.css';
+
+.data-model-view {
+  container-type: inline-size;
+}
+
+.data-model-project {
+  min-width: 0;
+  align-self: flex-end;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+}
+
+.data-model-project[open] {
+  flex: 1 1 100%;
+}
+
+.data-model-project-content {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-bottom: 0.3rem;
+}
+
+.data-model-schema {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@container (width >= 58rem) {
+  .data-model-schema[data-show-source='true'] {
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  }
+
+  .data-model-source {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.data-model-source {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
+  background: var(--card);
+}
+.data-model-source-code {
+  display: block;
+  width: 100%;
+  height: clamp(16rem, 64dvh, 43rem);
+  resize: vertical;
+  padding: 0.85rem 1rem;
+  background: #18232c;
+  color: #f0f6fb;
+  font: 0.8125rem/1.6 var(--font-mono);
+  tab-size: 2;
+}
+
+.data-model-source-code:focus-visible {
+  outline: 2px solid #85c5b5;
+  outline-offset: -2px;
+}

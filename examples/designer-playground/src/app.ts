@@ -103,8 +103,9 @@ import {
   useDocumentProject,
   type DocumentProjectArchive,
 } from '@formivue-design/data-model'
+import { DataModelWidget } from '@formivue-design/data-model/ui'
+import { exampleLocale } from '../../shared/language'
 import { createVariantsDemo } from './service/variants-demo'
-import { DataModelWidget } from './widgets/DataModelWidget'
 import type {
   AdvancedDesignerComponents,
   AdvancedSources,
@@ -580,34 +581,50 @@ export const App = defineComponent({
                                   { type: 'DATAMODEL', scrollable: false },
                                   {
                                     default: ({ tree }: { tree: any }) =>
-                                      h(DataModelWidget, {
-                                        tree,
-                                        model,
-                                        options: documentOptions,
-                                        materials: props.advanced?.materials,
-                                        demoHref: demo ? undefined : url.href,
-                                        onGenerate: () => {
-                                          model.generate(tree)
-                                          saveSchema(engine, advanced, profile)
+                                      h(
+                                        DataModelWidget,
+                                        {
+                                          tree,
+                                          model,
+                                          options: documentOptions,
+                                          locale: exampleLocale.value,
+                                          demoHref: demo ? undefined : url.href,
+                                          onGenerate: () => {
+                                            model.generate(tree)
+                                            saveSchema(
+                                              engine,
+                                              advanced,
+                                              profile,
+                                            )
+                                          },
+                                          onImport: openArchive,
+                                          onJson: () =>
+                                            engine.workbench.setWorkbenchType(
+                                              'JSONTREE',
+                                            ),
+                                          onNavigate: navigateToCanvas,
+                                          componentLabel: (id) => {
+                                            const node = tree.find(
+                                              (node: { id: string }) =>
+                                                node.id === id,
+                                            )
+                                            return (
+                                              node?.props.title ??
+                                              node?.props.name ??
+                                              node?.props['x-component']
+                                            )
+                                          },
                                         },
-                                        onImport: openArchive,
-                                        onJson: () =>
-                                          engine.workbench.setWorkbenchType(
-                                            'JSONTREE',
-                                          ),
-                                        onNavigate: navigateToCanvas,
-                                        componentLabel: (id) => {
-                                          const node = tree.find(
-                                            (node: { id: string }) =>
-                                              node.id === id,
-                                          )
-                                          return (
-                                            node?.props.title ??
-                                            node?.props.name ??
-                                            node?.props['x-component']
-                                          )
+                                        {
+                                          preview: (draft) =>
+                                            h(PreviewWidget, {
+                                              tree,
+                                              draft,
+                                              materials:
+                                                props.advanced?.materials,
+                                            }),
                                         },
-                                      }),
+                                      ),
                                   },
                                 ),
                                 h(

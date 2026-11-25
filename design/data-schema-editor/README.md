@@ -8,6 +8,9 @@ where each schema is used, including through local anchors and references.
 The `navigate` event returns a stable component ID. The `inspector` slot is
 available for application actions such as variant renaming.
 
+Include `@formivue-design/data-schema-editor/styles.css` for the field builder
+and tree inspector layouts.
+
 `DataValuesEditor` edits test values separately. It can supply read-only
 and off-form values or insert a schema example explicitly. Editing the
 schema does not replace test values.

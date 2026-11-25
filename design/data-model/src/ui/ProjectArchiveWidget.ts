@@ -7,13 +7,10 @@ import {
 } from 'vue'
 import type { TreeNode } from '@formivue-design/core'
 import { Button } from '@formivue-design/vue-ui'
-import { message } from '../../../shared/language'
-import { documentError } from '../../../shared/document-messages'
-import { downloadJson } from '../service/download-json'
-import type {
-  DocumentProject,
-  DocumentProjectArchive,
-} from '@formivue-design/data-model'
+import { createDocumentMessages } from './document-messages'
+import { downloadJson } from './download-json'
+import type { DocumentProject } from '../document-project'
+import type { DocumentProjectArchive } from '../document-project-archive'
 
 const importTitle = [
   'Import project',
@@ -24,6 +21,7 @@ const importTitle = [
 export const ProjectArchiveWidget = defineComponent({
   name: 'ProjectArchiveWidget',
   props: {
+    locale: String,
     tree: { type: Object as PropType<TreeNode>, required: true },
     model: { type: Object as PropType<DocumentProject>, required: true },
     onImport: {
@@ -32,6 +30,9 @@ export const ProjectArchiveWidget = defineComponent({
     },
   },
   setup(props) {
+    const { message, documentError } = createDocumentMessages(
+      () => props.locale,
+    )
     const input = shallowRef<HTMLInputElement>()
     const pending = shallowRef<{
       name: string

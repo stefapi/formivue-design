@@ -10,18 +10,29 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
+    "./ui": {
+      "types": "./dist/ui.d.mts",
+      "import": "./dist/ui.mjs"
+    },
+    "./styles.css": "./styles.css",
     "./package.json": "./package.json"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./styles.css"
+  ],
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "scripts": {
     "build": "tsdown --config-loader tsx"
   },
   "dependencies": {
     "@formivue-design/core": "workspace:*",
+    "@formivue-design/data-schema-editor": "workspace:*",
     "@formivue-design/formivue-transformer": "workspace:*",
+    "@formivue-design/vue-ui": "workspace:*",
+    "@formivue/core": "workspace:*",
     "@formivue/json-schema": "workspace:*",
     "@formivue/shared": "workspace:*"
   },

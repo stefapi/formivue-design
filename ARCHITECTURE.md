@@ -44,7 +44,7 @@ flowchart LR
 | Canvas materials, `Behavior` and `Resource` metadata, settings schemas, and runtime `Materials` | `design/formivue-vue`                                          |
 | Property panel and specialized editors such as data sources and reactions                       | `design/vue-settings-form`, `design/formivue-setters`          |
 | Import and export of UI, data schema and data documents                                         | `design/formivue-transformer`                                  |
-| Designer data model projects, drafts, reconciliation reviews and project archives               | `design/data-model`                                            |
+| Designer data model projects, drafts, reconciliation, archives and the model panel              | `design/data-model`                                            |
 | Sandbox iframe and its communication                                                            | `design/vue-sandbox`                                           |
 
 ## Advanced components
@@ -110,9 +110,9 @@ belongs to the application or session.
 
 `design/data-model` manages the designer's project session. It coordinates
 variants and drafts through the transformer and reads and writes versioned
-project archives. The application supplies persistence and preview rendering.
-The playground uses local storage and connects the session to its canvas and
-data model panel.
+project archives. Its `ui` entry provides the panel and its schema, test-data,
+reconciliation and archive controls. The playground supplies local storage,
+language, canvas navigation and a renderer for the draft preview slot.
 
 ## Verification
 

@@ -178,9 +178,18 @@ importers:
       '@formivue-design/core':
         specifier: workspace:*
         version: link:../core
+      '@formivue-design/data-schema-editor':
+        specifier: workspace:*
+        version: link:../data-schema-editor
       '@formivue-design/formivue-transformer':
         specifier: workspace:*
         version: link:../formivue-transformer
+      '@formivue-design/vue-ui':
+        specifier: workspace:*
+        version: link:../vue-ui
+      '@formivue/core':
+        specifier: workspace:*
+        version: link:../../manager/core
       '@formivue/json-schema':
         specifier: workspace:*
         version: link:../../manager/json-schema

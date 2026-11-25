@@ -10,11 +10,15 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
+    "./styles.css": "./styles.css",
     "./package.json": "./package.json"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./styles.css"
+  ],
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "scripts": {
     "build": "tsdown --config-loader tsx"

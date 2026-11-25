@@ -12,7 +12,7 @@ import {
 } from '@formivue-design/formivue-transformer'
 import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
 import { expect, test } from 'vitest'
-import { documentError } from '../../../shared/document-messages'
+import { documentError } from '../document-messages'
 
 const contracts = createDocumentContractRegistry([chartDocumentContracts])
 const fixture = (): FormDocuments => ({

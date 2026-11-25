@@ -7,7 +7,6 @@ import {
   valueAt,
   type JsonObject,
 } from '@formivue/json-schema'
-import type { TreeNode } from '@formivue-design/core'
 import { DataValuesEditor } from '@formivue-design/data-schema-editor'
 import type {
   compileFormDocuments,
@@ -18,26 +17,35 @@ import {
   h,
   onUnmounted,
   watch,
-  type Component,
   type PropType,
+  type SlotsType,
+  type VNodeChild,
 } from 'vue'
-import { exampleLocale, message } from '../../../shared/language'
-import { PreviewWidget } from './PreviewWidget'
+import { createDocumentMessages } from './document-messages'
+
+export interface DraftFormPreview {
+  form: ReturnType<typeof createForm>
+  compiled: ReturnType<typeof compileFormDocuments>
+  scope: Record<string, unknown>
+}
 
 export const TestDataWidget = defineComponent({
   name: 'TestDataWidget',
   props: {
-    tree: { type: Object as PropType<TreeNode>, required: true },
     compiled: Object as PropType<ReturnType<typeof compileFormDocuments>>,
     data: { type: Object as PropType<JsonObject>, required: true },
     schema: {
       type: Object as PropType<FormDocuments['dataSchema']>,
       required: true,
     },
-    materials: Object as PropType<Record<string, Component>>,
+    locale: String,
   },
+  slots: Object as SlotsType<{
+    preview?: (draft: DraftFormPreview) => VNodeChild
+  }>,
   emits: { change: (data: JsonObject) => !!data },
-  setup(props, { emit }) {
+  setup(props, { emit, slots }) {
+    const { message } = createDocumentMessages(() => props.locale)
     let syncing = false
     const form = createForm<JsonObject>({
       values: copyJson(props.data) as JsonObject,
@@ -81,7 +89,7 @@ export const TestDataWidget = defineComponent({
     onUnmounted(() => form.onUnmount())
     return () =>
       h('div', { class: 'grid min-w-0 items-start gap-4 lg:grid-cols-2' }, [
-        props.compiled
+        props.compiled && slots.preview
           ? h('section', { class: 'min-w-0 rounded-md border p-3' }, [
               h(
                 'h3',
@@ -92,11 +100,7 @@ export const TestDataWidget = defineComponent({
                   'Campos del formulario',
                 ]),
               ),
-              h(PreviewWidget, {
-                tree: props.tree,
-                materials: props.materials,
-                draft: { form, compiled: props.compiled, scope },
-              }),
+              slots.preview({ form, compiled: props.compiled, scope }),
             ])
           : null,
         h('section', { class: 'min-w-0 rounded-md border p-3' }, [
@@ -112,7 +116,7 @@ export const TestDataWidget = defineComponent({
           h(DataValuesEditor, {
             modelValue: props.data,
             schema: props.schema,
-            locale: exampleLocale.value,
+            locale: props.locale,
             'onUpdate:modelValue': (value) => emit('change', value),
           }),
         ]),

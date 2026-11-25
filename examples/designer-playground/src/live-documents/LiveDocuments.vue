@@ -14,10 +14,7 @@ import {
   createExampleSchemaScope,
   translateExampleSchema,
 } from '../../../shared/schema-language'
-import {
-  documentError,
-  validationMessage,
-} from '../../../shared/document-messages'
+import { documentError, validationMessage } from '../document-messages'
 import { schemaCopy, t, type CopyKey } from './copy'
 import { createSalesDemo } from './model'
 

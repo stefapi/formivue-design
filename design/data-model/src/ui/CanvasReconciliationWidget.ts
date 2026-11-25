@@ -15,9 +15,8 @@ import {
   watch,
   type PropType,
 } from 'vue'
-import { message, type Message } from '../../../shared/language'
-import { documentError } from '../../../shared/document-messages'
-import type { DocumentProject } from '@formivue-design/data-model'
+import { createDocumentMessages, type Message } from './document-messages'
+import type { DocumentProject } from '../document-project'
 
 type Review = NonNullable<DocumentProject['reconciliation']['value']>
 const pathLabel = (path: DocumentDataPath) =>
@@ -95,6 +94,7 @@ const effects: Partial<Record<CanvasReconciliationChoice, Message>> = {
 export const CanvasReconciliationWidget = defineComponent({
   name: 'CanvasReconciliationWidget',
   props: {
+    locale: String,
     review: { type: Object as PropType<Review>, required: true },
     componentLabel: {
       type: Function as PropType<(id: string) => string | undefined>,
@@ -105,6 +105,9 @@ export const CanvasReconciliationWidget = defineComponent({
     onNavigate: Function as PropType<(id?: string) => void>,
   },
   setup(props) {
+    const { message, documentError } = createDocumentMessages(
+      () => props.locale,
+    )
     const id = useId()
     const rejected = ref(false)
     const stale = computed(() => rejected.value || props.review.stale)

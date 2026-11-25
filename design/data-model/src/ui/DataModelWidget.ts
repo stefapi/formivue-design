@@ -7,8 +7,9 @@ import {
   ref,
   shallowRef,
   useId,
-  type Component,
   type PropType,
+  type SlotsType,
+  type VNodeChild,
 } from 'vue'
 import type { TreeNode } from '@formivue-design/core'
 import { DataSchemaEditor } from '@formivue-design/data-schema-editor'
@@ -27,14 +28,11 @@ import {
   type JsonObject,
 } from '@formivue/json-schema'
 import { Button } from '@formivue-design/vue-ui'
-import { exampleLocale, message, type Message } from '../../../shared/language'
-import { documentError } from '../../../shared/document-messages'
-import type {
-  DocumentProject,
-  DocumentProjectArchive,
-} from '@formivue-design/data-model'
-import { downloadJson } from '../service/download-json'
-import { TestDataWidget } from './TestDataWidget'
+import type { DocumentProject } from '../document-project'
+import type { DocumentProjectArchive } from '../document-project-archive'
+import { createDocumentMessages, type Message } from './document-messages'
+import { downloadJson } from './download-json'
+import { TestDataWidget, type DraftFormPreview } from './TestDataWidget'
 import { CanvasReconciliationWidget } from './CanvasReconciliationWidget'
 import { ProjectArchiveWidget } from './ProjectArchiveWidget'
 
@@ -65,20 +63,23 @@ function readObject<T>(source: string, path: string): T {
   ])
 }
 
-const action = (
-  label: Message,
-  onClick: () => void,
-  disabled = false,
-  primary = false,
-) =>
-  h(
-    Button,
-    { size: 'small', type: primary ? 'primary' : 'default', onClick, disabled },
-    () => message(label),
-  )
+const createAction =
+  (message: ReturnType<typeof createDocumentMessages>['message']) =>
+  (label: Message, onClick: () => void, disabled = false, primary = false) =>
+    h(
+      Button,
+      {
+        size: 'small',
+        type: primary ? 'primary' : 'default',
+        onClick,
+        disabled,
+      },
+      () => message(label),
+    )
 
 const RenameProperty = defineComponent({
   props: {
+    locale: String,
     path: { type: Array as PropType<(string | null)[]>, required: true },
     model: { type: Object as PropType<DocumentProject>, required: true },
     objects: { type: Array as PropType<(string | null)[][]>, required: true },
@@ -89,6 +90,10 @@ const RenameProperty = defineComponent({
     },
   },
   setup(props) {
+    const { message, documentError } = createDocumentMessages(
+      () => props.locale,
+    )
+    const action = createAction(message)
     const key = ref('')
     const id = useId()
     const depth = props.path.lastIndexOf(null) + 1
@@ -390,7 +395,7 @@ export const DataModelWidget = defineComponent({
       type: Object as PropType<CompileFormDocumentOptions>,
       required: true,
     },
-    materials: Object as PropType<Record<string, Component>>,
+    locale: String,
     demoHref: String,
     onGenerate: { type: Function as PropType<() => void>, required: true },
     onImport: {
@@ -407,7 +412,14 @@ export const DataModelWidget = defineComponent({
       required: true,
     },
   },
-  setup(props) {
+  slots: Object as SlotsType<{
+    preview?: (draft: DraftFormPreview) => VNodeChild
+  }>,
+  setup(props, { slots }) {
+    const { message, documentError } = createDocumentMessages(
+      () => props.locale,
+    )
+    const action = createAction(message)
     const tab = ref<'schema' | 'data'>('schema')
     const showSource = ref(true)
     const name = ref('')
@@ -633,6 +645,7 @@ export const DataModelWidget = defineComponent({
                 h(ProjectArchiveWidget, {
                   tree: props.tree,
                   model: props.model,
+                  locale: props.locale,
                   onImport: (archive) => {
                     props.onImport(archive)
                     name.value = ''
@@ -709,6 +722,7 @@ export const DataModelWidget = defineComponent({
           props.model.reconciliation.value
             ? h(CanvasReconciliationWidget, {
                 review: props.model.reconciliation.value,
+                locale: props.locale,
                 componentLabel: props.componentLabel,
                 onCancel: props.model.cancelReconciliation,
                 onNavigate: props.onNavigate,
@@ -841,7 +855,7 @@ export const DataModelWidget = defineComponent({
                                 key: selected,
                                 builder: true,
                                 modelValue: schema.value.value,
-                                locale: exampleLocale.value,
+                                locale: props.locale,
                                 dependencies,
                                 componentLabel: props.componentLabel,
                                 onNavigate: (id) => props.onNavigate(id),
@@ -864,6 +878,7 @@ export const DataModelWidget = defineComponent({
                                   typeof path?.[path.length - 1] === 'string'
                                     ? h(RenameProperty, {
                                         key: pointer,
+                                        locale: props.locale,
                                         model: props.model,
                                         path,
                                         objects,
@@ -936,15 +951,18 @@ export const DataModelWidget = defineComponent({
                       ],
                     )
                   : schema.value.value && data.value.value
-                    ? h(TestDataWidget, {
-                        key: selected,
-                        tree: props.tree,
-                        data: data.value.value,
-                        schema: schema.value.value,
-                        compiled: compiled.value.value,
-                        materials: props.materials,
-                        onChange: (data) => update('data', data),
-                      })
+                    ? h(
+                        TestDataWidget,
+                        {
+                          key: selected,
+                          data: data.value.value,
+                          schema: schema.value.value,
+                          compiled: compiled.value.value,
+                          locale: props.locale,
+                          onChange: (data) => update('data', data),
+                        },
+                        slots.preview ? { preview: slots.preview } : undefined,
+                      )
                     : null,
               ]
             : null,

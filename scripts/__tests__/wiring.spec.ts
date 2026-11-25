@@ -59,7 +59,11 @@ const consumers: Record<string, string[]> = {
     '@formivue/reactive',
   ],
   'design/formivue-transformer': ['@formivue/core', '@formivue/json-schema'],
-  'design/data-model': ['@formivue/json-schema', '@formivue/shared'],
+  'design/data-model': [
+    '@formivue/core',
+    '@formivue/json-schema',
+    '@formivue/shared',
+  ],
   // phase 3 vue — le chrome consomme les bindings Vue du manager
   'design/vue': ['@formivue/reactive', '@formivue/reactive-vue'],
   // phase 4 vue — la couche matériau consomme les bindings du manager
