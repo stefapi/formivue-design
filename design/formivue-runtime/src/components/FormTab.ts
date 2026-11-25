@@ -6,7 +6,7 @@ import { Schema } from '@formivue/json-schema'
 import { useField, useFieldSchema, RecursionField } from '@formivue/vue'
 import { observer } from '@formivue/reactive-vue'
 import { Tabs } from '@formivue-design/vue-ui'
-import { derived } from '../../shared'
+import { derived } from '../shared'
 
 interface ITabSource {
   name: string

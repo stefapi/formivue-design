@@ -1,36 +1,17 @@
 import type { Component } from 'vue'
-import { connect, mapProps, mapReadPretty } from '@formivue/vue'
-import {
-  DatePicker as DDatePicker,
-  DateRangePicker as DDateRangePicker,
-} from '@formivue-design/vue-ui'
+import { createDatePicker } from '@formivue-design/formivue-runtime/bindings'
 import {
   GlobalRegistry,
   createBehavior,
   createResource,
 } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-const mapLocale = mapProps((props: { locale?: string }) => ({
-  ...props,
-  locale: props.locale ?? GlobalRegistry.getDesignerLanguage(),
-}))
-
-export const DatePicker: DnFC<any> & { RangePicker?: Component } = connect(
-  DDatePicker,
-  mapLocale,
-  mapReadPretty(PreviewText.DatePicker as any),
-) as any
-
-DatePicker.RangePicker = connect(
-  DDateRangePicker,
-  mapLocale,
-  mapReadPretty(PreviewText.DateRangePicker as any),
-) as any
+export const DatePicker: DnFC<any> & { RangePicker?: Component } =
+  createDatePicker(() => GlobalRegistry.getDesignerLanguage()) as DnFC<any>
 
 DatePicker.Behavior = createBehavior(
   {

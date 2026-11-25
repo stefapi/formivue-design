@@ -1,20 +1,10 @@
 import { GlobalRegistry } from '@formivue-design/core'
+import { arrayMessages } from '@formivue-design/formivue-runtime/bindings'
 
 // Port d'ère (effet de bord : messages Previews.* consommés par getMessage).
 GlobalRegistry.registerDesignerLocales({
   'en-US': {
-    ArrayBase: {
-      addCard: 'Add card',
-      addRow: 'Add row',
-      empty: 'No items',
-      column: 'Column',
-      actions: 'Actions',
-      Copy: 'Duplicate',
-      Remove: 'Remove',
-      MoveUp: 'Move up',
-      MoveDown: 'Move down',
-      sort: 'Reorder row. Drag or use the up and down arrow keys.',
-    },
+    ArrayBase: arrayMessages['en-US'],
     Previews: {
       droppable: 'Drop component here',
       addTabPane: 'Add Tab Pane',
@@ -26,18 +16,7 @@ GlobalRegistry.registerDesignerLocales({
     },
   },
   'fr-FR': {
-    ArrayBase: {
-      addCard: 'Ajouter une carte',
-      addRow: 'Ajouter une ligne',
-      empty: 'Aucun élément',
-      column: 'Colonne',
-      actions: 'Actions',
-      Copy: 'Dupliquer',
-      Remove: 'Supprimer',
-      MoveUp: 'Monter',
-      MoveDown: 'Descendre',
-      sort: 'Réordonner la ligne. Glisser ou utiliser les flèches haut et bas.',
-    },
+    ArrayBase: arrayMessages['fr-FR'],
     Previews: {
       droppable: 'Déposez un composant ici',
       addTabPane: 'Ajouter un onglet',
@@ -49,18 +28,7 @@ GlobalRegistry.registerDesignerLocales({
     },
   },
   'es-ES': {
-    ArrayBase: {
-      addCard: 'Añadir tarjeta',
-      addRow: 'Añadir fila',
-      empty: 'No hay elementos',
-      column: 'Columna',
-      actions: 'Acciones',
-      Copy: 'Duplicar',
-      Remove: 'Eliminar',
-      MoveUp: 'Subir',
-      MoveDown: 'Bajar',
-      sort: 'Reordenar la fila. Arrastra o usa las flechas arriba y abajo.',
-    },
+    ArrayBase: arrayMessages['es-ES'],
     Previews: {
       droppable: 'Suelte un componente aquí',
       addTabPane: 'Añadir pestaña',

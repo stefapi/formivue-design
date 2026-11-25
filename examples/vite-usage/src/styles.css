@@ -1,6 +1,5 @@
 @import 'tailwindcss';
-@source '../node_modules/@formivue-design/formivue-vue/dist';
-@source '../../../design/vue-ui/dist';
+@import '@formivue-design/formivue-runtime/styles.css';
 
 @theme inline {
   --color-background: var(--color-white);

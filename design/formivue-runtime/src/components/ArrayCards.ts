@@ -4,12 +4,13 @@ import type { Schema } from '@formivue/json-schema'
 import { useField, useFieldSchema, RecursionField } from '@formivue/vue'
 import { observer } from '@formivue/reactive-vue'
 import { Card as DCard } from '@formivue-design/vue-ui'
-import { ArrayBase, ArrayBaseMixin, arrayMessage } from '../../array-base'
+import { ArrayBase, ArrayBaseMixin } from '../array-base'
+import { useArrayMessage } from '../array-base/messages'
 import {
   arrayContainerProps,
   arrayOperations,
   createArrayRowKeys,
-} from '../ArrayBase'
+} from '../array-base/props'
 
 const isAddition = (schema: Schema) =>
   schema['x-component'] === 'ArrayCards.Addition'
@@ -29,6 +30,7 @@ const FormivueArrayCards = observer(
       const fieldRef = useField() as { value: ArrayField }
       const schemaRef = useFieldSchema()
       const rowKeys = createArrayRowKeys()
+      const arrayMessage = useArrayMessage()
       return () => {
         const field = fieldRef.value
         const schema = schemaRef.value

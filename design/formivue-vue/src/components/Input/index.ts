@@ -1,21 +1,15 @@
-// formivue/vue — Input (binding réelle sur vue-ui + matériau designer :
-// Behavior/Resource d'ère portés 1:1). Input.TextArea = Textarea vue-ui.
 import type { Component } from 'vue'
-import { connect, mapReadPretty } from '@formivue/vue'
-import { Input as DInput, Textarea as DTextarea } from '@formivue-design/vue-ui'
+import { Materials } from '@formivue-design/formivue-runtime'
+import { cloneBinding } from '../../common/runtime'
 import { createBehavior, createResource } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const Input: DnFC<any> & { TextArea?: Component } = connect(
-  DInput,
-  mapReadPretty(PreviewText.Input as any),
-) as any
-
-Input.TextArea = connect(DTextarea, mapReadPretty(PreviewText.Input as any))
+export const Input: DnFC<any> & { TextArea?: Component } = cloneBinding(
+  Materials.Input,
+) as DnFC<any>
 
 Input.Behavior = createBehavior(
   {

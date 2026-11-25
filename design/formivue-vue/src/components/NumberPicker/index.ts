@@ -1,17 +1,14 @@
-// formivue/vue — NumberPicker (binding + matériau d'ère 1:1).
-import { connect, mapReadPretty } from '@formivue/vue'
-import { NumberPicker as DNumberPicker } from '@formivue-design/vue-ui'
+import { Materials } from '@formivue-design/formivue-runtime'
+import { cloneBinding } from '../../common/runtime'
 import { createBehavior, createResource } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const NumberPicker: DnFC<any> = connect(
-  DNumberPicker,
-  mapReadPretty(PreviewText.NumberPicker as any),
-) as any
+export const NumberPicker: DnFC<any> = cloneBinding(
+  Materials.NumberPicker,
+) as DnFC<any>
 
 NumberPicker.Behavior = createBehavior({
   name: 'NumberPicker',

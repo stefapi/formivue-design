@@ -4,8 +4,9 @@ import type { Schema } from '@formivue/json-schema'
 import { useField, useFieldSchema, RecursionField } from '@formivue/vue'
 import { observer } from '@formivue/reactive-vue'
 import { Table as DTable } from '@formivue-design/vue-ui'
-import { ArrayBase, ArrayBaseMixin, arrayMessage } from '../../array-base'
-import { arrayContainerProps, createArrayRowKeys } from '../ArrayBase'
+import { ArrayBase, ArrayBaseMixin } from '../array-base'
+import { useArrayMessage } from '../array-base/messages'
+import { arrayContainerProps, createArrayRowKeys } from '../array-base/props'
 
 interface ColumnSource {
   name: string
@@ -31,6 +32,7 @@ const FormivueArrayTable = observer(
       const fieldRef = useField() as { value: ArrayField }
       const schemaRef = useFieldSchema()
       const rowKeys = createArrayRowKeys()
+      const arrayMessage = useArrayMessage()
       return () => {
         const schema = schemaRef.value
         const field = fieldRef.value

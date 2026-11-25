@@ -40,16 +40,16 @@ Standard JSON Schema keys are honored: `title`, `description`, `default`,
 
 ## Render a designer export
 
-The designer exports a `{ form, schema }` object. Register the shared
-`Materials` collection in `@formivue/vue` so your application interprets
-the same component properties as the designer preview. Pass the root
-`form` properties to `Materials.FormLayout`.
+The designer exports a `{ form, schema }` object. Pass the `Materials`
+registry from `@formivue-design/formivue-runtime` to `createSchemaField` so
+the application interprets the same component properties as the preview.
+Pass the root `form` properties to `Materials.FormLayout`.
 
 ```vue
 <script setup lang="ts">
 import { createForm } from '@formivue/core'
 import { createSchemaField, FormProvider } from '@formivue/vue'
-import { Materials } from '@formivue-design/formivue-vue'
+import { Materials } from '@formivue-design/formivue-runtime'
 import rawExport from './form.json'
 
 const form = createForm()

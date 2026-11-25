@@ -10,10 +10,21 @@ import { FormPath } from '@formivue/shared'
 import { createDesigner, GlobalRegistry, TreeNode } from '@formivue-design/core'
 import { calcElementLayout } from '@formivue-design/shared'
 import { ComponentTreeWidget, Designer, Workspace } from '@formivue-design/vue'
+import { Materials as RuntimeMaterials } from '@formivue-design/formivue-runtime'
 import * as Pkg from '../index'
 import { Materials } from '../materials'
 
 const { SchemaField } = createSchemaField({ components: Materials as any })
+
+test('the designer attaches canvas metadata to its own bindings', () => {
+  expect(Materials.Input).toBe(Pkg.Input)
+  expect(Pkg.Input.Behavior).toBeDefined()
+  expect(Pkg.Input.Resource).toBeDefined()
+  expect(RuntimeMaterials.Input).not.toHaveProperty('Behavior')
+  expect(RuntimeMaterials.Input).not.toHaveProperty('Resource')
+  expect(RuntimeMaterials.Input.TextArea).toBe(Pkg.Input.TextArea)
+  expect(Pkg.Radio.Group).toBe(Pkg.Radio)
+})
 
 let warn: ReturnType<typeof vi.spyOn>
 let error: ReturnType<typeof vi.spyOn>

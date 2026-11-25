@@ -10,12 +10,11 @@
  * ------------------------------------------------------------------------- */
 
 @import 'tailwindcss';
+@import '@formivue-design/formivue-vue/styles.css';
 @import '@formivue-design/data-model/styles.css';
 
-@source '../node_modules/@formivue-design/vue-ui/dist';
 @source '../node_modules/@formivue-design/vue/dist';
 @source '../node_modules/@formivue-design/vue-settings-form/dist';
-@source '../node_modules/@formivue-design/formivue-vue/dist';
 @source '../node_modules/@formivue-design/shadcn-advanced-runtime/dist';
 @source '../node_modules/@formivue-design/shadcn-advanced-designer/dist';
 @source '../node_modules/@formivue-design/charts-runtime/dist';

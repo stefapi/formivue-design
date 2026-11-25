@@ -1,0 +1,70 @@
+{
+  "name": "@formivue-design/formivue-runtime",
+  "description": "Standard Vue bindings and materials for Formivue schemas",
+  "version": "3.0.3",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./bindings": {
+      "types": "./dist/bindings.d.mts",
+      "import": "./dist/bindings.mjs"
+    },
+    "./styles.css": "./styles.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "./styles.css"
+  ],
+  "files": [
+    "dist",
+    "styles.css"
+  ],
+  "scripts": {
+    "build": "tsdown --config-loader tsx"
+  },
+  "dependencies": {
+    "@formivue-design/vue-ui": "workspace:*",
+    "@formivue/core": "workspace:*",
+    "@formivue/grid": "workspace:*",
+    "@formivue/json-schema": "workspace:*",
+    "@formivue/reactive": "workspace:*",
+    "@formivue/reactive-vue": "workspace:*",
+    "@formivue/shared": "workspace:*",
+    "@formivue/vue": "workspace:*",
+    "@lucide/vue": "^1.77.0",
+    "classnames": "^2.5.1",
+    "dompurify": "^3.4.15"
+  },
+  "peerDependencies": {
+    "@babel/types": "^7.29.0",
+    "vue": "^3.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@babel/types": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@vue/test-utils": "^2.6.0",
+    "vue": "^3.5.46"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefapi/formivue-design.git",
+    "directory": "design/formivue-runtime"
+  },
+  "bugs": {
+    "url": "https://github.com/stefapi/formivue-design/issues"
+  },
+  "homepage": "https://github.com/stefapi/formivue-design#readme",
+  "author": "Stefapi",
+  "license": "MIT"
+}

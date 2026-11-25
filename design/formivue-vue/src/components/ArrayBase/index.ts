@@ -3,13 +3,16 @@
 // MoveUp/MoveDown). Les composants réels (boutons) vivent dans
 // ../../array-base.
 import { createBehavior, TreeNode } from '@formivue-design/core'
-import { normalizeStyle } from 'vue'
-import { raw } from '@formivue/reactive'
+import { arrayOperations } from '@formivue-design/formivue-runtime/bindings'
 import { createFieldSchema, createVoidFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const arrayOperations = ['Remove', 'Copy', 'MoveDown', 'MoveUp']
+export {
+  arrayContainerProps,
+  createArrayRowKeys,
+} from '@formivue-design/formivue-runtime/bindings'
+export { arrayOperations }
 
 // La barre de sélection du designer occupe le premier espace sous la liste.
 export const arrayActionPosition = { top: 'calc(100% + 32px)' }
@@ -19,50 +22,6 @@ export const createArrayControl = (component: string) =>
     componentName: 'Field',
     props: { type: 'void', 'x-component': component },
   })
-
-export const createArrayRowKeys = () => {
-  const ids = new WeakMap<object, number>()
-  let nextId = 0
-  return (records: unknown[]) => {
-    const occurrences = new Map<number, number>()
-    return records.map((record, index) => {
-      if (!record || typeof record !== 'object') return `position-${index}`
-      const target = raw(record)
-      const id = ids.get(target) ?? ++nextId
-      ids.set(target, id)
-      const occurrence = (occurrences.get(id) ?? 0) + 1
-      occurrences.set(id, occurrence)
-      return `record-${id}-${occurrence}`
-    })
-  }
-}
-
-export const arrayContainerProps = (
-  attrs: Record<string, unknown>,
-  className: string,
-) => {
-  const style = normalizeStyle([attrs.style])
-  const display =
-    typeof style === 'object' && typeof style.display === 'string'
-      ? style.display
-      : undefined
-  return {
-    ...Object.fromEntries(
-      Object.entries(attrs).filter(
-        ([name]) => name.startsWith('data-') || name.startsWith('aria-'),
-      ),
-    ),
-    id: attrs.id,
-    style: attrs.style,
-    'data-array-inline': display?.startsWith('inline') ? '' : undefined,
-    class: [
-      className,
-      'min-w-0 align-top gap-2',
-      !display && 'flex flex-col',
-      attrs.class,
-    ],
-  }
-}
 
 export const createArrayBehavior = (name: string) => {
   const Schemas = AllSchemas as any

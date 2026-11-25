@@ -1,17 +1,12 @@
-// formivue/vue — Rate (matériau d'ère, V3 backlog levé : Rate maison vue-ui).
-import { connect, mapReadPretty } from '@formivue/vue'
-import { Rate as DRate } from '@formivue-design/vue-ui'
+import { Materials } from '@formivue-design/formivue-runtime'
+import { cloneBinding } from '../../common/runtime'
 import { createBehavior, createResource } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const Rate: DnFC<any> = connect(
-  DRate,
-  mapReadPretty(PreviewText.Rate as any),
-) as any
+export const Rate: DnFC<any> = cloneBinding(Materials.Rate) as DnFC<any>
 
 Rate.Behavior = createBehavior({
   name: 'Rate',

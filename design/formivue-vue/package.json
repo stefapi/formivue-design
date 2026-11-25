@@ -20,7 +20,6 @@
   "devDependencies": {
     "@formivue-design/formivue-transformer": "workspace:*",
     "@formivue/core": "workspace:*",
-    "@formivue/grid": "workspace:*",
     "@formivue/json-schema": "workspace:*",
     "@formivue/reactive": "workspace:*",
     "@formivue/reactive-vue": "workspace:*",
@@ -31,13 +30,11 @@
   },
   "peerDependencies": {
     "@formivue/core": "^3.0.3",
-    "@formivue/grid": "^3.0.3",
     "@formivue/json-schema": "^3.0.3",
     "@formivue/reactive": "^3.0.3",
     "@formivue/reactive-vue": "^3.0.3",
     "@formivue/shared": "^3.0.3",
     "@formivue/vue": "^3.0.3",
-    "@lucide/vue": ">=1.0.0",
     "vue": "^3.5.0"
   },
   "dependencies": {
@@ -45,9 +42,7 @@
     "@formivue-design/shared": "workspace:*",
     "@formivue-design/vue": "workspace:*",
     "@formivue-design/vue-ui": "workspace:*",
-    "classnames": "^2.5.1",
-    "@lucide/vue": "^1.77.0",
-    "dompurify": "^3.4.15"
+    "@formivue-design/formivue-runtime": "workspace:*"
   },
   "publishConfig": {
     "access": "public"
@@ -57,14 +52,17 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./styles.css": "./styles.css"
   },
   "sideEffects": [
     "./src/locales/**",
-    "./dist/index.mjs"
+    "./dist/index.mjs",
+    "./styles.css"
   ],
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "author": "Stefapi"
 }

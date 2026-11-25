@@ -1,19 +1,14 @@
-// formivue/vue — TreeSelect (matériau d'ère, V3 backlog levé : TreeSelect maison
-// vue-ui — options depuis field.dataSource (arbre label/value/children)).
-import { connect, mapProps, mapReadPretty } from '@formivue/vue'
-import { TreeSelect as DTreeSelect } from '@formivue-design/vue-ui'
+import { Materials } from '@formivue-design/formivue-runtime'
+import { cloneBinding } from '../../common/runtime'
 import { createBehavior, createResource } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const TreeSelect: DnFC<any> = connect(
-  DTreeSelect,
-  mapProps({ dataSource: 'options' } as any),
-  mapReadPretty(PreviewText.TreeSelect as any),
-) as any
+export const TreeSelect: DnFC<any> = cloneBinding(
+  Materials.TreeSelect,
+) as DnFC<any>
 
 TreeSelect.Behavior = createBehavior({
   name: 'TreeSelect',

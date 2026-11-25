@@ -1,19 +1,12 @@
-// formivue/vue — Cascader (matériau d'ère, V3 backlog levé : Cascader maison
-// vue-ui — chemin de valeurs, options en arbre depuis field.dataSource).
-import { connect, mapProps, mapReadPretty } from '@formivue/vue'
-import { Cascader as DCascader } from '@formivue-design/vue-ui'
+import { Materials } from '@formivue-design/formivue-runtime'
+import { cloneBinding } from '../../common/runtime'
 import { createBehavior, createResource } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const Cascader: DnFC<any> = connect(
-  DCascader,
-  mapProps({ dataSource: 'options' } as any),
-  mapReadPretty(PreviewText.Cascader as any),
-) as any
+export const Cascader: DnFC<any> = cloneBinding(Materials.Cascader) as DnFC<any>
 
 Cascader.Behavior = createBehavior({
   name: 'Cascader',

@@ -98,6 +98,21 @@ function runtimeSpecifier(statement: ts.Statement) {
 }
 
 describe('workspace architecture', () => {
+  test('the standard runtime installs independently of the designer', () => {
+    const dependencies = new Set<string>()
+    const visit = (name: string) => {
+      for (const dependency of byName.get(name)?.runtime ?? []) {
+        if (dependencies.has(dependency)) continue
+        dependencies.add(dependency)
+        visit(dependency)
+      }
+    }
+    visit('@formivue-design/formivue-runtime')
+    expect(
+      [...dependencies].filter((name) => name.startsWith('@formivue-design/')),
+    ).toEqual(['@formivue-design/vue-ui'])
+  })
+
   test('the standard transformer is independent of charts and advanced contracts', () => {
     const dependencies = new Set<string>()
     const visit = (name: string) => {

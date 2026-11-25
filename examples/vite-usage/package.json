@@ -12,11 +12,10 @@
     "test:a11y": "vitest run src/playground.spec.ts"
   },
   "dependencies": {
-    "@formivue-design/formivue-vue": "workspace:*",
+    "@formivue-design/formivue-runtime": "workspace:*",
     "@formivue/core": "workspace:*",
     "@formivue/reactive": "workspace:*",
     "@formivue/reactive-vue": "workspace:*",
-    "@formivue/shared": "workspace:*",
     "@formivue/validator": "workspace:*",
     "@formivue/vue": "workspace:*",
     "@tailwindcss/vite": "^4.3.5",

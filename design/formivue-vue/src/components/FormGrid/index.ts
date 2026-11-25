@@ -3,6 +3,7 @@
 // resizable d'ère conservé verbatim — le moteur gère le redimensionnement).
 import { defineComponent, h, type Component } from 'vue'
 import { TreeNode, createBehavior, createResource } from '@formivue-design/core'
+import { Materials } from '@formivue-design/formivue-runtime'
 import { observer } from '@formivue/reactive-vue'
 import {
   useTreeNode,
@@ -14,7 +15,6 @@ import { LoadTemplate } from '../../common/LoadTemplate'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
-import { FormGridBinding } from './binding'
 
 export const FormGrid: DnFC<any> & { GridColumn?: Component } = observer(
   defineComponent({
@@ -29,7 +29,7 @@ export const FormGrid: DnFC<any> & { GridColumn?: Component } = observer(
           return h(DroppableWidget, attrs as any, slots)
         }
         return h(
-          FormGridBinding,
+          Materials.FormGrid,
           { ...nodeId, ...attrs, class: ['dn-grid relative', attrs.class] },
           {
             ...slots,

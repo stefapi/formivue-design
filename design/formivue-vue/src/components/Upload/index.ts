@@ -1,27 +1,15 @@
-// formivue/vue — Upload + Upload.Dragger (matériau d'ère, V3 backlog levé :
-// Upload maison vue-ui — input file natif, envoi XHR si `action`).
 import type { Component } from 'vue'
-import { connect, mapReadPretty } from '@formivue/vue'
-import {
-  Upload as DUpload,
-  UploadDragger as DUploadDragger,
-} from '@formivue-design/vue-ui'
+import { Materials } from '@formivue-design/formivue-runtime'
+import { cloneBinding } from '../../common/runtime'
 import { createBehavior, createResource } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const Upload: DnFC<any> & { Dragger?: Component } = connect(
-  DUpload,
-  mapReadPretty(PreviewText.Upload as any),
-) as any
-
-Upload.Dragger = connect(
-  DUploadDragger,
-  mapReadPretty(PreviewText.Upload as any),
-) as any
+export const Upload: DnFC<any> & { Dragger?: Component } = cloneBinding(
+  Materials.Upload,
+) as DnFC<any>
 
 Upload.Behavior = createBehavior(
   {

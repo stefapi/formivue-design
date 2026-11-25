@@ -11,6 +11,7 @@
       "@formivue-design/data-schema-advanced",
       "@formivue-design/data-schema-charts",
       "@formivue-design/data-schema-editor",
+      "@formivue-design/formivue-runtime",
       "@formivue-design/formivue-setters",
       "@formivue-design/formivue-transformer",
       "@formivue-design/formivue-vue",

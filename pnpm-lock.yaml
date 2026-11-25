@@ -247,6 +247,52 @@ importers:
         specifier: ^3.5.46
         version: 3.5.46(typescript@6.0.3)
 
+  design/formivue-runtime:
+    dependencies:
+      '@babel/types':
+        specifier: ^7.29.0
+        version: 7.29.15
+      '@formivue-design/vue-ui':
+        specifier: workspace:*
+        version: link:../vue-ui
+      '@formivue/core':
+        specifier: workspace:*
+        version: link:../../manager/core
+      '@formivue/grid':
+        specifier: workspace:*
+        version: link:../../manager/grid
+      '@formivue/json-schema':
+        specifier: workspace:*
+        version: link:../../manager/json-schema
+      '@formivue/reactive':
+        specifier: workspace:*
+        version: link:../../manager/reactive
+      '@formivue/reactive-vue':
+        specifier: workspace:*
+        version: link:../../manager/reactive-vue
+      '@formivue/shared':
+        specifier: workspace:*
+        version: link:../../manager/shared
+      '@formivue/vue':
+        specifier: workspace:*
+        version: link:../../manager/vue
+      '@lucide/vue':
+        specifier: ^1.77.0
+        version: 1.77.0(vue@3.5.46(typescript@6.0.3))
+      classnames:
+        specifier: ^2.5.1
+        version: 2.5.1
+      dompurify:
+        specifier: ^3.4.15
+        version: 3.4.15
+    devDependencies:
+      '@vue/test-utils':
+        specifier: ^2.6.0
+        version: 2.6.0(@vue/compiler-dom@3.5.46)(@vue/server-renderer@3.5.46)(vue@3.5.46(typescript@6.0.3))
+      vue:
+        specifier: ^3.5.46
+        version: 3.5.46(typescript@6.0.3)
+
   design/formivue-setters:
     dependencies:
       '@formivue-design/core':
@@ -323,6 +369,9 @@ importers:
       '@formivue-design/core':
         specifier: workspace:*
         version: link:../core
+      '@formivue-design/formivue-runtime':
+        specifier: workspace:*
+        version: link:../formivue-runtime
       '@formivue-design/shared':
         specifier: workspace:*
         version: link:../shared
@@ -332,15 +381,6 @@ importers:
       '@formivue-design/vue-ui':
         specifier: workspace:*
         version: link:../vue-ui
-      '@lucide/vue':
-        specifier: ^1.77.0
-        version: 1.77.0(vue@3.5.46(typescript@6.0.3))
-      classnames:
-        specifier: ^2.5.1
-        version: 2.5.1
-      dompurify:
-        specifier: ^3.4.15
-        version: 3.4.15
     devDependencies:
       '@formivue-design/formivue-transformer':
         specifier: workspace:*
@@ -348,9 +388,6 @@ importers:
       '@formivue/core':
         specifier: workspace:*
         version: link:../../manager/core
-      '@formivue/grid':
-        specifier: workspace:*
-        version: link:../../manager/grid
       '@formivue/json-schema':
         specifier: workspace:*
         version: link:../../manager/json-schema
@@ -887,9 +924,9 @@ importers:
 
   examples/vite-usage:
     dependencies:
-      '@formivue-design/formivue-vue':
+      '@formivue-design/formivue-runtime':
         specifier: workspace:*
-        version: link:../../design/formivue-vue
+        version: link:../../design/formivue-runtime
       '@formivue/core':
         specifier: workspace:*
         version: link:../../manager/core
@@ -899,9 +936,6 @@ importers:
       '@formivue/reactive-vue':
         specifier: workspace:*
         version: link:../../manager/reactive-vue
-      '@formivue/shared':
-        specifier: workspace:*
-        version: link:../../manager/shared
       '@formivue/validator':
         specifier: workspace:*
         version: link:../../manager/validator

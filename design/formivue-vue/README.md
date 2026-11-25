@@ -2,6 +2,13 @@
 
 Formivue materials of the **Vue 3.5** designer.
 
+For applications that render schemas, use
+[`@formivue-design/formivue-runtime`](../formivue-runtime).
+The designer entry also exports `Materials` and supplies the designer's
+locale to those bindings. In Tailwind stylesheets, import
+`@formivue-design/formivue-vue/styles.css` to scan both the runtime and
+designer sources.
+
 - **Components** — Input, TextArea, Password, Select, NumberPicker,
   Checkbox, Radio, Slider, Rate, Switch, DatePicker, TimePicker,
   Cascader, TreeSelect, Transfer, Upload, FormItem, FormLayout,

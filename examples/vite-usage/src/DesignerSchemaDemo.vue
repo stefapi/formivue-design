@@ -36,7 +36,7 @@ import {
 import { copy, t } from './copy'
 import { createForm } from '@formivue/core'
 import { createSchemaField, FormProvider, type ISchema } from '@formivue/vue'
-import { Materials } from '@formivue-design/formivue-vue'
+import { Materials } from '@formivue-design/formivue-runtime'
 import DemoSection from './ui/DemoSection.vue'
 import StateInspector from './ui/StateInspector.vue'
 

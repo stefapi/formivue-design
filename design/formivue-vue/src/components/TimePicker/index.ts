@@ -1,33 +1,17 @@
 import type { Component } from 'vue'
-import { connect, mapProps, mapReadPretty } from '@formivue/vue'
-import {
-  TimePicker as DTimePicker,
-  TimeRangePicker as DTimeRangePicker,
-} from '@formivue-design/vue-ui'
+import { createTimePicker } from '@formivue-design/formivue-runtime/bindings'
 import {
   GlobalRegistry,
   createBehavior,
   createResource,
 } from '@formivue-design/core'
 import type { DnFC } from '@formivue-design/vue'
-import { PreviewText } from '../../preview-text'
 import { createFieldSchema } from '../Field'
 import { AllSchemas } from '../../schemas'
 import { AllLocales } from '../../locales'
 
-export const TimePicker: DnFC<any> & { RangePicker?: Component } = connect(
-  DTimePicker,
-  mapReadPretty(PreviewText.TimePicker as any),
-) as any
-
-TimePicker.RangePicker = connect(
-  DTimeRangePicker,
-  mapProps((props: { locale?: string }) => ({
-    ...props,
-    locale: props.locale ?? GlobalRegistry.getDesignerLanguage(),
-  })),
-  mapReadPretty(PreviewText.TimeRangePicker as any),
-) as any
+export const TimePicker: DnFC<any> & { RangePicker?: Component } =
+  createTimePicker(() => GlobalRegistry.getDesignerLanguage()) as DnFC<any>
 
 TimePicker.Behavior = createBehavior(
   {

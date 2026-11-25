@@ -10,6 +10,10 @@
 export * from './components'
 export * from './schemas'
 export * from './locales'
-export * from './preview-text'
+export {
+  ComposedPreviewText,
+  PreviewText,
+  type IComposedPreviewText,
+} from '@formivue-design/formivue-runtime'
 export * from './array-base'
 export * from './materials'

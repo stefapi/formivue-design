@@ -31,21 +31,22 @@ flowchart LR
 
 ## Where changes belong
 
-| Concern                                                                                         | Package                                                        |
-| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Observable state, field paths, validation utilities                                             | `manager/reactive`, `path`, `shared`, `validator`              |
-| Form and field state, effects, validation lifecycle, array mutation                             | `manager/core`                                                 |
-| JSON Schema and `x-reactions` interpretation                                                    | `manager/json-schema`                                          |
-| Vue lifecycle and field/component adapters                                                      | `manager/reactive-vue`, `manager/vue`                          |
-| Responsive grid geometry                                                                        | `manager/grid`                                                 |
-| Authoring tree, workspaces, history, selection, designer drivers                                | `design/core`, with DOM and event utilities in `design/shared` |
-| Canvas, panels, drag targets, designer context and simulators                                   | `design/vue`                                                   |
-| Reusable controls, layout primitives and accessibility                                          | `design/vue-ui`                                                |
-| Canvas materials, `Behavior` and `Resource` metadata, settings schemas, and runtime `Materials` | `design/formivue-vue`                                          |
-| Property panel and specialized editors such as data sources and reactions                       | `design/vue-settings-form`, `design/formivue-setters`          |
-| Import and export of UI, data schema and data documents                                         | `design/formivue-transformer`                                  |
-| Designer data model projects, drafts, reconciliation, preview sessions and document editors     | `design/data-model`                                            |
-| Same-origin preview iframe for trusted content                                                  | `design/vue-sandbox`                                           |
+| Concern                                                                                     | Package                                                        |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Observable state, field paths, validation utilities                                         | `manager/reactive`, `path`, `shared`, `validator`              |
+| Form and field state, effects, validation lifecycle, array mutation                         | `manager/core`                                                 |
+| JSON Schema and `x-reactions` interpretation                                                | `manager/json-schema`                                          |
+| Vue lifecycle and field/component adapters                                                  | `manager/reactive-vue`, `manager/vue`                          |
+| Responsive grid geometry                                                                    | `manager/grid`                                                 |
+| Authoring tree, workspaces, history, selection, designer drivers                            | `design/core`, with DOM and event utilities in `design/shared` |
+| Canvas, panels, drag targets, designer context and simulators                               | `design/vue`                                                   |
+| Reusable controls, layout primitives and accessibility                                      | `design/vue-ui`                                                |
+| Canvas materials, `Behavior` and `Resource` metadata, settings schemas                      | `design/formivue-vue`                                          |
+| Standard Vue schema bindings and runtime `Materials`                                        | `design/formivue-runtime`                                      |
+| Property panel and specialized editors such as data sources and reactions                   | `design/vue-settings-form`, `design/formivue-setters`          |
+| Import and export of UI, data schema and data documents                                     | `design/formivue-transformer`                                  |
+| Designer data model projects, drafts, reconciliation, preview sessions and document editors | `design/data-model`                                            |
+| Same-origin preview iframe for trusted content                                              | `design/vue-sandbox`                                           |
 
 ## Advanced components
 
@@ -78,7 +79,9 @@ flowchart LR
    and reactions. `transformToTreeNode` rebuilds an editable tree from this
    object. Keep the object serializable and preserve stable field names and
    component keys used in saved forms.
-3. At runtime, `FormProvider` supplies the `Form`. `Materials.FormLayout`
+3. At runtime, `FormProvider` supplies the `Form`. The application can install
+   `@formivue-design/formivue-runtime` to use the standard registry.
+   `Materials.FormLayout`
    receives the root props. `createSchemaField({ components: Materials })`
    maps the schema to fields, and the registry resolves their visual components.
    The designer preview and the **Designer form** section of `pnpm demo:playground`
