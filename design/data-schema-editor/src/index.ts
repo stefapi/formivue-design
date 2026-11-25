@@ -28,6 +28,9 @@ import {
   draft2020,
   labels,
   resources,
+  schemaChildren,
+  schemaLists,
+  schemaMaps,
   typeNames,
   types,
   type Message,
@@ -39,6 +42,7 @@ import {
 } from './schema-rules'
 import { SchemaBuilder } from './builder'
 import { FieldSettings, type SettingsSection } from './field-settings'
+import { AdvancedRules } from './advanced-rules'
 export { DataValuesEditor } from './values'
 
 type Model = FormDocuments['dataSchema']
@@ -240,7 +244,10 @@ export const DataSchemaEditor = defineComponent({
     const inspecting = ref(false)
     const builderRoot = ref<HTMLElement>()
     const section = ref<SettingsSection>('validation')
-    const history = ref<{ pointer: string; section: SettingsSection }[]>([])
+    const advancedRule = ref<string>()
+    const history = ref<
+      { pointer: string; section: SettingsSection; rule?: string }[]
+    >([])
     let trigger: HTMLElement | undefined
     const example = ref<string>()
     const localError = ref('')
@@ -411,6 +418,7 @@ export const DataSchemaEditor = defineComponent({
               step:
                 key.endsWith('Length') ||
                 key.endsWith('Items') ||
+                key.endsWith('Contains') ||
                 key.endsWith('Properties')
                   ? 1
                   : 'any',
@@ -571,6 +579,7 @@ export const DataSchemaEditor = defineComponent({
       select,
       t,
       control,
+      inline: props.builder,
     })
     const usages = computed(() =>
       schemaUsages(props.modelValue, props.dependencies),
@@ -593,14 +602,21 @@ export const DataSchemaEditor = defineComponent({
     function show(pointer: string, nextSection: SettingsSection) {
       selected.value = pointer
       section.value = nextSection
+      advancedRule.value = undefined
       inspecting.value = true
       example.value = undefined
       localError.value = ''
     }
 
     function select(pointer: string) {
-      if (props.builder && inspecting.value && pointer !== selected.value)
-        history.value.push({ pointer: selected.value, section: section.value })
+      if (props.builder && inspecting.value) {
+        if (pointer === selected.value) return
+        history.value.push({
+          pointer: selected.value,
+          section: section.value,
+          rule: advancedRule.value,
+        })
+      }
       show(pointer, 'validation')
     }
 
@@ -612,7 +628,10 @@ export const DataSchemaEditor = defineComponent({
 
     function back() {
       const previous = history.value.pop()
-      if (previous) show(previous.pointer, previous.section)
+      if (previous) {
+        show(previous.pointer, previous.section)
+        advancedRule.value = previous.rule
+      }
     }
 
     function close() {
@@ -673,7 +692,8 @@ export const DataSchemaEditor = defineComponent({
               }),
             })
           : undefined
-      const references = () => [
+      const references = (keyword?: string) => [
+        (keyword === undefined || keyword === '$dynamicRef') &&
         dynamicTarget !== undefined
           ? button(
               [
@@ -684,6 +704,7 @@ export const DataSchemaEditor = defineComponent({
               () => select(dynamicTarget),
             )
           : null,
+        (keyword === undefined || keyword === '$ref') &&
         refTarget !== undefined &&
         locations.value.some(({ pointer }) => pointer === refTarget)
           ? button(
@@ -940,6 +961,15 @@ export const DataSchemaEditor = defineComponent({
         numberControls(['minContains', 'maxContains']),
         rules.child('unevaluatedItems'),
       ]
+      const useDialect = () =>
+        button(
+          [
+            'Use 2020-12 dialect',
+            'Utiliser le dialecte 2020-12',
+            'Usar el dialecto 2020-12',
+          ],
+          () => edit('$schema', draft2020),
+        )
       const groups: Record<Family, () => VNodeChild[]> = {
         types: () => [typeControls(), ...allowedValues(), constant()],
         numbers: () => [numberControls(numberKeys)],
@@ -966,15 +996,7 @@ export const DataSchemaEditor = defineComponent({
           ...resources
             .filter((keyword) => keyword !== '$schema' || resourceRoot)
             .map((keyword) => annotation(keyword, labels[keyword])),
-          resourceRoot &&
-            button(
-              [
-                'Use 2020-12 dialect',
-                'Utiliser le dialecte 2020-12',
-                'Usar el dialecto 2020-12',
-              ],
-              () => edit('$schema', draft2020),
-            ),
+          resourceRoot && useDialect(),
           rules.named('$defs'),
           resourceRoot && rules.vocabulary(),
         ],
@@ -990,6 +1012,39 @@ export const DataSchemaEditor = defineComponent({
           : null
       const isRuleSchema = isJsonObject(node.value)
       if (props.builder) {
+        const advancedEditor = (keyword: string): VNodeChild => {
+          switch (keyword) {
+            case 'schema-settings':
+              return [schemaForm(), isRuleSchema ? typeControls() : null]
+            case 'required':
+              return rules.required()
+            case 'dependentRequired':
+              return rules.dependencies()
+            case '$vocabulary':
+              return rules.vocabulary()
+            case 'minContains':
+            case 'maxContains':
+              return numberControls([keyword])
+            case '$schema':
+              return [
+                annotation(keyword, labels[keyword]),
+                resourceRoot ? h('div', [useDialect()]) : null,
+              ]
+            case '$ref':
+            case '$dynamicRef':
+              return [
+                annotation(keyword, labels[keyword]),
+                h('div', references(keyword)),
+              ]
+          }
+          if (schemaMaps.some((key) => key === keyword))
+            return rules.named(keyword)
+          if (schemaLists.some((key) => key === keyword))
+            return rules.branches(keyword)
+          if (schemaChildren.some((key) => key === keyword))
+            return rules.child(keyword)
+          return annotation(keyword, labels[keyword])
+        }
         const parentPath = currentPath.path.slice(0, -2)
         const key = currentPath.path[currentPath.path.length - 1]
         const parent =
@@ -1231,19 +1286,23 @@ export const DataSchemaEditor = defineComponent({
                 ],
                 advanced: () => [
                   feedback(),
-                  card(
-                    ['Schema and types', 'Schéma et types', 'Esquema y tipos'],
-                    [schemaForm(), isRuleSchema ? typeControls() : null],
+                  h(
+                    AdvancedRules,
+                    {
+                      key: currentPath.pointer,
+                      schema: isRuleSchema ? current : undefined,
+                      resourceRoot,
+                      active: advancedRule.value,
+                      'onUpdate:active': (keyword?: string) => {
+                        advancedRule.value = keyword
+                      },
+                      t,
+                    },
+                    {
+                      default: ({ keyword }: { keyword: string }) =>
+                        advancedEditor(keyword),
+                    },
                   ),
-                  ...(isRuleSchema
-                    ? [
-                        disclosure(families.objects, objectRules),
-                        disclosure(families.arrays, arrayRules),
-                        disclosure(families.combinations, groups.combinations),
-                        disclosure(families.resources, groups.resources),
-                        disclosure(families.content, groups.content),
-                      ]
-                    : []),
                 ],
               },
             ),

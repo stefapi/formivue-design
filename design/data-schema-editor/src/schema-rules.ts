@@ -5,7 +5,7 @@ import {
   type JsonValue,
 } from '@formivue/json-schema'
 import { Button } from '@formivue-design/vue-ui'
-import { h, reactive, type VNodeChild } from 'vue'
+import { h, reactive, useId, type VNodeChild } from 'vue'
 import { labels, type Message } from './keywords'
 
 interface RuleEditor {
@@ -15,6 +15,7 @@ interface RuleEditor {
   select: (pointer: string) => void
   t: (message: Message) => string
   control: string
+  inline?: boolean
 }
 
 const own = (object: object, key: string) =>
@@ -44,8 +45,10 @@ export function createRuleControls({
   select,
   t,
   control,
+  inline,
 }: RuleEditor) {
   const names = reactive<Record<string, string>>({})
+  const propertyListId = useId() + '-property-names'
   function button(
     label: string,
     action: () => void,
@@ -59,21 +62,27 @@ export function createRuleControls({
     )
   }
   const form = (keyword: string, contents: VNodeChild[]) =>
-    h(
-      'fieldset',
-      {
-        'data-schema-keyword': keyword,
-        class: 'grid min-w-0 gap-2 rounded border p-2',
-      },
-      [
-        h(
-          'legend',
-          { class: 'px-1 text-sm' },
-          `${t(labels[keyword])} · ${keyword}`,
-        ),
-        ...contents,
-      ],
-    )
+    inline
+      ? h(
+          'div',
+          { 'data-schema-keyword': keyword, class: 'grid min-w-0 gap-2' },
+          contents,
+        )
+      : h(
+          'fieldset',
+          {
+            'data-schema-keyword': keyword,
+            class: 'grid min-w-0 gap-2 rounded border p-2',
+          },
+          [
+            h(
+              'legend',
+              { class: 'px-1 text-sm' },
+              `${t(labels[keyword])} · ${keyword}`,
+            ),
+            ...contents,
+          ],
+        )
   const linked = (keyword: string, segments: string[], label: string) =>
     button(
       label,
@@ -82,14 +91,27 @@ export function createRuleControls({
       { 'data-open-schema': segments.join('/') },
     )
   const remove = (label: string, action: () => void) =>
-    button(t(removable) + ' · ' + label, action, false, {
-      'data-remove-schema': label,
-    })
+    button(
+      inline ? t(removable) : t(removable) + ' · ' + label,
+      action,
+      false,
+      {
+        'data-remove-schema': label,
+        ...(inline
+          ? {
+              'aria-label': t(removable) + ' · ' + label,
+              variant: 'ghost',
+              class: 'text-destructive hover:text-destructive',
+            }
+          : {}),
+      },
+    )
   const nameInput = (
     key: string,
     label: string,
     add: (value: string) => void,
     unavailable: (value: string) => boolean,
+    suggestProperties = false,
   ) => {
     const name = names[key] ?? ''
     const commit = () => {
@@ -105,6 +127,7 @@ export function createRuleControls({
           class: control,
           'aria-label': label,
           placeholder: label,
+          list: inline && suggestProperties ? propertyListId : undefined,
           value: name,
           onInput: (event: Event) => {
             names[key] = (event.target as HTMLInputElement).value
@@ -140,7 +163,38 @@ export function createRuleControls({
     edit(keyword, Object.keys(map).length ? map : undefined)
   }
   const join = (contents: VNodeChild[]) =>
-    h('div', { class: 'flex min-w-0 flex-wrap items-center gap-2' }, contents)
+    h(
+      'div',
+      {
+        class: [
+          'flex min-w-0 flex-wrap items-center gap-2',
+          inline && 'rounded-md border p-2',
+        ],
+      },
+      contents,
+    )
+  const namedLabels: Record<string, Message> = {
+    properties: [
+      'Property name',
+      'Nom de la propriété',
+      'Nombre de la propiedad',
+    ],
+    patternProperties: [
+      'Property name pattern',
+      'Motif du nom de propriété',
+      'Patrón del nombre de propiedad',
+    ],
+    dependentSchemas: [
+      'Trigger property',
+      'Propriété déclencheuse',
+      'Propiedad desencadenante',
+    ],
+    $defs: [
+      'Definition name',
+      'Nom de la définition',
+      'Nombre de la definición',
+    ],
+  }
   const named = (keyword: string) =>
     form(keyword, [
       ...entries(keyword).map(([name]) =>
@@ -151,7 +205,7 @@ export function createRuleControls({
       ),
       nameInput(
         keyword,
-        t(nameOf),
+        t(inline ? (namedLabels[keyword] ?? nameOf) : nameOf),
         (name) => {
           setMap(keyword, name, {})
           select(jsonPointer([...path(), keyword, name]))
@@ -159,8 +213,83 @@ export function createRuleControls({
         (name) => own(mapOf(keyword), name),
       ),
     ])
-  const child = (keyword: string) =>
-    form(keyword, [
+  const child = (keyword: string) => {
+    const schema = current()[keyword]
+    if (inline) {
+      const selected =
+        schema === undefined
+          ? ''
+          : typeof schema === 'boolean'
+            ? String(schema)
+            : 'schema'
+      return form(keyword, [
+        h('label', { class: 'grid gap-1.5 font-medium' }, [
+          t([
+            'Subschema behavior',
+            'Comportement du sous-schéma',
+            'Comportamiento del subesquema',
+          ]),
+          h(
+            'select',
+            {
+              class: control,
+              value: selected,
+              onChange: (event: Event) => {
+                const value = (event.target as HTMLSelectElement).value
+                edit(
+                  keyword,
+                  value === 'schema'
+                    ? {}
+                    : value
+                      ? value === 'true'
+                      : undefined,
+                )
+              },
+            },
+            [
+              h(
+                'option',
+                { value: '' },
+                t(['No rule', 'Aucune règle', 'Sin regla']),
+              ),
+              h(
+                'option',
+                { value: 'true' },
+                t(['Accept everything', 'Tout accepter', 'Aceptar todo']),
+              ),
+              h(
+                'option',
+                { value: 'false' },
+                t(['Reject everything', 'Tout refuser', 'Rechazar todo']),
+              ),
+              h(
+                'option',
+                { value: 'schema' },
+                t([
+                  'Use a subschema',
+                  'Utiliser un sous-schéma',
+                  'Usar un subesquema',
+                ]),
+              ),
+            ],
+          ),
+        ]),
+        selected === 'schema'
+          ? h('div', [
+              linked(
+                keyword,
+                [],
+                t([
+                  'Edit subschema',
+                  'Modifier le sous-schéma',
+                  'Editar subesquema',
+                ]),
+              ),
+            ])
+          : null,
+      ])
+    }
+    return form(keyword, [
       current()[keyword] === undefined
         ? button(
             t(addable),
@@ -176,12 +305,16 @@ export function createRuleControls({
             remove(keyword, () => edit(keyword)),
           ]),
     ])
+  }
   const branches = (keyword: string) => {
     const existing = current()[keyword]
     const list = Array.isArray(existing) ? (existing as JsonValue[]) : []
+    const ordered = keyword === 'prefixItems'
     return form(keyword, [
       ...list.map((_, index) => {
-        const label = String(index + 1)
+        const label = inline
+          ? `${t(ordered ? ['Position', 'Position', 'Posición'] : ['Branch', 'Branche', 'Rama'])} ${index + 1}`
+          : String(index + 1)
         const swap = (next: number) => {
           const reordered = [...list]
           ;[reordered[index], reordered[next]] = [
@@ -206,7 +339,13 @@ export function createRuleControls({
         ])
       }),
       button(
-        t(addable),
+        inline
+          ? t(
+              ordered
+                ? ['Add position', 'Ajouter une position', 'Añadir posición']
+                : ['Add branch', 'Ajouter une branche', 'Añadir rama'],
+            )
+          : t(addable),
         () => {
           edit(keyword, [...list, {}])
           select(jsonPointer([...path(), keyword, String(list.length)]))
@@ -231,18 +370,30 @@ export function createRuleControls({
         t(nameOf),
         (name) => change([...existing, name]),
         (name) => existing.includes(name),
+        true,
       ),
     ]
   }
+  const propertySuggestions = () =>
+    inline
+      ? h(
+          'datalist',
+          { id: propertyListId },
+          Object.keys(mapOf('properties')).map((name) =>
+            h('option', { value: name }),
+          ),
+        )
+      : null
   const required = () =>
-    form(
-      'required',
-      namesList('required', current().required, (next) =>
+    form('required', [
+      propertySuggestions(),
+      ...namesList('required', current().required, (next) =>
         edit('required', next.length ? next : undefined),
       ),
-    )
+    ])
   const dependencies = () =>
     form('dependentRequired', [
+      propertySuggestions(),
       ...entries('dependentRequired').map(([name, deps]) =>
         h('div', { class: 'grid gap-2 rounded border p-2' }, [
           join([
@@ -263,6 +414,7 @@ export function createRuleControls({
         ]),
         (name) => setMap('dependentRequired', name, []),
         (name) => own(mapOf('dependentRequired'), name),
+        true,
       ),
     ])
   const vocabulary = () =>

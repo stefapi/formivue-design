@@ -132,11 +132,12 @@ to enable the chart and advanced component contracts in the same editor.
 
 The schema view shows editable field rows beside `data.schema.json`. Expand
 objects and arrays to work on their children. A field's settings open on
-type-specific validation, with separate tabs for its details, canvas bindings
-and advanced rules. **Generate from canvas** reconciles canvas
-changes, and **Project and variants** groups variant creation and project
-archives. Schema and test data edits share a locally persisted draft. Applying
-a valid draft updates the preview. In **JSON documents**, download and import
+type-specific validation, with separate tabs for its details and canvas bindings.
+**Advanced** shows configured rules and lets you find others by label or JSON
+Schema keyword. Each rule opens its own editor. **Generate from canvas**
+reconciles canvas changes, and **Project and variants** groups variant creation
+and project archives. Schema and test data edits share a locally persisted draft.
+Applying a valid draft updates the preview. In **JSON documents**, download and import
 `ui.json`, `data.schema.json` and `data.json` to move a variant.
 
 ## Tests

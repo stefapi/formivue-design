@@ -152,6 +152,11 @@ describe('playground formivue-vue — a11y (V8)', () => {
     )
     await runAxe()
     await dialog
+      .get('[role="tab"]:last-child')
+      .trigger('keydown', { key: 'Enter' })
+    expect(dialog.find('input[type="search"]').exists()).toBe(true)
+    await runAxe()
+    await dialog
       .findAll('button')
       .find((button) => button.text() === 'Close settings')
       .trigger('click')

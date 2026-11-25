@@ -60,6 +60,8 @@ test('edits nested fields, array items and required names in the builder', async
     await dialog
       .get('[role="tab"]:last-child')
       .trigger('keydown', { key: 'Enter' })
+    expect(dialog.find('[data-schema-keyword="oneOf"]').exists()).toBe(false)
+    await dialog.get('[data-advanced-rule="oneOf"]').trigger('click')
     expect(dialog.find('[data-schema-keyword="oneOf"]').exists()).toBe(true)
     await dialog
       .findAll('button')
@@ -85,6 +87,76 @@ test('edits nested fields, array items and required names in the builder', async
     })
     await button('Delete · items').trigger('click')
     expect(view.props('modelValue')).toEqual({ type: 'object' })
+  } finally {
+    view.unmount()
+  }
+})
+
+test('finds and edits advanced rules and returns to the rule after visiting a branch', async () => {
+  const view = mount(DataSchemaEditor, {
+    attachTo: document.body,
+    props: {
+      builder: true,
+      locale: 'fr',
+      modelValue: {
+        type: 'object',
+        additionalProperties: false,
+        oneOf: [{ required: ['code'] }],
+      },
+      'onUpdate:modelValue': (value: Schema) =>
+        view.setProps({ modelValue: value }),
+    },
+  })
+  try {
+    await view.get('button[aria-label="Réglages du schéma"]').trigger('click')
+    const dialog = new DOMWrapper(document.body).get('[role="dialog"]')
+    await dialog
+      .get('[role="tab"]:last-child')
+      .trigger('keydown', { key: 'Enter' })
+    const rule = (keyword: string) =>
+      dialog.get(`[data-advanced-rule="${keyword}"]`)
+    const search = () => dialog.get('input[type="search"]')
+    const back = () =>
+      dialog
+        .findAll('button')
+        .find((button) => button.text() === '← Retour aux règles')!
+        .trigger('click')
+
+    expect(rule('additionalProperties').text()).toContain('Refuse tout')
+    await search().setValue('proprietes supplementaires')
+    await search().trigger('keydown', { key: 'Enter' })
+    const behavior = dialog.get<HTMLSelectElement>(
+      '[data-schema-keyword="additionalProperties"] select',
+    )
+    expect(behavior.element.value).toBe('false')
+    await behavior.setValue('true')
+    expect(view.props('modelValue').additionalProperties).toBe(true)
+    await back()
+    expect(rule('additionalProperties').text()).toContain('Accepte tout')
+
+    await search().setValue('no-such-keyword')
+    expect(dialog.get('[role="status"]').text()).toBe(
+      'Aucune règle correspondante.',
+    )
+    await search().setValue('oneOf')
+    await rule('oneOf').trigger('click')
+    await dialog.get('[data-add-schema="oneOf"]').trigger('click')
+    await dialog
+      .get('[role="tab"]:nth-child(2)')
+      .trigger('keydown', { key: 'Enter' })
+    await dialog.get('[data-schema-keyword="title"]').setValue('Alternative')
+    await dialog
+      .findAll('button')
+      .find((button) => button.text() === '← Champ précédent')!
+      .trigger('click')
+    const group = dialog.get('[data-schema-keyword="oneOf"]')
+    expect(group.get('[data-open-schema="1"]').text()).toBe('Branche 2')
+    expect(view.props('modelValue').oneOf).toEqual([
+      { required: ['code'] },
+      { title: 'Alternative' },
+    ])
+    await group.get('[data-remove-schema="Branche 2"]').trigger('click')
+    expect(view.props('modelValue').oneOf).toEqual([{ required: ['code'] }])
   } finally {
     view.unmount()
   }
