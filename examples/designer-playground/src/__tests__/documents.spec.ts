@@ -24,6 +24,7 @@ import { AdvancedSources } from '@formivue-design/shadcn-advanced-designer'
 import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
 import { ChartSources } from '@formivue-design/charts-designer'
 import { ChartMaterials } from '@formivue-design/charts-runtime'
+import type { JsonObject } from '@formivue/json-schema'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { describe, expect, test, vi } from 'vitest'
@@ -229,6 +230,89 @@ function filteredDocuments() {
 }
 
 describe('separate UI, schema and data documents', () => {
+  test.each([false, true])(
+    'restores an editable table deleted from the schema draft (nested: %s)',
+    async (nested) => {
+      const { ui, dataSchema, data } = documents()
+      const table = ui.nodes[0]
+      const initial: FormDocuments = {
+        ui: {
+          version: 1,
+          nodes: nested
+            ? [
+                makeNode('report', {
+                  kind: 'object',
+                  bind: '/report',
+                  children: [table],
+                }),
+              ]
+            : [table],
+        },
+        dataSchema: {
+          type: 'object',
+          $defs: dataSchema.$defs,
+          properties: nested
+            ? {
+                report: {
+                  type: 'object',
+                  properties: { sales: dataSchema.properties.sales },
+                },
+              }
+            : { sales: dataSchema.properties.sales },
+        },
+        data: nested
+          ? { report: { sales: data.sales } }
+          : { sales: data.sales },
+      }
+      const project = createFormDocumentVariant(
+        createFormDocumentProject(initial, { contracts }),
+        'API',
+      )
+      const draft = parseFormDocuments(stringifyFormDocuments(initial))
+      const object = nested
+        ? (draft.dataSchema.properties.report as FormDocuments['dataSchema'])
+        : draft.dataSchema
+      delete object.properties.sales
+      const target = (nested ? draft.data.report : draft.data) as JsonObject
+      const rows = target.sales as JsonObject[]
+      rows[1].month = 'Edited February'
+      const review = prepareFormDocumentReconciliation(project, initial, {
+        contracts,
+      })
+      const restored = review.migrate({ ...project.variants[0], ...draft })
+      expect(restored.dataChanges).toEqual({
+        dataSchema: initial.dataSchema,
+        data: draft.data,
+      })
+      const document = createDocument({ ...draft, ...restored.dataChanges })
+      const view = mount(PreviewWidget, { props: { tree: tree(), document } })
+      try {
+        const months = () =>
+          view
+            .findAll<HTMLInputElement>('.dn-array-table input')
+            .map(({ element }) => element.value)
+        await vi.waitFor(() =>
+          expect(months()).toEqual(['January', 'Edited February']),
+        )
+        const path = nested ? ['report', 'sales'] : ['sales']
+        const field = document.form.query([...path, '1', 'month']).take()
+        const [january, february] = rows
+        const replaceRows = (sales: JsonObject[]) =>
+          document.replaceData(nested ? { report: { sales } } : { sales })
+        replaceRows([february, january])
+        await vi.waitFor(() =>
+          expect(months()).toEqual(['Edited February', 'January']),
+        )
+        replaceRows([february])
+        await vi.waitFor(() => expect(months()).toEqual(['Edited February']))
+        expect(document.form.query([...path, '0', 'month']).take()).toBe(field)
+      } finally {
+        view.unmount()
+        document.dispose()
+      }
+    },
+  )
+
   test('uses a session-local contract to migrate and compile a custom component', () => {
     const registry = createDocumentContractRegistry([
       {
@@ -607,6 +691,16 @@ describe('separate UI, schema and data documents', () => {
     const exported = exportFormDocumentVariant(renamed, 'API', { contracts })
     const files = stringifyFormDocuments(exported)
     const imported = parseFormDocuments(files)
+    const draft = parseFormDocuments(files)
+    delete draft.dataSchema.properties.sales
+    const review = prepareFormDocumentReconciliation(renamed, initial, {
+      contracts,
+    })
+    const migrated = review.migrate({ ...renamed.variants[0], ...draft })
+    expect(migrated.dataChanges).toEqual({
+      dataSchema: imported.dataSchema,
+      data: imported.data,
+    })
     for (const id of ['chart', 'donut']) {
       const node = imported.ui.nodes.find((node) => node.id === id)
       expect(node.bindings.rows).toEqual({ path: '/sales' })
@@ -649,7 +743,7 @@ describe('separate UI, schema and data documents', () => {
         configurable: true,
         value,
       })
-    const document = createDocument(imported)
+    const document = createDocument({ ...imported, ...migrated.dataChanges })
     const view = mount(PreviewWidget, {
       props: { tree: tree(), materials, document },
     })
@@ -814,6 +908,17 @@ describe('separate UI, schema and data documents', () => {
       initial,
     )
 
+    const draft = parseFormDocuments(stringifyFormDocuments(portable))
+    delete draft.dataSchema.properties.sales
+    delete draft.data.sales
+    const review = prepareFormDocumentReconciliation(status.project, initial, {
+      contracts,
+    })
+    const restored = review.migrate({ ...status.project.variants[0], ...draft })
+    expect(restored.dataChanges).toEqual({
+      dataSchema: portable.dataSchema,
+      data: portable.data,
+    })
     const measures = {
       getComputedTextLength: () => 24,
       getBBox: () => ({ x: 0, y: 0, width: 24, height: 12 }),
@@ -823,7 +928,7 @@ describe('separate UI, schema and data documents', () => {
         configurable: true,
         value,
       })
-    const document = createDocument(portable)
+    const document = createDocument({ ...portable, ...restored.dataChanges })
     const view = mount(PreviewWidget, {
       props: { tree: tree(), materials, document },
     })

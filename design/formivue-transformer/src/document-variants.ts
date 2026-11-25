@@ -1,12 +1,19 @@
 import {
   copyJson,
   DocumentValidationError,
+  pointerSegments,
   type DocumentIssue,
   type JsonObject,
 } from '@formivue/json-schema'
 import { generateFormDataSchema } from './document-generation'
-import { documentError, documentPath, visitUiNodes } from './document-paths'
 import {
+  documentError,
+  documentPath,
+  visitUiNodes,
+  type DocumentDataPath,
+} from './document-paths'
+import {
+  renameDataPath,
   renameDocumentData,
   renameDocumentSchema,
   renameDocumentUi,
@@ -32,6 +39,7 @@ import {
   describeCanvasChanges,
   migrateCanvasVariant,
   reconciliationIssues,
+  restoreCanvasProperties,
   type CanvasNodeOverride,
   type CanvasReconciliationChoice,
 } from './document-reconciliation'
@@ -361,13 +369,14 @@ export function prepareFormDocumentReconciliation(
     options,
   )
   // Display bindings can introduce root data without a bound field on the canvas.
-  const derived = Object.entries(canvas.dataSchema.properties ?? {}).filter(
-    ([key]) =>
-      !Object.prototype.hasOwnProperty.call(
-        previousSchema.properties ?? {},
-        key,
-      ) && !changes.some(({ to }) => to?.[0] === key),
+  const derived = Object.keys(canvas.dataSchema.properties ?? {}).filter(
+    (key) => !changes.some(({ to }) => to?.[0] === key),
   )
+  const generatedTables = new Map<string, DocumentDataPath>()
+  visitUiNodes(canvas.ui, (node, _scope, path) => {
+    if (node.kind === 'array' && node.component === 'ArrayTable' && node.bind)
+      generatedTables.set(node.id, path)
+  })
   const canonicalChoices = Object.fromEntries(
     changes.map((change) => [
       change.componentId,
@@ -397,34 +406,45 @@ export function prepareFormDocumentReconciliation(
       options,
       canonical,
     )
-    if (!canonical || !derived.length) return result
-    const before = result.dataChanges?.dataSchema ?? variant.dataSchema
-    const missing = derived.filter(
-      ([key]) =>
-        !Object.prototype.hasOwnProperty.call(before.properties ?? {}, key),
+    if (!derived.length && !generatedTables.size) return result
+    const materialize = (path: DocumentDataPath) =>
+      result.renames.reduce(renameDataPath, path)
+    const bindingPaths: DocumentDataPath[] = []
+    const tables: { from: DocumentDataPath; to: DocumentDataPath }[] = []
+    visitUiNodes(canonical ? canvas.ui : result.ui, (node, scope, path) => {
+      for (const binding of Object.values(node.bindings ?? {})) {
+        bindingPaths.push([
+          ...(binding.scope === 'parent' ? scope : []),
+          ...pointerSegments(binding.path),
+        ])
+      }
+      const from = generatedTables.get(node.id)
+      if (from && node.kind === 'array' && node.component === 'ArrayTable') {
+        const expected = materialize(from)
+        if (path.length === expected.length && pathStartsWith(path, expected))
+          tables.push({ from, to: path })
+      }
+    })
+    const adopted = derived.flatMap((key) => {
+      const from = [key]
+      const path = materialize(from)
+      return bindingPaths.some((binding) => pathStartsWith(binding, path)) ||
+        (canonical &&
+          !Object.prototype.hasOwnProperty.call(
+            previousSchema.properties ?? {},
+            key,
+          ))
+        ? [{ from, to: path }]
+        : []
+    })
+    if (!adopted.length && !tables.length) return result
+    const dataChanges = restoreCanvasProperties(
+      result.dataChanges ?? variant,
+      canvas,
+      [...adopted, ...tables],
+      result.renames,
     )
-    if (!missing.length) return result
-    const data = { ...(result.dataChanges?.data ?? variant.data) }
-    const required = new Set(before.required ?? [])
-    for (const [key] of missing) {
-      if (
-        !Object.prototype.hasOwnProperty.call(data, key) &&
-        Object.prototype.hasOwnProperty.call(canvas.data, key)
-      )
-        data[key] = canvas.data[key]
-      if (canvas.dataSchema.required?.includes(key)) required.add(key)
-    }
-    return {
-      ...result,
-      dataChanges: {
-        data,
-        dataSchema: {
-          ...before,
-          properties: { ...before.properties, ...Object.fromEntries(missing) },
-          ...(required.size ? { required: [...required] } : {}),
-        },
-      },
-    }
+    return dataChanges ? { ...result, dataChanges } : result
   }
   return {
     changes,

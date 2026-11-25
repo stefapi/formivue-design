@@ -3,6 +3,7 @@ import {
   DocumentValidationError,
   isJsonObject,
   jsonPointer,
+  valueAt,
   type JsonValue,
 } from '@formivue/json-schema'
 import {
@@ -11,7 +12,11 @@ import {
   visitUiNodes,
   type DocumentDataPath,
 } from './document-paths'
-import { pathStartsWith } from './document-move'
+import {
+  moveDocumentData,
+  moveDocumentSchema,
+  pathStartsWith,
+} from './document-move'
 import {
   renameDataPath,
   renameDocumentData,
@@ -346,10 +351,15 @@ const own = (value: object, key: string) =>
 function schemaObject(
   schema: FormDocuments['dataSchema'],
   path: DocumentDataPath,
+  create = false,
 ) {
   let current = schema
   for (const part of path) {
-    const object = part === null ? current.items : current.properties?.[part]
+    let object = part === null ? current.items : current.properties?.[part]
+    if (object === undefined && part !== null && create) {
+      object = { type: 'object', properties: {} }
+      ;(current.properties ??= {})[part] = object
+    }
     if (!isJsonObject(object))
       documentError(
         'reconciliation_schema_parent',
@@ -359,6 +369,96 @@ function schemaObject(
     current = object
   }
   return current
+}
+
+export function restoreCanvasProperties(
+  source: Pick<FormDocuments, 'dataSchema' | 'data'>,
+  canvas: FormDocuments,
+  paths: readonly { from: DocumentDataPath; to: DocumentDataPath }[],
+  history: readonly DocumentPropertyChange[],
+) {
+  let dataSchema = source.dataSchema
+  let data: FormDocuments['data'] | undefined
+  const schemaPath = (path: DocumentDataPath) =>
+    path.flatMap((part) => (part === null ? ['items'] : ['properties', part]))
+
+  for (const { from, to: path } of paths) {
+    if (
+      valueAt(dataSchema, schemaPath(path)) !== undefined ||
+      valueAt(canvas.dataSchema, schemaPath(from)) === undefined
+    )
+      continue
+
+    // Replay only edits to this generated property and its enclosing path.
+    const key = from[0] as string
+    let generatedPath = from
+    let generatedSchema: FormDocuments['dataSchema'] = {
+      type: 'object',
+      properties: { [key]: canvas.dataSchema.properties[key] },
+      ...(canvas.dataSchema.$defs ? { $defs: canvas.dataSchema.$defs } : {}),
+      ...(canvas.dataSchema.required?.includes(key) ? { required: [key] } : {}),
+    }
+    let generatedData = own(canvas.data, key) ? { [key]: canvas.data[key] } : {}
+    for (const edit of history) {
+      if (
+        (!pathStartsWith(edit.path, generatedPath) &&
+          !pathStartsWith(generatedPath, edit.path)) ||
+        schemaLookup(generatedSchema).at(edit.path) === undefined
+      )
+        continue
+      if ('to' in edit) {
+        generatedSchema = moveDocumentSchema(generatedSchema, edit).dataSchema
+        generatedData = moveDocumentData(generatedData, edit)
+      } else {
+        generatedSchema = renameDocumentSchema(generatedSchema, edit, true)
+        generatedData = renameDocumentData(generatedData, edit)
+      }
+      generatedPath = renameDataPath(generatedPath, edit)
+    }
+
+    const parent = path.slice(0, -1)
+    const targetKey = path[path.length - 1] as string
+    const generated = schemaObject(generatedSchema, parent)
+    const rule = generated.properties[targetKey]
+    if (!data) {
+      dataSchema = copyJson(dataSchema) as FormDocuments['dataSchema']
+      data = copyJson(source.data) as FormDocuments['data']
+    }
+    const target = schemaObject(dataSchema, parent, true)
+    ;(target.properties ??= {})[targetKey] = copyJson(rule) as DataSchema
+    if (
+      generated.required?.includes(targetKey) &&
+      !target.required?.includes(targetKey)
+    )
+      (target.required ??= []).push(targetKey)
+
+    if (parent.includes(null)) {
+      // Each repeated record keeps its own values. Only seed a field default.
+      if (isJsonObject(rule) && rule.default !== undefined)
+        for (const record of dataObjects(data, parent))
+          if (!own(record, targetKey))
+            record[targetKey] = copyJson(rule.default)
+      continue
+    }
+    const address = path as readonly string[]
+    const value = valueAt(generatedData, address)
+    if (value === undefined || valueAt(data, address) !== undefined) continue
+    let record = data
+    for (const part of address.slice(0, -1)) {
+      if (!own(record, part)) record[part] = {}
+      const child = record[part]
+      if (!isJsonObject(child))
+        documentError(
+          'data_key_collision',
+          documentPath(parent),
+          'The destination is not an object in this record',
+        )
+      record = child
+    }
+    record[targetKey] = copyJson(value)
+  }
+
+  return data ? { dataSchema, data } : undefined
 }
 
 function dataObjects(

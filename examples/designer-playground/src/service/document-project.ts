@@ -2,6 +2,7 @@ import { computed, shallowRef } from 'vue'
 import { isEqual } from '@formivue/shared'
 import type { ITreeNode, TreeNode } from '@formivue-design/core'
 import {
+  compileFormDocuments,
   createFormDocumentProject,
   createFormDocumentVariant,
   chooseCanvasAction,
@@ -415,7 +416,8 @@ export function useDocumentProject(
       name ? choices[name] : undefined,
       !name,
     )
-    if (!isEqual(oldUi, ui)) {
+    const uiChanged = !isEqual(oldUi, ui)
+    if (uiChanged) {
       if (!isEqual(oldUi, json('ui')))
         throw new DocumentValidationError([
           {
@@ -431,6 +433,14 @@ export function useDocumentProject(
       files.dataSchema = JSON.stringify(dataChanges.dataSchema, null, 2)
       files.data = JSON.stringify(dataChanges.data, null, 2)
     }
+    if (uiChanged || dataChanges)
+      compileFormDocuments(
+        {
+          ui: uiChanged ? ui : (json('ui') as unknown as FormDocuments['ui']),
+          dataSchema: dataChanges?.dataSchema ?? json('dataSchema'),
+        },
+        options,
+      )
     return { files, renames, uiOverrides }
   }
 

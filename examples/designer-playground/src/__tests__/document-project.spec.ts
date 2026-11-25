@@ -1,4 +1,5 @@
 import {
+  createDocumentContractRegistry,
   createFormDocument,
   createFormDocumentProject,
   materializeFormDocumentVariant,
@@ -6,9 +7,273 @@ import {
   stringifyFormDocuments,
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
+import { ChartSources } from '@formivue-design/charts-designer'
+import { ChartMaterials } from '@formivue-design/charts-runtime'
 import { TreeNode } from '@formivue-design/core'
-import { expect, test, vi } from 'vitest'
+import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
+import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
+import { DataTable } from '@formivue-design/shadcn-advanced-designer'
+import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
+import { pointerSegments, type JsonObject } from '@formivue/json-schema'
+import { mount, type VueWrapper } from '@vue/test-utils'
+import { afterAll, beforeAll, expect, test, vi } from 'vitest'
 import { useDocumentProject } from '../service/document-project'
+import { DataModelWidget } from '../widgets/DataModelWidget'
+import { PreviewWidget } from '../widgets/PreviewWidget'
+
+const svgMeasurements = {
+  getComputedTextLength: () => 24,
+  getBBox: () => ({ x: 0, y: 0, width: 24, height: 12 }),
+  getTotalLength: () => 100,
+  getPointAtLength: (length: number) => ({ x: length, y: 0 }),
+}
+beforeAll(() => {
+  for (const [key, value] of Object.entries(svgMeasurements))
+    Object.defineProperty(SVGElement.prototype, key, {
+      configurable: true,
+      value,
+    })
+})
+afterAll(async () => {
+  // Unovis throttles tooltip positioning for 500 ms, including after unmount.
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  for (const key of Object.keys(svgMeasurements))
+    Reflect.deleteProperty(SVGElement.prototype, key)
+})
+
+const displayResources = [...Object.values(ChartSources).flat(), DataTable]
+  .flatMap((chart) => chart.Resource)
+  .map(({ node }) => ({
+    component: node.children[0].props['x-component'],
+    children: node.children.map((child) => child.serialize()),
+  }))
+
+test.each(displayResources)(
+  'restores $component rows at their generated and variant paths',
+  async ({ component, children }) => {
+    const storage = 'test-formivue-rows-path-' + component
+    const options = {
+      contracts: createDocumentContractRegistry([
+        chartDocumentContracts,
+        advancedDocumentContracts,
+      ]),
+    }
+    const emptyCanvas = new TreeNode({ componentName: 'Form' })
+    const canvas = new TreeNode({ componentName: 'Form', children })
+    const model = useDocumentProject(storage, options, vi.fn())
+    try {
+      model.generate(emptyCanvas)
+      model.addVariant('API', false)
+      model.generate(canvas)
+      expect(model.reconciliation.value).toBeUndefined()
+      const original = parseFormDocuments(model.files.value)
+      const [key] = pointerSegments(original.ui.nodes[0].bindings.rows.path)
+      expect(original.data[key]).not.toHaveLength(0)
+
+      const deleted = parseFormDocuments(model.files.value)
+      delete deleted.dataSchema.properties[key]
+      delete deleted.data[key]
+      model.edit(stringifyFormDocuments(deleted))
+      model.generate(canvas)
+      expect(parseFormDocuments(model.files.value)).toEqual(original)
+
+      const columns = (
+        original.dataSchema.properties[key] as FormDocuments['dataSchema']
+      ).items as FormDocuments['dataSchema']
+      const [column] = Object.keys(columns.properties)
+      expect(
+        model.reviewMove({ path: [key], to: ['metrics', 'series'] }).confirm(),
+      ).toBe(true)
+      expect(
+        model
+          .reviewRename({
+            path: ['metrics', 'series', null, column],
+            key: 'primary',
+          })
+          .confirm(),
+      ).toBe(true)
+      const moved = parseFormDocuments(model.files.value)
+      model.apply(moved)
+      const edited = parseFormDocuments(model.files.value)
+      const metrics = edited.dataSchema.properties
+        .metrics as FormDocuments['dataSchema']
+      delete metrics.properties.series
+      delete (edited.data.metrics as JsonObject).series
+      model.edit(stringifyFormDocuments(edited))
+      model.generate(canvas)
+      const restored = parseFormDocuments(model.files.value)
+      expect(restored).toEqual(moved)
+      const document = createFormDocument(restored, options)
+      const view = mount(PreviewWidget, {
+        props: {
+          tree: canvas,
+          materials: { ...ChartMaterials, ...AdvancedMaterials },
+          document,
+        },
+      })
+      try {
+        const rows =
+          component === 'DataTable' ? 'table tbody tr' : 'figure tbody tr'
+        await vi.waitFor(() =>
+          expect(view.findAll(rows).length).toBeGreaterThan(0),
+        )
+      } finally {
+        view.unmount()
+        document.dispose()
+      }
+    } finally {
+      localStorage.removeItem(storage)
+    }
+  },
+)
+
+test('reconciles generated chart rows and restores deleted chart fields in drafts', async () => {
+  const storage = 'test-formivue-chart-reconciliation'
+  const options = {
+    contracts: createDocumentContractRegistry([chartDocumentContracts]),
+  }
+  const rows = [{ city: 'Lyon', sales: 12 }]
+  const customRows = [{ city: 'Paris', sales: 30 }]
+  const rowsKey = 'sales-chart-rows'
+  const rowsSchema = {
+    type: 'array',
+    minItems: 1,
+    items: {
+      type: 'object',
+      properties: { city: { type: 'string' }, sales: { type: 'number' } },
+    },
+  } as const
+  const canvas = new TreeNode({ componentName: 'Form' })
+  let editor: VueWrapper | undefined
+  try {
+    const model = useDocumentProject(storage, options, vi.fn())
+    model.generate(canvas)
+    model.addVariant('API', false)
+    model.edit({ ...model.files.value, data: '{"draftNote":"Keep me"}' })
+    model.addVariant('Back office', false)
+    const custom = parseFormDocuments(model.files.value)
+    custom.dataSchema.properties[rowsKey] = rowsSchema
+    custom.data[rowsKey] = customRows
+    model.apply(custom)
+    model.addVariant('Archive', false)
+    model.choose('')
+
+    const updated = new TreeNode({
+      componentName: 'Form',
+      children: [
+        {
+          id: 'report',
+          componentName: 'Field',
+          props: { name: 'report', type: 'object' },
+          children: [
+            {
+              id: 'sales-chart',
+              componentName: 'Field',
+              props: {
+                type: 'void',
+                'x-component': 'BarChart',
+                'x-component-props': {
+                  rows,
+                  xKey: 'city',
+                  series: [{ key: 'sales' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+    model.generate(updated)
+    model.reconciliation.value.selectChoice('Archive', 'report', 'defer')
+    editor = mount(DataModelWidget, {
+      props: {
+        tree: updated,
+        model,
+        options,
+        onGenerate: () => model.generate(updated),
+        onImport: vi.fn(),
+        onJson: vi.fn(),
+        onNavigate: vi.fn(),
+        componentLabel: vi.fn(),
+      },
+    })
+    const button = (label: string) =>
+      editor.findAll('button').find((button) => button.text() === label)
+    await button('Apply reconciliation').trigger('click')
+    expect(editor.text()).toContain('Variants reconciled')
+    const { base, variants } = model.project.value
+    const [api, backOffice, archive] = variants
+    expect(api.dataSchema.properties[rowsKey]).toEqual(
+      base.dataSchema.properties[rowsKey],
+    )
+    expect(api.data[rowsKey]).toEqual(rows)
+    expect(backOffice.dataSchema.properties[rowsKey]).toEqual(rowsSchema)
+    expect(backOffice.data[rowsKey]).toEqual(customRows)
+    expect(archive.dataSchema.properties).not.toHaveProperty(rowsKey)
+    expect(archive.data).not.toHaveProperty(rowsKey)
+
+    await editor
+      .get(`button[aria-label="Delete · ${rowsKey}"]`)
+      .trigger('click')
+    expect(editor.text()).not.toContain('Variants reconciled')
+    expect(button('Apply to preview').attributes('disabled')).toBeDefined()
+
+    model.choose('API')
+    const draft = parseFormDocuments(model.files.value)
+    expect(draft.data).toMatchObject({ draftNote: 'Keep me', [rowsKey]: rows })
+    expect(draft.ui.nodes[0].children[0].bindings.rows.path).toBe('/' + rowsKey)
+    createFormDocument(draft, options).dispose()
+
+    // Removing a field in the schema editor leaves the test data intact.
+    for (const name of ['', 'API']) {
+      model.choose(name)
+      const edited = parseFormDocuments(model.files.value)
+      delete edited.dataSchema.properties[rowsKey]
+      if (name) edited.data[rowsKey] = customRows
+      else delete edited.data[rowsKey]
+      model.edit(stringifyFormDocuments(edited))
+    }
+    await button('Generate from canvas').trigger('click')
+    expect(model.reconciliation.value).toBeUndefined()
+    expect(button('Apply to preview').attributes('disabled')).toBeUndefined()
+    for (const name of ['', 'API']) {
+      model.choose(name)
+      const restored = parseFormDocuments(model.files.value)
+      expect(restored.dataSchema.properties[rowsKey]).toEqual(
+        base.dataSchema.properties[rowsKey],
+      )
+      expect(restored.data[rowsKey]).toEqual(name ? customRows : rows)
+      createFormDocument(restored, options).dispose()
+    }
+
+    const incompatible = parseFormDocuments(model.files.value)
+    incompatible.dataSchema.properties[rowsKey] = { type: 'string' }
+    const incompatibleDraft = stringifyFormDocuments(incompatible)
+    model.edit(incompatibleDraft)
+    updated.append(
+      new TreeNode({
+        id: 'description',
+        componentName: 'Field',
+        props: { name: 'description', type: 'string', 'x-component': 'Input' },
+      }),
+    )
+    model.generate(updated)
+    const review = model.reconciliation.value
+    const blocked = review.check(review.choices)
+    expect(blocked.diagnostics.map(({ variant }) => variant)).toEqual(['API'])
+    expect(blocked.diagnostics[0].issues).toContainEqual(
+      expect.objectContaining({
+        code: 'incompatible_rows',
+        path: '/' + rowsKey,
+      }),
+    )
+    expect(blocked.confirm()).toBe(false)
+    expect(model.files.value).toEqual(incompatibleDraft)
+  } finally {
+    editor?.unmount()
+    localStorage.removeItem(storage)
+  }
+})
 
 test('reopens unconfirmed reconciliation choices from a project archive', () => {
   const sourceKey = 'test-reconciliation-archive-source'

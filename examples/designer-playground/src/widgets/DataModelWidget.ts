@@ -5,6 +5,7 @@ import {
   nextTick,
   onMounted,
   ref,
+  shallowRef,
   useId,
   type Component,
   type PropType,
@@ -410,8 +411,8 @@ export const DataModelWidget = defineComponent({
     const name = ref('')
     const error = ref<unknown>()
     const applied = ref(false)
-    const reconciled = ref(false)
     const files = props.model.files
+    const reconciledFiles = shallowRef<typeof files.value>()
     const schemaSource = computed(() => files.value?.dataSchema)
     const uiSource = computed(() => files.value?.ui)
     const dataSource = computed(() => files.value?.data)
@@ -465,7 +466,7 @@ export const DataModelWidget = defineComponent({
     const run = (work: () => void) => {
       error.value = undefined
       applied.value = false
-      reconciled.value = false
+      reconciledFiles.value = undefined
       try {
         work()
       } catch (cause) {
@@ -635,7 +636,7 @@ export const DataModelWidget = defineComponent({
                     name.value = ''
                     error.value = undefined
                     applied.value = false
-                    reconciled.value = false
+                    reconciledFiles.value = undefined
                     tab.value = 'schema'
                   },
                 }),
@@ -710,11 +711,11 @@ export const DataModelWidget = defineComponent({
                 onCancel: props.model.cancelReconciliation,
                 onNavigate: props.onNavigate,
                 onApplied: () => {
-                  reconciled.value = true
+                  reconciledFiles.value = files.value
                 },
               })
             : null,
-          reconciled.value
+          reconciledFiles.value && reconciledFiles.value === files.value
             ? h(
                 'p',
                 { role: 'status', class: 'text-sm' },
