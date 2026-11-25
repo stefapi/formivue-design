@@ -1,7 +1,7 @@
 // Phase 3.6 — suites @formivue-design/vue : montage isolé des widgets (chromes).
 // Locales du package enregistrées à l'import de '../index' (effet de bord
 // volontaire, parité avec l'ère `import './locales'`).
-import { beforeAll, describe, expect, test } from 'vitest'
+import { beforeAll, describe, expect, test, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import {
@@ -276,14 +276,11 @@ describe('@formivue-design/vue — widgets', () => {
 
   test('HistoryWidget : entrées rendues + goTo rembobine le tree', async () => {
     const engine = createDesigner()
-    engine.workbench.ensureWorkspace({ id: 'index' })
-    const ws = engine.workbench.currentWorkspace
+    const ws = engine.workbench.ensureWorkspace({ id: 'index' })
     const tree = ws.operation.tree
     const field = new TreeNode({ id: 'f1', componentName: 'Field' })
     tree.append(field)
-    // operation.snapshot() pousse l'historique via requestIdle (polyfill
-    // setTimeout) — on attend le macrotask avant d'assertionner
-    await new Promise((r) => setTimeout(r, 80))
+    await vi.waitFor(() => expect(ws.history.list()).toHaveLength(2))
 
     const wrapper = mount(
       defineComponent({
@@ -298,7 +295,7 @@ describe('@formivue-design/vue — widgets', () => {
       }),
     )
     const items = wrapper.findAll('.dn-history-item')
-    expect(items.length).toBeGreaterThan(0)
+    expect(items).toHaveLength(2)
     expect(items[items.length - 1].text()).toContain('Append Node')
 
     // le premier item = default_state : y aller retire le champ

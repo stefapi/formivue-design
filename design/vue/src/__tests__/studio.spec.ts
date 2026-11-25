@@ -2,7 +2,7 @@
 // Workbench > StudioPanel > CompositePanel/WorkspacePanel/SettingsPanel),
 // wiring des drivers du moteur (drag souris synthétique, sélection au clic),
 // historique undo/redo via @formivue-design/core intact, locales.
-import { afterEach, beforeAll, describe, expect, test } from 'vitest'
+import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import {
@@ -310,10 +310,11 @@ describe('@formivue-design/vue — studio (intégration)', () => {
 
   test('historique : undo/redo via HistoryWidget + moteur intact', async () => {
     const engine = createDesigner()
-    engine.workbench.ensureWorkspace({ id: 'index' })
-    const tree = engine.workbench.currentWorkspace.operation.tree
+    const workspace = engine.workbench.ensureWorkspace({ id: 'index' })
+    const { history, operation } = workspace
+    const { tree } = operation
     tree.append(new TreeNode({ id: 'card-1', componentName: 'Card' }))
-    await delay()
+    await vi.waitFor(() => expect(history.list()).toHaveLength(2))
 
     const wrapper = register(
       mount(Studio, { props: { engine }, attachTo: document.body }),
@@ -324,7 +325,7 @@ describe('@formivue-design/vue — studio (intégration)', () => {
     await panes[2].trigger('click')
     await nextTick()
     const items = wrapper.findAll('.dn-history-item')
-    expect(items.length).toBe(2) // default_state + append_node
+    expect(items).toHaveLength(2) // default_state + append_node
     expect(items[1].text()).toContain('Append Node')
 
     // goTo le default_state → le node disparaît (undo manuel du panneau)
@@ -335,7 +336,6 @@ describe('@formivue-design/vue — studio (intégration)', () => {
     expect(tree.findById('card-1')).toBeDefined()
 
     // history API directe du moteur (undo/redo des boutons DesignerToolsWidget)
-    const history = engine.workbench.currentWorkspace.history
     history.undo()
     expect(tree.findById('card-1')).toBeUndefined()
     history.redo()
