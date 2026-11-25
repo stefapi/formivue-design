@@ -372,11 +372,18 @@ export function prepareFormDocumentReconciliation(
   const derived = Object.keys(canvas.dataSchema.properties ?? {}).filter(
     (key) => !changes.some(({ to }) => to?.[0] === key),
   )
-  const generatedTables = new Map<string, DocumentDataPath>()
+  const generatedFields = new Map<string, DocumentDataPath>()
   visitUiNodes(canvas.ui, (node, _scope, path) => {
-    if (node.kind === 'array' && node.component === 'ArrayTable' && node.bind)
-      generatedTables.set(node.id, path)
+    if (node.kind !== 'void' && node.bind !== undefined && path.length)
+      generatedFields.set(node.id, path)
   })
+  const dependencies = compileFormDocuments(
+    canvas,
+    options,
+  ).dependencies.filter(
+    ({ property, path }) =>
+      path.length && (property !== 'bind' || path[path.length - 1] === null),
+  )
   const canonicalChoices = Object.fromEntries(
     changes.map((change) => [
       change.componentId,
@@ -396,6 +403,7 @@ export function prepareFormDocumentReconciliation(
     >,
     choices?: Readonly<Record<string, CanvasReconciliationChoice>>,
     canonical = false,
+    { restoreMissingSchema = true } = {},
   ) {
     const result = migrateCanvasVariant(
       project.base.ui,
@@ -406,23 +414,25 @@ export function prepareFormDocumentReconciliation(
       options,
       canonical,
     )
-    if (!derived.length && !generatedTables.size) return result
+    if (!restoreMissingSchema) return result
     const materialize = (path: DocumentDataPath) =>
       result.renames.reduce(renameDataPath, path)
     const bindingPaths: DocumentDataPath[] = []
-    const tables: { from: DocumentDataPath; to: DocumentDataPath }[] = []
+    const fields: { from: DocumentDataPath; to: DocumentDataPath }[] = []
+    const activeIds = new Set<string>()
     visitUiNodes(canonical ? canvas.ui : result.ui, (node, scope, path) => {
+      activeIds.add(node.id)
       for (const binding of Object.values(node.bindings ?? {})) {
         bindingPaths.push([
           ...(binding.scope === 'parent' ? scope : []),
           ...pointerSegments(binding.path),
         ])
       }
-      const from = generatedTables.get(node.id)
-      if (from && node.kind === 'array' && node.component === 'ArrayTable') {
+      const from = generatedFields.get(node.id)
+      if (from && node.kind !== 'void' && node.bind !== undefined) {
         const expected = materialize(from)
         if (path.length === expected.length && pathStartsWith(path, expected))
-          tables.push({ from, to: path })
+          fields.push({ from, to: path })
       }
     })
     const adopted = derived.flatMap((key) => {
@@ -437,11 +447,22 @@ export function prepareFormDocumentReconciliation(
         ? [{ from, to: path }]
         : []
     })
-    if (!adopted.length && !tables.length) return result
+    // Retained layouts can have different property bindings from the canvas.
+    for (const override of result.uiOverrides)
+      if ('node' in override)
+        visitUiNodes({ version: 1, nodes: [override.node] }, ({ id }) => {
+          activeIds.delete(id)
+        })
+    const paths = [...adopted, ...fields]
+    for (const { componentId, path: from } of dependencies)
+      if (activeIds.has(componentId))
+        paths.push({ from, to: materialize(from) })
+    if (!paths.length) return result
+    paths.sort((a, b) => a.to.length - b.to.length)
     const dataChanges = restoreCanvasProperties(
       result.dataChanges ?? variant,
       canvas,
-      [...adopted, ...tables],
+      paths,
       result.renames,
     )
     return dataChanges ? { ...result, dataChanges } : result

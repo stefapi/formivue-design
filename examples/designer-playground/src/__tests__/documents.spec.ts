@@ -230,6 +230,108 @@ function filteredDocuments() {
 }
 
 describe('separate UI, schema and data documents', () => {
+  test('restores nested field, display and branch bindings without reviving unused properties', () => {
+    const initial: FormDocuments = {
+      ui: {
+        version: 1,
+        nodes: [
+          makeNode('profile', {
+            kind: 'object',
+            bind: '/profile',
+            children: [
+              makeNode('name', {
+                kind: 'field',
+                component: 'Input',
+                bind: '/name',
+              }),
+              makeNode('badge', {
+                component: 'Badge',
+                bindings: { text: { scope: 'parent', path: '/label' } },
+              }),
+            ],
+          }),
+          makeNode('tags', {
+            kind: 'field',
+            component: 'TagsInput',
+            bind: '/tags',
+          }),
+          ...['StepperStep', 'QuestionnaireStep'].map((component) =>
+            makeNode(component, {
+              component,
+              props: {
+                branches: [
+                  { path: '/profile/route', equals: 'review', next: 'end' },
+                ],
+              },
+            }),
+          ),
+        ],
+      },
+      dataSchema: {
+        type: 'object',
+        properties: {
+          profile: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              label: { type: 'string' },
+              route: { type: 'string', enum: ['review'] },
+              spare: { type: 'string' },
+            },
+          },
+          tags: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      data: {
+        profile: { name: 'Original', label: 'Active', route: 'review' },
+        tags: ['one'],
+      },
+    }
+    const project = createFormDocumentVariant(
+      createFormDocumentProject(initial, { contracts }),
+      'API',
+    )
+    const renamed = renameFormDocumentProperty(
+      project,
+      'API',
+      { path: ['profile', 'route'], key: 'destination' },
+      { contracts },
+    ).project
+    const draft = exportFormDocumentVariant(renamed, 'API', { contracts })
+    const profile = draft.dataSchema.properties
+      .profile as FormDocuments['dataSchema']
+    profile.properties = {}
+    delete (draft.dataSchema.properties.tags as FormDocuments['dataSchema'])
+      .items
+    ;(draft.data.profile as JsonObject).name = 'Edited'
+    const review = prepareFormDocumentReconciliation(renamed, initial, {
+      contracts,
+    })
+    const result = review.migrate({ ...renamed.variants[0], ...draft })
+    const recovered = createDocument({
+      ...draft,
+      ...result.dataChanges,
+      ui: result.ui,
+    })
+    try {
+      const { data, dataSchema } = recovered.exportDocuments()
+      expect(data).toEqual(draft.data)
+      expect(dataSchema.properties).toEqual({
+        profile: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            label: { type: 'string' },
+            destination: { type: 'string', enum: ['review'] },
+          },
+        },
+        tags: { type: 'array', items: { type: 'string' } },
+      })
+    } finally {
+      recovered.dispose()
+    }
+  })
+
   test.each([false, true])(
     'restores an editable table deleted from the schema draft (nested: %s)',
     async (nested) => {
@@ -1496,7 +1598,7 @@ describe('separate UI, schema and data documents', () => {
     session.dispose()
   })
 
-  test('validates all palette resources after migrating the legacy designer export', () => {
+  test('validates and restores deleted schema fields for every palette resource', () => {
     const standard = [
       Standard.Input,
       Standard.Password,
@@ -1564,6 +1666,23 @@ describe('separate UI, schema and data documents', () => {
         expect(session.diagnostics).toEqual([])
         expect(session.exportDocuments()).toEqual(migrated)
         session.dispose()
+        if (!Object.keys(migrated.dataSchema.properties ?? {}).length) continue
+        const options = { contracts: registry }
+        const project = createFormDocumentVariant(
+          createFormDocumentProject(migrated, options),
+          'API',
+        )
+        const draft = parseFormDocuments(stringifyFormDocuments(migrated))
+        draft.dataSchema.properties = {}
+        const { dataChanges } = prepareFormDocumentReconciliation(
+          project,
+          migrated,
+          options,
+        ).migrate({ ...project.variants[0], ...draft })
+        expect(dataChanges, migrated.ui.nodes[0].component).toEqual({
+          dataSchema: migrated.dataSchema,
+          data: migrated.data,
+        })
       }
     }
   })

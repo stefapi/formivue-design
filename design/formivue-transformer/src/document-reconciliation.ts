@@ -351,15 +351,10 @@ const own = (value: object, key: string) =>
 function schemaObject(
   schema: FormDocuments['dataSchema'],
   path: DocumentDataPath,
-  create = false,
 ) {
   let current = schema
   for (const part of path) {
-    let object = part === null ? current.items : current.properties?.[part]
-    if (object === undefined && part !== null && create) {
-      object = { type: 'object', properties: {} }
-      ;(current.properties ??= {})[part] = object
-    }
+    const object = part === null ? current.items : current.properties?.[part]
     if (!isJsonObject(object))
       documentError(
         'reconciliation_schema_parent',
@@ -381,11 +376,35 @@ export function restoreCanvasProperties(
   let data: FormDocuments['data'] | undefined
   const schemaPath = (path: DocumentDataPath) =>
     path.flatMap((part) => (part === null ? ['items'] : ['properties', part]))
+  const canvasLookup = schemaLookup(canvas.dataSchema)
 
-  for (const { from, to: path } of paths) {
+  for (const { from, to } of paths) {
     if (
-      valueAt(dataSchema, schemaPath(path)) !== undefined ||
+      valueAt(dataSchema, schemaPath(to)) !== undefined ||
       valueAt(canvas.dataSchema, schemaPath(from)) === undefined
+    )
+      continue
+    const current = schemaLookup(dataSchema)
+    if (
+      current.accepts(
+        current.at(to),
+        canvasLookup.possible(canvasLookup.at(from)),
+      )
+    )
+      continue
+    const missing = to.findIndex(
+      (_, i) =>
+        valueAt(dataSchema, schemaPath(to.slice(0, i + 1))) === undefined,
+    )
+    const path = to.slice(0, missing + 1)
+    const parent = path.slice(0, -1)
+    const targetKey = path[path.length - 1]
+    if (
+      !current.accepts(
+        current.at(parent),
+        [targetKey === null ? 'array' : 'object'],
+        true,
+      )
     )
       continue
 
@@ -416,15 +435,18 @@ export function restoreCanvasProperties(
       generatedPath = renameDataPath(generatedPath, edit)
     }
 
-    const parent = path.slice(0, -1)
-    const targetKey = path[path.length - 1] as string
+    const rule = valueAt(generatedSchema, schemaPath(path)) as DataSchema
+    if (rule === undefined) continue
     const generated = schemaObject(generatedSchema, parent)
-    const rule = generated.properties[targetKey]
     if (!data) {
       dataSchema = copyJson(dataSchema) as FormDocuments['dataSchema']
       data = copyJson(source.data) as FormDocuments['data']
     }
-    const target = schemaObject(dataSchema, parent, true)
+    const target = schemaObject(dataSchema, parent)
+    if (targetKey === null) {
+      target.items = copyJson(rule) as DataSchema
+      continue
+    }
     ;(target.properties ??= {})[targetKey] = copyJson(rule) as DataSchema
     if (
       generated.required?.includes(targetKey) &&

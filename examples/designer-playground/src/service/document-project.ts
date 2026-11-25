@@ -402,12 +402,18 @@ export function useDocumentProject(
         },
       ])
     }
+    let draftSchema: FormDocuments['dataSchema'] | undefined
+    try {
+      draftSchema = json('dataSchema')
+    } catch {
+      // Leave unfinished JSON intact unless the canvas change needs the schema.
+    }
     const { ui, renames, uiOverrides, dataChanges } = prepared.migrate(
       {
         renames: draft.renames,
         uiOverrides: draft.uiOverrides,
         get dataSchema() {
-          return json('dataSchema')
+          return draftSchema ?? json('dataSchema')
         },
         get data() {
           return json('data')
@@ -415,6 +421,7 @@ export function useDocumentProject(
       },
       name ? choices[name] : undefined,
       !name,
+      { restoreMissingSchema: !!draftSchema },
     )
     const uiChanged = !isEqual(oldUi, ui)
     if (uiChanged) {
