@@ -80,15 +80,26 @@ const emptyProject = (): SavedProject => ({
   drafts: {},
 })
 
-export function useDocumentProject(
-  storageKey: string,
-  options: CompileFormDocumentOptions,
-  applyPreview: (documents: FormDocuments) => readonly string[] | void,
-) {
+export interface DocumentProjectPersistence {
+  read(): string | null
+  write(state: string): void
+}
+
+export interface DocumentProjectOptions {
+  documentOptions?: CompileFormDocumentOptions
+  applyPreview: (documents: FormDocuments) => readonly string[] | void
+  persistence?: DocumentProjectPersistence
+}
+
+export function useDocumentProject({
+  documentOptions: options = {},
+  applyPreview,
+  persistence,
+}: DocumentProjectOptions) {
   const storageError = shallowRef(false)
   function restore(): SavedProject {
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+      const saved = JSON.parse(persistence?.read() ?? 'null')
       if (
         saved?.version === 1 &&
         typeof saved.selected === 'string' &&
@@ -116,7 +127,7 @@ export function useDocumentProject(
       }
     state.value = next
     try {
-      localStorage.setItem(storageKey, JSON.stringify(next))
+      persistence?.write(JSON.stringify(next))
       storageError.value = false
     } catch {
       storageError.value = true

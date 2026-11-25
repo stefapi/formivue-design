@@ -17,9 +17,25 @@ import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
 import { pointerSegments, type JsonObject } from '@formivue/json-schema'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
-import { useDocumentProject } from '../service/document-project'
+import {
+  useDocumentProject,
+  type DocumentProjectOptions,
+} from '@formivue-design/data-model'
+import { localProjectPersistence } from '../service'
 import { DataModelWidget } from '../widgets/DataModelWidget'
 import { PreviewWidget } from '../widgets/PreviewWidget'
+
+function openProject(
+  key: string,
+  documentOptions: DocumentProjectOptions['documentOptions'],
+  applyPreview: DocumentProjectOptions['applyPreview'],
+) {
+  return useDocumentProject({
+    documentOptions,
+    applyPreview,
+    persistence: localProjectPersistence(key),
+  })
+}
 
 const svgMeasurements = {
   getComputedTextLength: () => 24,
@@ -60,7 +76,7 @@ test.each(displayResources)(
     }
     const emptyCanvas = new TreeNode({ componentName: 'Form' })
     const canvas = new TreeNode({ componentName: 'Form', children })
-    const model = useDocumentProject(storage, options, vi.fn())
+    const model = openProject(storage, options, vi.fn())
     try {
       model.generate(emptyCanvas)
       model.addVariant('API', false)
@@ -146,7 +162,7 @@ test.each([false, true])(
         },
       ],
     })
-    const model = useDocumentProject(storage, {}, (documents) =>
+    const model = openProject(storage, {}, (documents) =>
       createFormDocument(documents).dispose(),
     )
     const rule = { type: 'string', pattern: '^[A-Z]+-[0-9]+$', readOnly: true }
@@ -216,7 +232,7 @@ test('reconciles generated chart rows and restores deleted chart fields in draft
   const canvas = new TreeNode({ componentName: 'Form' })
   let editor: VueWrapper | undefined
   try {
-    const model = useDocumentProject(storage, options, vi.fn())
+    const model = openProject(storage, options, vi.fn())
     model.generate(canvas)
     model.addVariant('API', false)
     model.edit({ ...model.files.value, data: '{"draftNote":"Keep me"}' })
@@ -373,7 +389,7 @@ test('reopens unconfirmed reconciliation choices from a project archive', () => 
       ],
     })
   try {
-    const model = useDocumentProject(sourceKey, {}, preview)
+    const model = openProject(sourceKey, {}, preview)
     model.generate(canvas(false))
     model.addVariant('Adopt', false)
     model.addVariant('Retain', false)
@@ -385,7 +401,7 @@ test('reopens unconfirmed reconciliation choices from a project archive', () => 
     model.reconciliation.value.selectChoice('Adopt', 'amount', 'adopt')
     const source = model.exportArchive(proposed.serialize())
 
-    const target = useDocumentProject(targetKey, {}, preview)
+    const target = openProject(targetKey, {}, preview)
     const archive = target.readArchive(source)
     const tree = new TreeNode(archive.canvas)
     target.importArchive(archive, tree)
@@ -395,7 +411,7 @@ test('reopens unconfirmed reconciliation choices from a project archive', () => 
     expect(target.project.value.base.data).toEqual({ amount: 45 })
     expect(preview).not.toHaveBeenCalled()
 
-    const reloaded = useDocumentProject(targetKey, {}, preview)
+    const reloaded = openProject(targetKey, {}, preview)
     reloaded.restoreReconciliation(tree)
     const review = reloaded.reconciliation.value
     expect(review.choices).toEqual({
@@ -464,7 +480,7 @@ test('restores pending path changes and invalid JSON beside the last applied var
   )
   localStorage.removeItem(storageKey)
   try {
-    const model = useDocumentProject(storageKey, {}, preview)
+    const model = openProject(storageKey, {}, preview)
     model.install(createFormDocumentProject(base))
     model.addVariant('API', false)
     const review = model.reviewRename({ path: ['price'], key: 'total' })
@@ -487,7 +503,7 @@ test('restores pending path changes and invalid JSON beside the last applied var
     expect(parseFormDocuments(model.files.value)).toEqual(base)
     model.choose('API')
 
-    const restored = useDocumentProject(storageKey, {}, preview)
+    const restored = openProject(storageKey, {}, preview)
     restored.restorePreview()
     expect(preview).toHaveBeenLastCalledWith(renamed)
     expect(restored.selected.value).toBe('API')
@@ -533,7 +549,7 @@ test('reconciles a canvas rename while transporting moved variant data and its i
     })
   localStorage.removeItem(storage)
   try {
-    const model = useDocumentProject(storage, {}, preview)
+    const model = openProject(storage, {}, preview)
     model.generate(canvas('price'))
     model.addVariant('Portable', false)
     model.reviewMove({ path: ['price'], to: ['billing', 'price'] }).confirm()
@@ -623,7 +639,7 @@ test('reconciles a canvas rename while transporting moved variant data and its i
       runtime.dispose()
     }
     model.edit(JSON.parse(JSON.stringify(json)))
-    const restored = useDocumentProject(storage, {}, preview)
+    const restored = openProject(storage, {}, preview)
     restored.restorePreview()
     expect(preview).toHaveBeenCalledTimes(2)
     expect(preview).toHaveBeenLastCalledWith(applied)
@@ -681,7 +697,7 @@ test('resolves additions, removals and type changes independently across exporte
       ],
     })
   try {
-    const model = useDocumentProject(storage, {}, preview)
+    const model = openProject(storage, {}, preview)
     model.generate(canvas(false))
     model.addVariant('API', false)
     expect(
@@ -805,7 +821,7 @@ test('resolves additions, removals and type changes independently across exporte
     const tree = canvas(true)
     const snapshot = tree.serialize()
     const archive = model.exportArchive(snapshot)
-    const target = useDocumentProject(importedStorage, {}, preview)
+    const target = openProject(importedStorage, {}, preview)
     const decoded = target.readArchive(archive)
     expect(decoded.canvas).toEqual(snapshot)
     expect(decoded.state.project).toEqual(model.project.value)
@@ -817,7 +833,7 @@ test('resolves additions, removals and type changes independently across exporte
     )
     expect(target.project.value).toBeUndefined()
     target.importArchive(decoded)
-    const restored = useDocumentProject(importedStorage, {}, preview)
+    const restored = openProject(importedStorage, {}, preview)
     restored.restorePreview()
     expect(preview).toHaveBeenLastCalledWith(applied)
     expect(restored.selected.value).toBe('API')

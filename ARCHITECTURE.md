@@ -44,6 +44,7 @@ flowchart LR
 | Canvas materials, `Behavior` and `Resource` metadata, settings schemas, and runtime `Materials` | `design/formivue-vue`                                          |
 | Property panel and specialized editors such as data sources and reactions                       | `design/vue-settings-form`, `design/formivue-setters`          |
 | Import and export of UI, data schema and data documents                                         | `design/formivue-transformer`                                  |
+| Designer data model projects, drafts, reconciliation reviews and project archives               | `design/data-model`                                            |
 | Sandbox iframe and its communication                                                            | `design/vue-sandbox`                                           |
 
 ## Advanced components
@@ -106,6 +107,12 @@ components. These packages implement the transformer's public extension
 contract. The chart extension imports the chart runtime's headless
 `data-contract` export to reuse mapping and validation rules. The registry
 belongs to the application or session.
+
+`design/data-model` manages the designer's project session. It coordinates
+variants and drafts through the transformer and reads and writes versioned
+project archives. The application supplies persistence and preview rendering.
+The playground uses local storage and connects the session to its canvas and
+data model panel.
 
 ## Verification
 

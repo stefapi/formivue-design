@@ -173,6 +173,25 @@ importers:
         specifier: workspace:*
         version: link:../../manager/reactive
 
+  design/data-model:
+    dependencies:
+      '@formivue-design/core':
+        specifier: workspace:*
+        version: link:../core
+      '@formivue-design/formivue-transformer':
+        specifier: workspace:*
+        version: link:../formivue-transformer
+      '@formivue/json-schema':
+        specifier: workspace:*
+        version: link:../../manager/json-schema
+      '@formivue/shared':
+        specifier: workspace:*
+        version: link:../../manager/shared
+    devDependencies:
+      vue:
+        specifier: ^3.5.46
+        version: 3.5.46(typescript@6.0.3)
+
   design/data-schema-advanced:
     dependencies:
       '@formivue-design/formivue-transformer':
@@ -645,6 +664,9 @@ importers:
       '@formivue-design/core':
         specifier: workspace:*
         version: link:../../design/core
+      '@formivue-design/data-model':
+        specifier: workspace:*
+        version: link:../../design/data-model
       '@formivue-design/data-schema-advanced':
         specifier: workspace:*
         version: link:../../design/data-schema-advanced

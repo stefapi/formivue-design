@@ -93,9 +93,16 @@ import {
   DocumentEditorWidget,
   MarkupSchemaWidget,
 } from './widgets'
-import { loadInitialSchema, saveCanvasSnapshot, saveSchema } from './service'
-import { useDocumentProject } from './service/document-project'
-import type { DocumentProjectArchive } from './service/document-project-archive'
+import {
+  loadInitialSchema,
+  localProjectPersistence,
+  saveCanvasSnapshot,
+  saveSchema,
+} from './service'
+import {
+  useDocumentProject,
+  type DocumentProjectArchive,
+} from '@formivue-design/data-model'
 import { createVariantsDemo } from './service/variants-demo'
 import { DataModelWidget } from './widgets/DataModelWidget'
 import type {
@@ -275,13 +282,15 @@ export const App = defineComponent({
     const demo = url.searchParams.get('demo') === 'variants'
     const profile = demo ? 'variants-demo' : ''
     url.searchParams.set('demo', 'variants')
-    const model = useDocumentProject(
-      ['formivue-document-project', advanced ? 'advanced' : '', profile]
-        .filter(Boolean)
-        .join('-'),
+    const model = useDocumentProject({
       documentOptions,
-      applyDocument,
-    )
+      applyPreview: applyDocument,
+      persistence: localProjectPersistence(
+        ['formivue-document-project', advanced ? 'advanced' : '', profile]
+          .filter(Boolean)
+          .join('-'),
+      ),
+    })
     const panes = ['workspace', 'palette', 'dataModel', 'settings'] as const
     const activePane = ref<'workspace' | 'palette' | 'settings'>('workspace')
     const sidebarTab = ref('components')

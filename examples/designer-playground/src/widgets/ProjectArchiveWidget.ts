@@ -10,8 +10,10 @@ import { Button } from '@formivue-design/vue-ui'
 import { message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
 import { downloadJson } from '../service/download-json'
-import type { DocumentProject } from '../service/document-project'
-import type { DocumentProjectArchive } from '../service/document-project-archive'
+import type {
+  DocumentProject,
+  DocumentProjectArchive,
+} from '@formivue-design/data-model'
 
 const importTitle = [
   'Import project',

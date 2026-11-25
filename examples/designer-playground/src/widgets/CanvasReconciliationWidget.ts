@@ -17,7 +17,7 @@ import {
 } from 'vue'
 import { message, type Message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
-import type { DocumentProject } from '../service/document-project'
+import type { DocumentProject } from '@formivue-design/data-model'
 
 type Review = NonNullable<DocumentProject['reconciliation']['value']>
 const pathLabel = (path: DocumentDataPath) =>

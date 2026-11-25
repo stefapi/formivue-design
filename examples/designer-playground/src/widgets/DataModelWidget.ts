@@ -29,8 +29,10 @@ import {
 import { Button } from '@formivue-design/vue-ui'
 import { exampleLocale, message, type Message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
-import type { DocumentProject } from '../service/document-project'
-import type { DocumentProjectArchive } from '../service/document-project-archive'
+import type {
+  DocumentProject,
+  DocumentProjectArchive,
+} from '@formivue-design/data-model'
 import { downloadJson } from '../service/download-json'
 import { TestDataWidget } from './TestDataWidget'
 import { CanvasReconciliationWidget } from './CanvasReconciliationWidget'

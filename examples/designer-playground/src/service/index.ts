@@ -3,12 +3,20 @@
 // le toast `message.success` antd disparaît (V1) — le retour visuel du save
 // est assuré par le ActionsWidget (indicateur « Saved », tokens V6).
 import type { Engine, ITreeNode } from '@formivue-design/core'
+import type { DocumentProjectPersistence } from '@formivue-design/data-model'
 import {
   transformToSchema,
   transformToTreeNode,
 } from '@formivue-design/formivue-transformer'
 
 export const STORAGE_KEY = 'formivue-vue-schema'
+
+export const localProjectPersistence = (
+  key: string,
+): DocumentProjectPersistence => ({
+  read: () => localStorage.getItem(key),
+  write: (state) => localStorage.setItem(key, state),
+})
 
 const storageKey = (advanced: boolean, profile: string) =>
   [STORAGE_KEY, advanced ? 'advanced' : '', profile].filter(Boolean).join('-')
