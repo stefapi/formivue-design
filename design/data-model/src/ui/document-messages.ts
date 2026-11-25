@@ -309,6 +309,17 @@ export function createDocumentMessages(locale: () => string = () => 'en') {
     return JSON.stringify(value) ?? message(['missing', 'absente', 'ausente'])
   }
 
+  function conflictMessage(paths: readonly string[]) {
+    return message(
+      [
+        'Remote updates overlap local edits: {paths}',
+        'Des mises à jour distantes touchent la saisie : {paths}',
+        'Las actualizaciones remotas afectan a los cambios locales: {paths}',
+      ],
+      { paths: paths.join(', ') },
+    )
+  }
+
   const has = (object: object, key: string) =>
     Object.prototype.hasOwnProperty.call(object, key)
 
@@ -536,5 +547,5 @@ export function createDocumentMessages(locale: () => string = () => 'en') {
     return detail
   }
 
-  return { message, documentError, validationMessage }
+  return { message, documentError, validationMessage, conflictMessage }
 }

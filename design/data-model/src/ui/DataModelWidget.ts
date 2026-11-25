@@ -28,6 +28,7 @@ import {
   type JsonObject,
 } from '@formivue/json-schema'
 import { Button } from '@formivue-design/vue-ui'
+import { formDocumentFileNames } from '../document-files'
 import type { DocumentProject } from '../document-project'
 import type { DocumentProjectArchive } from '../document-project-archive'
 import { createDocumentMessages, type Message } from './document-messages'
@@ -407,10 +408,7 @@ export const DataModelWidget = defineComponent({
       type: Function as PropType<(id?: string) => void>,
       required: true,
     },
-    componentLabel: {
-      type: Function as PropType<(id: string) => string | undefined>,
-      required: true,
-    },
+    componentLabel: Function as PropType<(id: string) => string | undefined>,
   },
   slots: Object as SlotsType<{
     preview?: (draft: DraftFormPreview) => VNodeChild
@@ -420,6 +418,11 @@ export const DataModelWidget = defineComponent({
       () => props.locale,
     )
     const action = createAction(message)
+    function componentLabel(id: string): string | undefined {
+      if (props.componentLabel) return props.componentLabel(id)
+      const node = props.tree.find((candidate) => candidate.id === id)
+      return node?.props.title ?? node?.props.name ?? node?.props['x-component']
+    }
     const tab = ref<'schema' | 'data'>('schema')
     const showSource = ref(true)
     const name = ref('')
@@ -723,7 +726,7 @@ export const DataModelWidget = defineComponent({
             ? h(CanvasReconciliationWidget, {
                 review: props.model.reconciliation.value,
                 locale: props.locale,
-                componentLabel: props.componentLabel,
+                componentLabel,
                 onCancel: props.model.cancelReconciliation,
                 onNavigate: props.onNavigate,
                 onApplied: () => {
@@ -857,7 +860,7 @@ export const DataModelWidget = defineComponent({
                                 modelValue: schema.value.value,
                                 locale: props.locale,
                                 dependencies,
-                                componentLabel: props.componentLabel,
+                                componentLabel,
                                 onNavigate: (id) => props.onNavigate(id),
                                 'onUpdate:modelValue': (value) =>
                                   update('dataSchema', value),
@@ -883,7 +886,7 @@ export const DataModelWidget = defineComponent({
                                         path,
                                         objects,
                                         onConfirmed: close,
-                                        componentLabel: props.componentLabel,
+                                        componentLabel,
                                       })
                                     : null,
                               },
@@ -923,7 +926,7 @@ export const DataModelWidget = defineComponent({
                                     ],
                                     () =>
                                       downloadJson(
-                                        'data.schema.json',
+                                        formDocumentFileNames.dataSchema,
                                         files.value.dataSchema,
                                       ),
                                     !schema.value.value,
@@ -931,7 +934,8 @@ export const DataModelWidget = defineComponent({
                                 ]),
                                 h('textarea', {
                                   class: 'data-model-source-code',
-                                  'aria-label': 'data.schema.json',
+                                  'aria-label':
+                                    formDocumentFileNames.dataSchema,
                                   'aria-invalid': schema.value.error
                                     ? 'true'
                                     : undefined,

@@ -6,8 +6,10 @@ import {
   ref,
   watch,
   type PropType,
+  type SlotsType,
+  type VNode,
 } from 'vue'
-import type { ITreeNode, TreeNode } from '@formivue-design/core'
+import type { TreeNode } from '@formivue-design/core'
 import {
   createFormDocument,
   parseFormDocuments,
@@ -20,16 +22,9 @@ import {
 } from '@formivue-design/formivue-transformer'
 import { Button } from '@formivue-design/vue-ui'
 import { DataSchemaEditor } from '@formivue-design/data-schema-editor'
-import { exampleLocale, message } from '../../../shared/language'
-import { documentError } from '../document-messages'
-import { downloadJson } from '@formivue-design/data-model/ui'
-import { SchemaEditorWidget } from './SchemaEditorWidget'
-
-const files = {
-  ui: 'ui.json',
-  dataSchema: 'data.schema.json',
-  data: 'data.json',
-} satisfies Record<keyof FormDocuments, string>
+import { formDocumentFileNames as files } from '../document-files'
+import { createDocumentMessages } from './document-messages'
+import { downloadJson } from './download-json'
 
 export const DocumentEditorWidget = defineComponent({
   name: 'DocumentEditorWidget',
@@ -39,6 +34,8 @@ export const DocumentEditorWidget = defineComponent({
     hasComponent: Function as PropType<
       CompileFormDocumentOptions['hasComponent']
     >,
+    locale: String,
+    showVisualSchema: { type: Boolean, default: true },
     documents: Object as PropType<FormDocuments>,
     draft: Object as PropType<FormDocumentJson>,
     onDraft: Function as PropType<(draft: FormDocumentJson) => void>,
@@ -51,9 +48,12 @@ export const DocumentEditorWidget = defineComponent({
       required: true,
     },
     onCanvas: { type: Function as PropType<() => void>, required: true },
-    onChange: Function as PropType<(tree: ITreeNode) => void>,
   },
-  setup(props) {
+  slots: Object as SlotsType<{ legacy?: () => VNode[] }>,
+  setup(props, { slots }) {
+    const { message, documentError, conflictMessage } = createDocumentMessages(
+      () => props.locale,
+    )
     const part = ref<keyof FormDocuments | 'legacy'>('ui')
     const contents = ref<FormDocumentJson>({ ui: '', dataSchema: '', data: '' })
     const visualSchema = ref(true)
@@ -102,9 +102,12 @@ export const DocumentEditorWidget = defineComponent({
           contracts: props.contracts,
           hasComponent: props.hasComponent,
         })
-        const canonical = stringifyFormDocuments(session.exportDocuments())
-        session.dispose()
-        downloadJson(files[key], canonical[key])
+        try {
+          const canonical = stringifyFormDocuments(session.exportDocuments())
+          downloadJson(files[key], canonical[key])
+        } finally {
+          session.dispose()
+        }
         error.value = ''
       } catch (cause) {
         error.value = documentError(cause)
@@ -143,14 +146,19 @@ export const DocumentEditorWidget = defineComponent({
               ...Object.entries(files).map(([key, label]) =>
                 h('option', { value: key }, label),
               ),
-              h(
-                'option',
-                { value: 'legacy' },
-                message(['Formivue JSON', 'JSON Formivue', 'JSON de Formivue']),
-              ),
+              slots.legacy &&
+                h(
+                  'option',
+                  { value: 'legacy' },
+                  message([
+                    'Formivue JSON',
+                    'JSON Formivue',
+                    'JSON de Formivue',
+                  ]),
+                ),
             ],
           ),
-          !props.onModel && selected === 'dataSchema' && schema.value
+          props.showVisualSchema && selected === 'dataSchema' && schema.value
             ? h(
                 Button,
                 {
@@ -238,14 +246,7 @@ export const DocumentEditorWidget = defineComponent({
                         )
                         error.value =
                           conflicts && conflicts.length
-                            ? message(
-                                [
-                                  'Remote updates overlap local edits: {paths}',
-                                  'Des mises à jour distantes touchent la saisie : {paths}',
-                                  'Las actualizaciones remotas afectan a los cambios locales: {paths}',
-                                ],
-                                { paths: conflicts.join(', ') },
-                              )
+                            ? conflictMessage(conflicts)
                             : ''
                       } catch (cause) {
                         error.value = documentError(cause)
@@ -292,21 +293,14 @@ export const DocumentEditorWidget = defineComponent({
             )
           : null,
         selected === 'legacy'
-          ? h(
-              'div',
-              { class: 'min-h-0 flex-1' },
-              h(SchemaEditorWidget, {
-                tree: props.tree,
-                onChange: props.onChange,
-              }),
-            )
-          : !props.onModel &&
+          ? h('div', { class: 'min-h-0 flex-1' }, slots.legacy?.())
+          : props.showVisualSchema &&
               selected === 'dataSchema' &&
               visualSchema.value &&
               schema.value
             ? h(DataSchemaEditor, {
                 modelValue: schema.value,
-                locale: exampleLocale.value,
+                locale: props.locale,
                 'onUpdate:modelValue': (value) => {
                   write('dataSchema', JSON.stringify(value, null, 2))
                   error.value = ''

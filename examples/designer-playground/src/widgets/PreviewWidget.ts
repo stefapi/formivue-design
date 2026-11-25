@@ -17,8 +17,7 @@ import type { DraftFormPreview } from '@formivue-design/data-model/ui'
 // ATTENTION piège du port : le barrel de @formivue-design/formivue-vue exporte le
 // MATÉRIAU DESIGNER FormLayout (= withContainer → DroppableWidget du chrome) ;
 // la binding réelle vit dans la carte Materials (FormLayout vue-ui pur).
-import { message } from '../../../shared/language'
-import { validationMessage } from '../document-messages'
+import { conflictMessage, validationMessage } from '../document-messages'
 import { Materials } from '@formivue-design/formivue-vue'
 
 export const PreviewWidget = observer(
@@ -70,14 +69,7 @@ export const PreviewWidget = observer(
                                 role: 'alert',
                                 class: 'text-sm text-destructive',
                               },
-                              message(
-                                [
-                                  'Remote updates overlap local edits: {paths}',
-                                  'Des mises à jour distantes touchent la saisie : {paths}',
-                                  'Las actualizaciones remotas afectan a los cambios locales: {paths}',
-                                ],
-                                { paths: conflicts.join(', ') },
-                              ),
+                              conflictMessage(conflicts),
                             ),
                           ]
                         : []),

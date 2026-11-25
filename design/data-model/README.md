@@ -3,14 +3,21 @@
 `useDocumentProject` manages the base model, variants, draft documents and
 reconciliation reviews for a designer canvas. Pass the component contracts
 used by the application and a callback that applies the documents to the
-preview.
+preview. `useDocumentPreview` supplies this callback when the application
+uses a Formivue document session. It keeps the form and reports conflicts
+when only the data changes. Call `preview.clear()` when closing the preview
+or unmounting its owner.
 
 ```ts
-import { useDocumentProject } from '@formivue-design/data-model'
+import {
+  useDocumentPreview,
+  useDocumentProject,
+} from '@formivue-design/data-model'
 
+const preview = useDocumentPreview({ contracts })
 const model = useDocumentProject({
   documentOptions: { contracts },
-  applyPreview,
+  applyPreview: preview.apply,
   persistence: {
     read: () => localStorage.getItem('my-form-project'),
     write: (state) => localStorage.setItem('my-form-project', state),
@@ -38,3 +45,10 @@ Pass the canvas tree, project session, document options and application locale
 to the panel. The application handles archive installation and navigation to
 the canvas or JSON documents. The optional `preview` slot receives the draft
 form, compiled schema and binding scope for the application's renderer.
+
+`DocumentEditorWidget` from the same entry edits, imports and downloads
+`ui.json`, `data.schema.json` and `data.json`. Wire `draft`, `onDraft`,
+`onReload` and `onApply` to the project to share its draft with the model
+panel. The optional `legacy` slot adds an editor for the combined Formivue
+JSON format. Set `showVisualSchema` to `false` when the application already
+provides the visual schema editor in the model panel.

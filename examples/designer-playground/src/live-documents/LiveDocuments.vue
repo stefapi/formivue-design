@@ -6,6 +6,11 @@ import { Materials } from '@formivue-design/formivue-vue'
 import { DataTable } from '@formivue-design/shadcn-advanced-runtime'
 import { BarChart } from '@formivue-design/charts-runtime'
 import {
+  formDocumentFileNames as fileNames,
+  hasSameFormDocumentDefinition,
+} from '@formivue-design/data-model'
+import { downloadJson } from '@formivue-design/data-model/ui'
+import {
   parseFormDocuments,
   type FormDocumentJson,
 } from '@formivue-design/formivue-transformer'
@@ -49,11 +54,6 @@ const sections = computed(() => {
   }
 })
 
-const fileNames = {
-  ui: 'ui.json',
-  dataSchema: 'data.schema.json',
-  data: 'data.json',
-} satisfies Record<keyof FormDocumentJson, string>
 const selected = ref<keyof FormDocumentJson>('data')
 const drafts = ref<Partial<FormDocumentJson>>({})
 const files = shallowRef(demo.value.files())
@@ -183,11 +183,7 @@ function edit(event: Event) {
 function applyDocuments() {
   try {
     const docs = parseFormDocuments({ ...files.value, ...drafts.value })
-    const previous = session.value.exportDocuments()
-    if (
-      JSON.stringify(previous.ui) === JSON.stringify(docs.ui) &&
-      JSON.stringify(previous.dataSchema) === JSON.stringify(docs.dataSchema)
-    ) {
+    if (hasSameFormDocumentDefinition(session.value.exportDocuments(), docs)) {
       demo.value.applyData(docs.data)
     } else {
       const next = createSalesDemo(docs)
@@ -223,14 +219,7 @@ async function importFile(event: Event) {
 }
 
 function download() {
-  const url = URL.createObjectURL(
-    new Blob([files.value[selected.value]], { type: 'application/json' }),
-  )
-  const link = document.createElement('a')
-  link.download = fileNames[selected.value]
-  link.href = url
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 0)
+  downloadJson(fileNames[selected.value], files.value[selected.value])
 }
 
 onUnmounted(() => {

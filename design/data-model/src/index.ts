@@ -1,4 +1,9 @@
 export {
+  formDocumentFileNames,
+  hasSameFormDocumentDefinition,
+} from './document-files'
+export { useDocumentPreview } from './document-preview'
+export {
   useDocumentProject,
   type DocumentProject,
   type DocumentProjectOptions,

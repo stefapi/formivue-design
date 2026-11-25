@@ -19,6 +19,8 @@ import {
 } from '@formivue-design/formivue-transformer'
 import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
 import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
+import { useDocumentPreview } from '@formivue-design/data-model'
+import { DocumentEditorWidget } from '@formivue-design/data-model/ui'
 import * as Standard from '@formivue-design/formivue-vue'
 import { AdvancedSources } from '@formivue-design/shadcn-advanced-designer'
 import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
@@ -29,7 +31,6 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { describe, expect, test, vi } from 'vitest'
 import { PreviewWidget } from '../widgets/PreviewWidget'
-import { DocumentEditorWidget } from '../widgets/DocumentEditorWidget'
 
 const makeNode = (
   key: string,
@@ -1881,6 +1882,52 @@ describe('separate UI, schema and data documents', () => {
       expect(document.exportData().links).toEqual(initial.data.links)
     } finally {
       document.dispose()
+    }
+  })
+
+  test('keeps the preview form and reports conflicts on a data-only update', () => {
+    const preview = useDocumentPreview({ contracts })
+    const initial = documents()
+    try {
+      preview.apply(initial)
+      const active = preview.document.value!
+      active.form.setValuesIn('heading', 'Local heading')
+
+      const next = active.exportDocuments()
+      next.data.heading = 'Imported heading'
+      expect(preview.apply(next)).toEqual(['/heading'])
+      expect(preview.document.value).toBe(active)
+      expect(active.form.getValuesIn('heading')).toBe('Local heading')
+
+      const changed = active.exportDocuments()
+      changed.dataSchema.properties.heading = { type: 'string', minLength: 1 }
+      preview.apply(changed)
+      expect(preview.document.value).not.toBe(active)
+    } finally {
+      preview.clear()
+    }
+  })
+
+  test('keeps the current preview when archive replacement fails', () => {
+    const preview = useDocumentPreview({ contracts })
+    try {
+      const original = documents()
+      preview.apply(original)
+      const active = preview.document.value
+      const installCanvas = vi.fn(() => {
+        throw new Error('Canvas could not be installed')
+      })
+
+      expect(() =>
+        preview.replace({ ...original, data: {} }, installCanvas),
+      ).toThrow()
+      expect(installCanvas).not.toHaveBeenCalled()
+      expect(() => preview.replace(original, installCanvas)).toThrow(
+        'Canvas could not be installed',
+      )
+      expect(preview.document.value).toBe(active)
+    } finally {
+      preview.clear()
     }
   })
 

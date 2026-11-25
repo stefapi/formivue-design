@@ -15,8 +15,6 @@ import {
   onMounted,
   onUnmounted,
   ref,
-  shallowRef,
-  triggerRef,
   type PropType,
 } from 'vue'
 import {
@@ -38,11 +36,7 @@ import {
   TextWidget,
 } from '@formivue-design/vue'
 import { useObserver } from '@formivue/reactive-vue'
-import {
-  createFormDocument,
-  type DocumentContractRegistry,
-  type FormDocuments,
-} from '@formivue-design/formivue-transformer'
+import type { DocumentContractRegistry } from '@formivue-design/formivue-transformer'
 import { SettingsForm } from '@formivue-design/vue-settings-form'
 import {
   createDesigner,
@@ -90,7 +84,7 @@ import {
   LogoWidget,
   ActionsWidget,
   PreviewWidget,
-  DocumentEditorWidget,
+  SchemaEditorWidget,
   MarkupSchemaWidget,
 } from './widgets'
 import {
@@ -101,9 +95,13 @@ import {
 } from './service'
 import {
   useDocumentProject,
+  useDocumentPreview,
   type DocumentProjectArchive,
 } from '@formivue-design/data-model'
-import { DataModelWidget } from '@formivue-design/data-model/ui'
+import {
+  DataModelWidget,
+  DocumentEditorWidget,
+} from '@formivue-design/data-model/ui'
 import { exampleLocale } from '../../shared/language'
 import { createVariantsDemo } from './service/variants-demo'
 import type {
@@ -254,30 +252,8 @@ export const App = defineComponent({
           .split('.')
           .reduce((value, key) => value?.[key], materials as any) != null,
     }
-    const previewDocument = shallowRef<ReturnType<typeof createFormDocument>>()
-    const clearDocument = () => {
-      previewDocument.value?.dispose()
-      previewDocument.value = undefined
-    }
-    onUnmounted(clearDocument)
-    const applyDocument = (documents: FormDocuments) => {
-      const current = previewDocument.value
-      const currentDocuments = current?.exportDocuments()
-      if (
-        current &&
-        JSON.stringify(currentDocuments.ui) === JSON.stringify(documents.ui) &&
-        JSON.stringify(currentDocuments.dataSchema) ===
-          JSON.stringify(documents.dataSchema)
-      ) {
-        const result = current.replaceData(documents.data)
-        triggerRef(previewDocument)
-        return result.conflicts
-      } else {
-        const next = createFormDocument(documents, documentOptions)
-        clearDocument()
-        previewDocument.value = next
-      }
-    }
+    const preview = useDocumentPreview(documentOptions)
+    onUnmounted(preview.clear)
     const advanced = !!props.advanced
     const url = new URL(window.location.href)
     const demo = url.searchParams.get('demo') === 'variants'
@@ -285,7 +261,7 @@ export const App = defineComponent({
     url.searchParams.set('demo', 'variants')
     const model = useDocumentProject({
       documentOptions,
-      applyPreview: applyDocument,
+      applyPreview: preview.apply,
       persistence: localProjectPersistence(
         ['formivue-document-project', advanced ? 'advanced' : '', profile]
           .filter(Boolean)
@@ -315,19 +291,11 @@ export const App = defineComponent({
       engine.workbench.setWorkbenchType('DATAMODEL')
     }
     const openArchive = (archive: DocumentProjectArchive) => {
-      const next = archive.state.applied
-        ? createFormDocument(archive.state.applied, documentOptions)
-        : undefined
-      try {
+      preview.replace(archive.state.applied, () => {
         saveCanvasSnapshot(archive.canvas, advanced, profile)
         engine.setCurrentTree(archive.canvas)
         engine.workbench.currentWorkspace.operation.selection.clear()
-      } catch (cause) {
-        next?.dispose()
-        throw cause
-      }
-      clearDocument()
-      previewDocument.value = next
+      })
       model.importArchive(archive, engine.getCurrentTree())
     }
     onMounted(() => {
@@ -603,17 +571,6 @@ export const App = defineComponent({
                                               'JSONTREE',
                                             ),
                                           onNavigate: navigateToCanvas,
-                                          componentLabel: (id) => {
-                                            const node = tree.find(
-                                              (node: { id: string }) =>
-                                                node.id === id,
-                                            )
-                                            return (
-                                              node?.props.title ??
-                                              node?.props.name ??
-                                              node?.props['x-component']
-                                            )
-                                          },
                                         },
                                         {
                                           preview: (draft) =>
@@ -648,27 +605,38 @@ export const App = defineComponent({
                                       tree: any
                                       onChange: any
                                     }) =>
-                                      h(DocumentEditorWidget, {
-                                        tree,
-                                        onChange,
-                                        contracts:
-                                          props.advanced?.documentContracts,
-                                        hasComponent:
-                                          documentOptions.hasComponent,
-                                        documents:
-                                          previewDocument.value?.exportDocuments(),
-                                        draft: model.files.value,
-                                        onDraft: model.edit,
-                                        onModel: openDataModel,
-                                        onReload: model.project.value
-                                          ? model.resetDraft
-                                          : undefined,
-                                        onApply: model.apply,
-                                        onCanvas: () => {
-                                          model.clearPreview()
-                                          clearDocument()
+                                      h(
+                                        DocumentEditorWidget,
+                                        {
+                                          tree,
+                                          locale: exampleLocale.value,
+                                          showVisualSchema: false,
+                                          contracts: documentOptions.contracts,
+                                          hasComponent:
+                                            documentOptions.hasComponent,
+                                          documents:
+                                            preview.document.value?.exportDocuments(),
+                                          draft: model.files.value,
+                                          onDraft: model.edit,
+                                          onModel: openDataModel,
+                                          onReload: model.project.value
+                                            ? model.resetDraft
+                                            : undefined,
+                                          onApply: model.apply,
+                                          onCanvas: () => {
+                                            model.clearPreview()
+                                            preview.clear()
+                                          },
                                         },
-                                      }),
+                                        {
+                                          legacy: () => [
+                                            h(SchemaEditorWidget, {
+                                              tree,
+                                              onChange,
+                                            }),
+                                          ],
+                                        },
+                                      ),
                                   },
                                 ),
                                 h(
@@ -688,7 +656,7 @@ export const App = defineComponent({
                                         tree,
                                         materials: props.advanced?.materials,
                                         frame: props.advanced?.previewFrame,
-                                        document: previewDocument.value,
+                                        document: preview.document.value,
                                       }),
                                   },
                                 ),

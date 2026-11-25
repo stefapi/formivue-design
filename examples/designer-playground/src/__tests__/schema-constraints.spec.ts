@@ -9,7 +9,7 @@ import {
 } from '@formivue-design/formivue-transformer'
 import { mount } from '@vue/test-utils'
 import { expect, test, vi } from 'vitest'
-import { DocumentEditorWidget } from '../widgets/DocumentEditorWidget'
+import { DocumentEditorWidget } from '@formivue-design/data-model/ui'
 import { PreviewWidget } from '../widgets/PreviewWidget'
 
 const tree = () => new TreeNode({ componentName: 'Form' })

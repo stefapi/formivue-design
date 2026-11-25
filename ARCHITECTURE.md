@@ -44,7 +44,7 @@ flowchart LR
 | Canvas materials, `Behavior` and `Resource` metadata, settings schemas, and runtime `Materials` | `design/formivue-vue`                                          |
 | Property panel and specialized editors such as data sources and reactions                       | `design/vue-settings-form`, `design/formivue-setters`          |
 | Import and export of UI, data schema and data documents                                         | `design/formivue-transformer`                                  |
-| Designer data model projects, drafts, reconciliation, archives and the model panel              | `design/data-model`                                            |
+| Designer data model projects, drafts, reconciliation, preview sessions and document editors     | `design/data-model`                                            |
 | Sandbox iframe and its communication                                                            | `design/vue-sandbox`                                           |
 
 ## Advanced components
@@ -109,10 +109,11 @@ contract. The chart extension imports the chart runtime's headless
 belongs to the application or session.
 
 `design/data-model` manages the designer's project session. It coordinates
-variants and drafts through the transformer and reads and writes versioned
-project archives. Its `ui` entry provides the panel and its schema, test-data,
-reconciliation and archive controls. The playground supplies local storage,
-language, canvas navigation and a renderer for the draft preview slot.
+variants and drafts through the transformer, manages the preview document
+session and reads and writes versioned project archives. Its `ui` entry
+provides the model panel and the three-document JSON editor. The playground
+supplies local storage, language, canvas navigation, the preview renderer
+and the editor for the combined Formivue JSON format.
 
 ## Verification
 
