@@ -127,6 +127,76 @@ test.each(displayResources)(
   },
 )
 
+test.each([false, true])(
+  'restores a deleted field from the applied variant (draft move: %s)',
+  (moved) => {
+    const storage = 'test-formivue-restore-variant-settings-' + moved
+    const canvas = new TreeNode({
+      componentName: 'Form',
+      children: [
+        {
+          id: 'account',
+          componentName: 'Field',
+          props: {
+            name: 'account',
+            type: 'string',
+            default: 'BASE-1',
+            'x-component': 'Input',
+          },
+        },
+      ],
+    })
+    const model = useDocumentProject(storage, {}, (documents) =>
+      createFormDocument(documents).dispose(),
+    )
+    const rule = { type: 'string', pattern: '^[A-Z]+-[0-9]+$', readOnly: true }
+    try {
+      model.generate(canvas)
+      model.addVariant('Customer API', false)
+      expect(
+        model.reviewRename({ path: ['account'], key: 'customer_id' }).confirm(),
+      ).toBe(true)
+      const applied = parseFormDocuments(model.files.value)
+      applied.dataSchema.properties.customer_id = rule
+      applied.dataSchema.required = ['customer_id']
+      applied.data.customer_id = 'API-1'
+      model.apply(applied)
+      if (moved)
+        expect(
+          model
+            .reviewMove({ path: ['customer_id'], to: ['customer', 'id'] })
+            .confirm(),
+        ).toBe(true)
+      const draft = parseFormDocuments(model.files.value)
+      const parentSchema = moved
+        ? (draft.dataSchema.properties.customer as FormDocuments['dataSchema'])
+        : draft.dataSchema
+      const parentData = (
+        moved ? draft.data.customer : draft.data
+      ) as JsonObject
+      const key = moved ? 'id' : 'customer_id'
+      delete parentSchema.properties[key]
+      delete parentSchema.required
+      parentData[key] = 'TEST-42'
+      model.edit(stringifyFormDocuments(draft))
+
+      model.generate(canvas)
+      expect(model.reconciliation.value).toBeUndefined()
+      const restored = parseFormDocuments(model.files.value)
+      const restoredParent = moved
+        ? (restored.dataSchema.properties
+            .customer as FormDocuments['dataSchema'])
+        : restored.dataSchema
+      expect(restoredParent.properties[key]).toEqual(rule)
+      expect(restoredParent.required).toEqual([key])
+      expect(restored.data).toEqual(draft.data)
+      createFormDocument(restored).dispose()
+    } finally {
+      localStorage.removeItem(storage)
+    }
+  },
+)
+
 test('reconciles generated chart rows and restores deleted chart fields in drafts', async () => {
   const storage = 'test-formivue-chart-reconciliation'
   const options = {

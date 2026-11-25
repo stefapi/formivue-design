@@ -316,7 +316,14 @@ export function useDocumentProject(
               try {
                 return [
                   name,
-                  rebaseDraft(saved.project, prepared, choices, name, draft),
+                  rebaseDraft(
+                    saved.project,
+                    result.project,
+                    prepared,
+                    choices,
+                    name,
+                    draft,
+                  ),
                 ]
               } catch (cause) {
                 if (!(cause instanceof DocumentValidationError)) throw cause
@@ -363,11 +370,15 @@ export function useDocumentProject(
 
   function rebaseDraft(
     before: FormDocumentProject,
+    reconciled: FormDocumentProject,
     prepared: ReturnType<typeof prepareFormDocumentReconciliation>,
     choices: ReconciliationChoices,
     name: string,
     draft: Draft,
   ): Draft {
+    const applied = name
+      ? reconciled.variants.find((variant) => variant.name === name)
+      : { ...reconciled.base, renames: [] }
     const oldUi = name
       ? materializeFormDocumentVariant(
           {
@@ -421,7 +432,7 @@ export function useDocumentProject(
       },
       name ? choices[name] : undefined,
       !name,
-      { restoreMissingSchema: !!draftSchema },
+      { restoreMissingSchema: !!draftSchema, applied },
     )
     const uiChanged = !isEqual(oldUi, ui)
     if (uiChanged) {

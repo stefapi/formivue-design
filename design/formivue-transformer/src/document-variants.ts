@@ -39,6 +39,7 @@ import {
   describeCanvasChanges,
   migrateCanvasVariant,
   reconciliationIssues,
+  restoreAppliedProperties,
   restoreCanvasProperties,
   type CanvasNodeOverride,
   type CanvasReconciliationChoice,
@@ -403,7 +404,13 @@ export function prepareFormDocumentReconciliation(
     >,
     choices?: Readonly<Record<string, CanvasReconciliationChoice>>,
     canonical = false,
-    { restoreMissingSchema = true } = {},
+    {
+      restoreMissingSchema = true,
+      applied,
+    }: {
+      restoreMissingSchema?: boolean
+      applied?: Pick<FormDocumentVariant, 'dataSchema' | 'data' | 'renames'>
+    } = {},
   ) {
     const result = migrateCanvasVariant(
       project.base.ui,
@@ -459,12 +466,17 @@ export function prepareFormDocumentReconciliation(
         paths.push({ from, to: materialize(from) })
     if (!paths.length) return result
     paths.sort((a, b) => a.to.length - b.to.length)
-    const dataChanges = restoreCanvasProperties(
-      result.dataChanges ?? variant,
-      canvas,
-      paths,
-      result.renames,
-    )
+    const source = result.dataChanges ?? variant
+    const restored =
+      applied &&
+      restoreAppliedProperties(source, applied, paths, result.renames)
+    const dataChanges =
+      restoreCanvasProperties(
+        restored ?? source,
+        canvas,
+        paths,
+        result.renames,
+      ) ?? restored
     return dataChanges ? { ...result, dataChanges } : result
   }
   return {

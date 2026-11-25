@@ -366,9 +366,38 @@ function schemaObject(
   return current
 }
 
+export function restoreAppliedProperties(
+  source: Pick<FormDocuments, 'dataSchema' | 'data'>,
+  applied: ReconciliationSource,
+  paths: readonly { from: DocumentDataPath; to: DocumentDataPath }[],
+  history: readonly DocumentPropertyChange[],
+) {
+  // Draft path edits extend the applied history. Replay only the unapplied edits.
+  if (
+    !applied.renames.every((edit, index) => {
+      const next = history[index]
+      return (
+        next &&
+        samePath(edit.path, next.path) &&
+        samePath(destination(edit), destination(next))
+      )
+    })
+  )
+    return
+  return restoreCanvasProperties(
+    source,
+    applied,
+    paths.map(({ from, to }) => ({
+      from: applied.renames.reduce(renameDataPath, from),
+      to,
+    })),
+    history.slice(applied.renames.length),
+  )
+}
+
 export function restoreCanvasProperties(
   source: Pick<FormDocuments, 'dataSchema' | 'data'>,
-  canvas: FormDocuments,
+  canvas: Pick<FormDocuments, 'dataSchema' | 'data'>,
   paths: readonly { from: DocumentDataPath; to: DocumentDataPath }[],
   history: readonly DocumentPropertyChange[],
 ) {
