@@ -164,8 +164,31 @@ export function documentError(error: unknown) {
   }
   return error.issues
     .map(
-      ({ component, path, property, code, message: detail }) =>
-        `${component ? component + ' ' : ''}${path || '/'}${property ? ' · ' + property : ''}: ${validationMessage(detail, code)}`,
+      ({
+        component,
+        path,
+        property,
+        code,
+        message: detail,
+        constantMismatch,
+      }) => {
+        const explanation = constantMismatch
+          ? message(
+              [
+                'Expected {expected}, current value {actual}.',
+                'Valeur attendue {expected}, valeur actuelle {actual}.',
+                'Valor esperado {expected}, valor actual {actual}.',
+              ],
+              {
+                expected: JSON.stringify(constantMismatch.expected),
+                actual:
+                  JSON.stringify(constantMismatch.actual) ??
+                  message(['missing', 'absente', 'ausente']),
+              },
+            )
+          : validationMessage(detail, code)
+        return `${component ? component + ' ' : ''}${path || '/'}${property ? ' · ' + property : ''}: ${explanation}`
+      },
     )
     .join('\n')
 }

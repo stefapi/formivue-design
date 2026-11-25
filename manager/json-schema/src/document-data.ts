@@ -21,6 +21,7 @@ export interface DocumentIssue {
   property?: string
   code?: string
   severity?: 'error' | 'warning'
+  constantMismatch?: { expected: JsonValue; actual: unknown }
 }
 
 export class DocumentValidationError extends Error {
@@ -153,11 +154,17 @@ export interface DataSchemaValidationOptions {
   resources?: DataSchemaRegistry
   /** The document manager asserts registered formats by default. */
   format?: 'assert' | 'annotate'
+  /** Include both values for failed const rules and collapse their direct conditional summary. */
+  includeConstantValues?: boolean
 }
 
 export function compileDataValidator(
   schema: JsonDataSchema,
-  { resources = {}, format = 'assert' }: DataSchemaValidationOptions = {},
+  {
+    resources = {},
+    format = 'assert',
+    includeConstantValues = false,
+  }: DataSchemaValidationOptions = {},
 ) {
   const ajv = new Ajv2020({
     allErrors: true,
@@ -198,11 +205,37 @@ export function compileDataValidator(
       }
     }
     if (needsDialectEvaluation(schema, resources))
-      return dialectValidator(schema, resources, format === 'assert')
+      return dialectValidator(
+        schema,
+        resources,
+        format === 'assert',
+        includeConstantValues,
+      )
     const validate = ajv.compile(schema)
     return (value: unknown): DocumentIssue[] => {
       if (validate(value)) return []
-      return validate.errors.map(
+      const errors = validate.errors
+      const constants = includeConstantValues
+        ? new Set(
+            errors
+              .filter(({ keyword }) => keyword === 'const')
+              .map(({ instancePath, schemaPath }) =>
+                JSON.stringify([instancePath, schemaPath]),
+              ),
+          )
+        : undefined
+      const issues = constants?.size
+        ? errors.filter(({ keyword, instancePath, schemaPath, params }) => {
+            if (keyword !== 'if') return true
+            const branch =
+              schemaPath.slice(0, schemaPath.lastIndexOf('/') + 1) +
+              params.failingKeyword
+            return !constants.has(
+              JSON.stringify([instancePath, branch + '/const']),
+            )
+          })
+        : errors
+      return issues.map(
         ({ instancePath, message, keyword, params, propertyName }) => {
           const field =
             propertyName ??
@@ -216,6 +249,16 @@ export function compileDataValidator(
                 ? instancePath + jsonPointer([field])
                 : instancePath,
             message: message ?? keyword,
+            ...(includeConstantValues && keyword === 'const'
+              ? {
+                  constantMismatch: {
+                    expected: params.allowedValue as JsonValue,
+                    actual:
+                      propertyName ??
+                      valueAt(value, pointerSegments(instancePath)),
+                  },
+                }
+              : {}),
           }
         },
       )

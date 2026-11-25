@@ -432,10 +432,10 @@ export const DataModelWidget = defineComponent({
     const validation = computed(() =>
       schema.value.value
         ? parsed(() =>
-            compileDataValidator(
-              schema.value.value,
-              props.options.schemaValidation,
-            ),
+            compileDataValidator(schema.value.value, {
+              ...props.options.schemaValidation,
+              includeConstantValues: true,
+            }),
           )
         : { error: schema.value.error, value: undefined },
     )

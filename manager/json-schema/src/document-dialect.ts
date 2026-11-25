@@ -12,6 +12,7 @@ import {
   jsonPointer,
   valueAt,
   type DocumentIssue,
+  type JsonValue,
 } from './document-data'
 import {
   dataSchemaLocations,
@@ -167,6 +168,7 @@ export function dialectValidator(
   schema: JsonDataSchema,
   resources: DataSchemaRegistry,
   assertFormats: boolean,
+  includeConstantValues: boolean,
 ) {
   const drafts = Object.entries(resources).flatMap(([uri, meta]) => {
     if (!isJsonObject(meta) || !isJsonObject(meta.$vocabulary)) return []
@@ -244,6 +246,14 @@ export function dialectValidator(
           message:
             (typeof code === 'string' ? messages[code]?.() : undefined) ??
             message,
+          ...(includeConstantValues && code === 'const-error'
+            ? {
+                constantMismatch: {
+                  expected: data.expected as JsonValue,
+                  actual: data.value,
+                },
+              }
+            : {}),
         }
       })
     } catch (cause) {

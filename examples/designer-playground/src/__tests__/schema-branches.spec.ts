@@ -1,4 +1,7 @@
-import { compileDataValidator } from '@formivue/json-schema'
+import {
+  compileDataValidator,
+  DocumentValidationError,
+} from '@formivue/json-schema'
 import {
   compileFormDocuments,
   createDocumentContractRegistry,
@@ -9,6 +12,7 @@ import {
 } from '@formivue-design/formivue-transformer'
 import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
 import { expect, test } from 'vitest'
+import { documentError } from '../../../shared/document-messages'
 
 const contracts = createDocumentContractRegistry([chartDocumentContracts])
 const fixture = (): FormDocuments => ({
@@ -198,3 +202,40 @@ test('validates tuple evaluation, remote dynamic anchors, field diagnostics and 
   expect(compileDataValidator({ multipleOf: 1e-8 })(1.5e-8)).not.toEqual([])
   expect(compileDataValidator({ multipleOf: 1e-8 })(3e-8)).toEqual([])
 })
+
+test.each(['standard', 'dialect'])(
+  'shows one conditional constant error with both values (%s)',
+  (mode) => {
+    const schema = {
+      type: 'object',
+      properties: {
+        account: { type: 'string', if: true, then: { const: 'toto' } },
+        amount:
+          mode === 'dialect'
+            ? { type: 'number', multipleOf: 2 }
+            : { type: 'number' },
+      },
+    }
+    const validate = compileDataValidator(schema, {
+      includeConstantValues: true,
+    })
+    const issues = validate({ account: 'ACME-01', amount: 2 })
+    expect(issues).toHaveLength(1)
+    expect(issues[0]).toMatchObject({
+      path: '/account',
+      constantMismatch: { expected: 'toto', actual: 'ACME-01' },
+    })
+    expect(documentError(new DocumentValidationError(issues))).toBe(
+      '/account: Expected "toto", current value "ACME-01".',
+    )
+    expect(validate({ account: 'toto', amount: 2 })).toEqual([])
+    if (mode === 'standard') {
+      expect(
+        compileDataValidator(schema)({ account: 'ACME-01', amount: 2 }),
+      ).toEqual([
+        { path: '/account', message: 'must be equal to constant' },
+        { path: '/account', message: 'must match "then" schema' },
+      ])
+    }
+  },
+)
