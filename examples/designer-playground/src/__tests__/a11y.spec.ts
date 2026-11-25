@@ -7,7 +7,7 @@
 // ici simplement hérité du montage réel de l'App).
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { DOMWrapper, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { TreeNode } from '@formivue-design/core'
 import { App } from '../app'
@@ -57,6 +57,7 @@ afterEach(() => {
   document.body.innerHTML = ''
   localStorage.removeItem('formivue-vue-schema')
   localStorage.removeItem('formivue-vue-schema-advanced')
+  localStorage.removeItem('formivue-document-project')
 })
 
 const runAxe = async () => {
@@ -116,6 +117,45 @@ describe('playground formivue-vue — a11y (V8)', () => {
       false,
     )
 
+    const source = () =>
+      wrapper.get<HTMLTextAreaElement>(
+        'textarea[aria-label="data.schema.json"]',
+      )
+    await wrapper.get('button[aria-label="Add field"]').trigger('click')
+    const name = wrapper.get('input[data-field-name="/properties/field"]')
+    await name.setValue('customer')
+    await name.trigger('blur')
+    expect(JSON.parse(source().element.value).properties.customer).toEqual({
+      type: 'string',
+    })
+    const valid = source().element.value
+    await source().setValue('{')
+    expect(source().element.value).toBe('{')
+    expect(wrapper.find('.schema-builder').exists()).toBe(false)
+    await source().setValue(
+      JSON.stringify({
+        ...JSON.parse(valid),
+        properties: { customer: { type: 'integer', minimum: 0 } },
+      }),
+    )
+    expect(
+      wrapper.get<HTMLSelectElement>('[data-field-type="/properties/customer"]')
+        .element.value,
+    ).toBe('integer')
+    await runAxe()
+    await wrapper
+      .get('button[aria-label="Field settings · customer"]')
+      .trigger('click')
+    const dialog = new DOMWrapper(document.body).get('[role="dialog"]')
+    expect(dialog.get('[role="tab"][aria-selected="true"]').text()).toBe(
+      'Validation',
+    )
+    await runAxe()
+    await dialog
+      .findAll('button')
+      .find((button) => button.text() === 'Close settings')
+      .trigger('click')
+
     const workspaceButton = (label: string) =>
       wrapper
         .findAll('.dn-workspace-panel button')
@@ -124,12 +164,21 @@ describe('playground formivue-vue — a11y (V8)', () => {
     await vi.waitFor(() =>
       expect(workspaceButton('Back to data model')).toBeDefined(),
     )
+    await wrapper
+      .get('select[aria-label="JSON document"]')
+      .setValue('dataSchema')
+    expect(JSON.parse(source().element.value).properties.customer.minimum).toBe(
+      0,
+    )
     await workspaceButton('Back to data model').trigger('click')
     await vi.waitFor(() =>
       expect(wrapper.find('.data-model-view').exists()).toBe(true),
     )
     expect(modelTab.attributes('aria-selected')).toBe('true')
     expect(wrapper.find('[data-designer-source-id]').exists()).toBe(false)
+    expect(JSON.parse(source().element.value).properties.customer.minimum).toBe(
+      0,
+    )
 
     await modelTab.trigger('click')
     await wrapper.get('button[role="tab"]:first-child').trigger('click')

@@ -130,10 +130,14 @@ or the panel navigation on a small screen. The **Variants demo** link opens
 renamed JSON keys, validation rules and a read-only field. Add `mode=advanced`
 to enable the chart and advanced component contracts in the same editor.
 
-Generate from the canvas, choose or create a variant, and edit its schema or
-test values. JSON edits and graphical edits share a locally persisted draft.
-Applying a valid draft updates the preview. In **JSON documents**, download
-and import `ui.json`, `data.schema.json` and `data.json` to move a variant.
+The schema view shows editable field rows beside `data.schema.json`. Expand
+objects and arrays to work on their children. A field's settings open on
+type-specific validation, with separate tabs for its details, canvas bindings
+and advanced rules. **Generate from canvas** reconciles canvas
+changes, and **Project and variants** groups variant creation and project
+archives. Schema and test data edits share a locally persisted draft. Applying
+a valid draft updates the preview. In **JSON documents**, download and import
+`ui.json`, `data.schema.json` and `data.json` to move a variant.
 
 ## Tests
 

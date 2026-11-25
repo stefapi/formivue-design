@@ -8,10 +8,141 @@ import {
   stringifyFormDocuments,
   type FormDocuments,
 } from '@formivue-design/formivue-transformer'
-import { mount } from '@vue/test-utils'
+import { DOMWrapper, mount } from '@vue/test-utils'
 import { expect, test } from 'vitest'
 
 type Schema = FormDocuments['dataSchema']
+
+test('edits nested fields, array items and required names in the builder', async () => {
+  const view = mount(DataSchemaEditor, {
+    attachTo: document.body,
+    props: {
+      builder: true,
+      modelValue: { type: 'object' },
+      'onUpdate:modelValue': (value: Schema) =>
+        view.setProps({ modelValue: value }),
+    },
+  })
+  const button = (name: string) => view.get(`button[aria-label="${name}"]`)
+  const rename = async (pointer: string, name: string) => {
+    const field = view.get(`input[data-field-name="${pointer}"]`)
+    await field.setValue(name)
+    await field.trigger('blur')
+  }
+  const type = (pointer: string, name: string) =>
+    view.get(`select[data-field-type="${pointer}"]`).setValue(name)
+  try {
+    await button('Add field').trigger('click')
+    await rename('/properties/field', 'items')
+    await type('/properties/items', 'array')
+    await button('Array items · items').trigger('click')
+    await type('/properties/items/items', 'object')
+    await button('Add field · Array items').trigger('click')
+    await view.get('input[aria-label="Required · field"]').setValue(true)
+    await rename('/properties/items/items/properties/field', 'amount')
+    await type('/properties/items/items/properties/amount', 'number')
+    await button('Field settings · amount').trigger('click')
+    const dialog = new DOMWrapper(document.body).get('[role="dialog"]')
+    const required = dialog.get<HTMLInputElement>('input[type="checkbox"]')
+    expect(required.element.checked).toBe(true)
+    await required.setValue(false)
+    expect(
+      view.get<HTMLInputElement>('input[aria-label="Required · amount"]')
+        .element.checked,
+    ).toBe(false)
+    await required.setValue(true)
+    await dialog.get('[data-schema-keyword="minimum"]').setValue('1')
+    await dialog
+      .get('[role="tab"]:nth-child(2)')
+      .trigger('keydown', { key: 'Enter' })
+    await dialog.get('[data-schema-keyword="title"]').setValue('Amount')
+    expect(dialog.find('[data-schema-keyword="minimum"]').exists()).toBe(false)
+    await dialog
+      .get('[role="tab"]:last-child')
+      .trigger('keydown', { key: 'Enter' })
+    expect(dialog.find('[data-schema-keyword="oneOf"]').exists()).toBe(true)
+    await dialog
+      .findAll('button')
+      .find((button) => button.text() === 'Close settings')
+      .trigger('click')
+
+    const documents = portable(view.props('modelValue'))
+    documents.data.items = [{ amount: 2 }]
+    const session = createFormDocument(documents)
+    expect(session.exportDocuments().dataSchema.properties.items).toEqual({
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { amount: { type: 'number', minimum: 1, title: 'Amount' } },
+        required: ['amount'],
+      },
+    })
+    session.dispose()
+    await button('Delete · amount').trigger('click')
+    expect(view.props('modelValue').properties.items).toEqual({
+      type: 'array',
+      items: { type: 'object' },
+    })
+    await button('Delete · items').trigger('click')
+    expect(view.props('modelValue')).toEqual({ type: 'object' })
+  } finally {
+    view.unmount()
+  }
+})
+
+test('renaming a field retargets local pointers and preserves dependencies', async () => {
+  const view = mount(DataSchemaEditor, {
+    props: {
+      builder: true,
+      modelValue: {
+        type: 'object',
+        properties: {
+          original: { type: 'string' },
+          other: { $ref: '#/properties/original' },
+          bound: { type: 'string' },
+        },
+        dependentRequired: { original: ['other'], other: ['original'] },
+        dependentSchemas: { original: { $ref: '#/properties/original' } },
+      },
+      dependencies: [
+        {
+          componentId: 'input',
+          property: 'value',
+          path: ['bound'],
+          types: ['string'] as const,
+        },
+      ],
+      componentLabel: () => 'Customer name',
+      'onUpdate:modelValue': (value: Schema) =>
+        view.setProps({ modelValue: value }),
+    },
+  })
+  try {
+    expect(
+      view.get('[data-schema-field="/properties/bound"]').text(),
+    ).toContain('Customer name')
+    expect(
+      view.find('input[data-field-name="/properties/bound"]').exists(),
+    ).toBe(false)
+    const input = view.get('input[data-field-name="/properties/original"]')
+    await input.setValue('other')
+    await input.trigger('blur')
+    expect(view.emitted('update:modelValue')).toBeUndefined()
+    await input.setValue('a/b c')
+    await input.trigger('blur')
+    const schema = view.props('modelValue')
+    expect(schema.properties.other).toEqual({ $ref: '#/properties/a~1b%20c' })
+    expect(schema.dependentRequired).toEqual({
+      'a/b c': ['other'],
+      other: ['a/b c'],
+    })
+    expect(schema.dependentSchemas).toEqual({
+      'a/b c': { $ref: '#/properties/a~1b%20c' },
+    })
+  } finally {
+    view.unmount()
+  }
+})
 
 test('inserts a typed example explicitly in test data', async () => {
   const view = mount(DataValuesEditor, {

@@ -16,6 +16,7 @@ import {
 } from '@formivue/json-schema'
 import {
   computed,
+  Comment,
   defineComponent,
   h,
   ref,
@@ -23,29 +24,24 @@ import {
   type PropType,
   type VNodeChild,
 } from 'vue'
-import { draft2020, labels, resources, type Message } from './keywords'
-import { createRuleControls, replaceSubschema } from './schema-rules'
+import {
+  draft2020,
+  labels,
+  resources,
+  typeNames,
+  types,
+  type Message,
+} from './keywords'
+import {
+  createRuleControls,
+  replaceSubschema,
+  setRequiredProperty,
+} from './schema-rules'
+import { SchemaBuilder } from './builder'
+import { FieldSettings, type SettingsSection } from './field-settings'
 export { DataValuesEditor } from './values'
 
 type Model = FormDocuments['dataSchema']
-const types = [
-  'object',
-  'array',
-  'string',
-  'integer',
-  'number',
-  'boolean',
-  'null',
-]
-const typeNames: Record<string, Message> = {
-  object: ['Object', 'Objet', 'Objeto'],
-  array: ['Array', 'Tableau', 'Lista'],
-  string: ['String', 'Chaîne', 'Cadena'],
-  integer: ['Integer', 'Entier', 'Entero'],
-  number: ['Number', 'Nombre', 'Número'],
-  boolean: ['Boolean', 'Booléen', 'Booleano'],
-  null: ['Null', 'Nul', 'Nulo'],
-}
 const numeric: Record<string, Message> = {
   minimum: ['Minimum', 'Minimum', 'Mínimo'],
   maximum: ['Maximum', 'Maximum', 'Máximo'],
@@ -228,6 +224,7 @@ export const DataSchemaEditor = defineComponent({
     modelValue: { type: Object as PropType<Model>, required: true },
     locale: { type: String, default: 'en' },
     tree: Boolean,
+    builder: Boolean,
     dependencies: {
       type: Array as PropType<readonly DocumentDependency[]>,
       default: () => [],
@@ -241,7 +238,11 @@ export const DataSchemaEditor = defineComponent({
   setup(props, { emit, slots }) {
     const selected = ref('')
     const inspecting = ref(false)
-    const example = ref('')
+    const builderRoot = ref<HTMLElement>()
+    const section = ref<SettingsSection>('validation')
+    const history = ref<{ pointer: string; section: SettingsSection }[]>([])
+    let trigger: HTMLElement | undefined
+    const example = ref<string>()
     const localError = ref('')
     const id = useId()
     const locations = computed(() =>
@@ -275,7 +276,10 @@ export const DataSchemaEditor = defineComponent({
         t(labels),
       )
     const label = (text: string, input: VNodeChild) =>
-      h('label', { class: 'grid min-w-0 gap-1 text-sm' }, [text, input])
+      h('label', { class: 'grid min-w-0 gap-1.5 text-sm font-medium' }, [
+        text,
+        input,
+      ])
     const group = (family: Family, contents: VNodeChild[]) =>
       h(
         'fieldset',
@@ -382,7 +386,7 @@ export const DataSchemaEditor = defineComponent({
       const declared = schema.value.type
       return initialValue(Array.isArray(declared) ? declared[0] : declared)
     }
-    const annotation = (key: string, labels: Message) =>
+    const annotation = (key: string, labels: Message, attrs = {}) =>
       label(
         t(labels),
         h(key === 'description' ? 'textarea' : 'input', {
@@ -390,6 +394,7 @@ export const DataSchemaEditor = defineComponent({
           'data-schema-keyword': key,
           value: schema.value[key] ?? '',
           onInput: (event: Event) => edit(key, valueFrom(event) || undefined),
+          ...attrs,
         }),
       )
     const numberControls = (keys: string[]) =>
@@ -450,12 +455,18 @@ export const DataSchemaEditor = defineComponent({
         ),
       )
 
-    function list(key: 'enum' | 'examples', heading: Message) {
+    function list(
+      key: 'enum' | 'examples',
+      heading: Message,
+      showHeading = true,
+    ) {
       const entries = (
         Array.isArray(schema.value[key]) ? schema.value[key] : []
       ) as JsonValue[]
       return [
-        h('p', { class: 'text-sm font-medium' }, t(heading)),
+        showHeading
+          ? h('p', { class: 'text-sm font-medium' }, t(heading))
+          : null,
         ...entries.map((value, i) =>
           h(
             'div',
@@ -529,8 +540,9 @@ export const DataSchemaEditor = defineComponent({
       const { pattern } = schema.value
       if (typeof pattern !== 'string') return ''
       try {
-        return compileDataValidator({ type: 'string', pattern })(example.value)
-          .length
+        const validate = compileDataValidator({ type: 'string', pattern })
+        if (props.builder && example.value === undefined) return ''
+        return validate(example.value ?? '').length
           ? t([
               'Sample does not match',
               'L’exemple ne correspond pas',
@@ -563,17 +575,55 @@ export const DataSchemaEditor = defineComponent({
     const usages = computed(() =>
       schemaUsages(props.modelValue, props.dependencies),
     )
+    const linked = computed(() => {
+      const paths = new Set<string>()
+      for (const { path, pointer } of locations.value) {
+        if (!usages.value.has(pointer)) continue
+        for (let i = 0; i <= path.length; i++)
+          paths.add(jsonPointer(path.slice(0, i)))
+      }
+      return paths
+    })
     function referencedDataPath() {
       const paths = new Map<string, (string | null)[]>()
       for (const { path } of usages.value.get(location.value.pointer) ?? [])
         paths.set(JSON.stringify(path), [...path])
       if (paths.size === 1) return paths.values().next().value
     }
-    function select(pointer: string) {
+    function show(pointer: string, nextSection: SettingsSection) {
       selected.value = pointer
+      section.value = nextSection
       inspecting.value = true
-      example.value = ''
+      example.value = undefined
       localError.value = ''
+    }
+
+    function select(pointer: string) {
+      if (props.builder && inspecting.value && pointer !== selected.value)
+        history.value.push({ pointer: selected.value, section: section.value })
+      show(pointer, 'validation')
+    }
+
+    function openInspector(pointer: string, button?: HTMLElement) {
+      history.value = []
+      trigger = button
+      show(pointer, 'validation')
+    }
+
+    function back() {
+      const previous = history.value.pop()
+      if (previous) show(previous.pointer, previous.section)
+    }
+
+    function close() {
+      inspecting.value = false
+    }
+
+    function restoreFocus() {
+      ;(trigger?.isConnected ? trigger : builderRoot.value)?.focus({
+        preventScroll: true,
+      })
+      trigger = undefined
     }
 
     return () => {
@@ -600,6 +650,606 @@ export const DataSchemaEditor = defineComponent({
       const dynamicTarget = reference('$dynamicRef')
       const resourceRoot =
         !location.value.path.length || typeof current.$id === 'string'
+      const currentPath = location.value
+      const pathLabel = currentPath.data
+        ? jsonPointer(currentPath.data.map((part) => part ?? '*')) || '/'
+        : currentPath.pointer
+      const directBindings = usages.value.get(currentPath.pointer) ?? []
+      const extension =
+        props.tree || (props.builder && inspecting.value)
+          ? slots.inspector?.({
+              path: currentPath.data ?? referencedDataPath(),
+              pointer: currentPath.pointer,
+              close,
+              objects: locations.value.flatMap(({ data, path }) => {
+                if (!data) return []
+                const schema = valueAt(props.modelValue, path)
+                return isJsonObject(schema) &&
+                  (schema.type === 'object' ||
+                    (Array.isArray(schema.type) &&
+                      schema.type.includes('object')))
+                  ? [data]
+                  : []
+              }),
+            })
+          : undefined
+      const references = () => [
+        dynamicTarget !== undefined
+          ? button(
+              [
+                'Open dynamic reference',
+                'Ouvrir la référence dynamique',
+                'Abrir referencia dinámica',
+              ],
+              () => select(dynamicTarget),
+            )
+          : null,
+        refTarget !== undefined &&
+        locations.value.some(({ pointer }) => pointer === refTarget)
+          ? button(
+              ['Open reference', 'Ouvrir la référence', 'Abrir referencia'],
+              () => select(refTarget),
+            )
+          : null,
+      ]
+      const typeLabel = (type: string) =>
+        types.includes(type as keyof typeof typeNames)
+          ? t(typeNames[type as keyof typeof typeNames])
+          : type
+      const bindingRows = () =>
+        directBindings.map(({ componentId, property, types }) => {
+          const component = props.componentLabel?.(componentId)
+          return h(
+            'div',
+            {
+              key: componentId + property,
+              class: props.builder
+                ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2.5'
+                : 'flex flex-wrap items-center gap-2 text-sm',
+            },
+            [
+              h('div', { class: 'min-w-0' }, [
+                h(
+                  'span',
+                  { class: 'font-medium break-words' },
+                  component ?? componentId,
+                ),
+                h(
+                  'div',
+                  { class: 'text-xs break-words text-muted-foreground' },
+                  property + ' · ' + types.map(typeLabel).join(' / '),
+                ),
+              ]),
+              (!props.componentLabel || component) &&
+                button(
+                  [
+                    'Select on canvas',
+                    'Sélectionner sur le canevas',
+                    'Seleccionar en el lienzo',
+                  ],
+                  () => emit('navigate', componentId),
+                ),
+            ],
+          )
+        })
+      const schemaFormLabel = t([
+        'Schema form',
+        'Forme du schéma',
+        'Forma del esquema',
+      ])
+      const schemaForm = () =>
+        currentPath.path.length
+          ? label(
+              schemaFormLabel,
+              h(
+                'select',
+                {
+                  'aria-label': schemaFormLabel,
+                  class: control,
+                  value:
+                    typeof node.value === 'boolean'
+                      ? String(node.value)
+                      : 'object',
+                  onChange: (event: Event) => {
+                    const next = valueFrom(event)
+                    emit(
+                      'update:modelValue',
+                      replaceSubschema(
+                        props.modelValue,
+                        currentPath.path,
+                        next === 'object' ? {} : next === 'true',
+                      ) as Model,
+                    )
+                  },
+                },
+                [
+                  h(
+                    'option',
+                    { value: 'object' },
+                    props.builder
+                      ? t([
+                          'Schema with rules',
+                          'Schéma avec règles',
+                          'Esquema con reglas',
+                        ])
+                      : t(typeNames.object),
+                  ),
+                  h(
+                    'option',
+                    { value: 'true' },
+                    t([
+                      'Accepts every value',
+                      'Accepte toute valeur',
+                      'Acepta cualquier valor',
+                    ]),
+                  ),
+                  h(
+                    'option',
+                    { value: 'false' },
+                    t([
+                      'Rejects every value',
+                      'Refuse toute valeur',
+                      'Rechaza cualquier valor',
+                    ]),
+                  ),
+                ],
+              ),
+            )
+          : null
+      const typeControls = () =>
+        h(
+          'div',
+          { class: 'flex flex-wrap gap-3' },
+          types.map((type) =>
+            h('label', { class: 'flex items-center gap-1.5 text-sm' }, [
+              h('input', {
+                type: 'checkbox',
+                checked: selectedTypes.includes(type),
+                onChange: (event: Event) => {
+                  const next = (event.target as HTMLInputElement).checked
+                    ? [...selectedTypes, type]
+                    : selectedTypes.filter((item) => item !== type)
+                  edit('type', next.length > 1 ? next : next[0])
+                },
+              }),
+              typeLabel(type),
+            ]),
+          ),
+        )
+      const allowedValuesLabel: Message = [
+        'Allowed values',
+        'Valeurs autorisées',
+        'Valores permitidos',
+      ]
+      const allowedValues = (showHeading = true) =>
+        list('enum', allowedValuesLabel, showHeading)
+      const constant = () =>
+        optionalValue('const', ['Constant', 'Constante', 'Constante'])
+      const visibility = () =>
+        h(
+          'div',
+          { class: 'grid gap-3 sm:grid-cols-3' },
+          ['readOnly', 'writeOnly', 'deprecated'].map(flag),
+        )
+      const titles = () => [
+        annotation('title', ['Title', 'Titre', 'Título']),
+        annotation(
+          'description',
+          ['Description', 'Description', 'Descripción'],
+          { rows: 3 },
+        ),
+      ]
+      const suggestedValues = () => [
+        optionalValue('default', [
+          'Default value',
+          'Valeur par défaut',
+          'Valor predeterminado',
+        ]),
+        ...list('examples', ['Examples', 'Exemples', 'Ejemplos']),
+      ]
+      const numberKeys = [
+        'minimum',
+        'maximum',
+        'exclusiveMinimum',
+        'exclusiveMaximum',
+        'multipleOf',
+      ]
+      const stringRules = () => [
+        numberControls(['minLength', 'maxLength']),
+        annotation(
+          'format',
+          ['Format', 'Format', 'Formato'],
+          props.builder
+            ? { list: id + '-formats', placeholder: 'email, date…' }
+            : {},
+        ),
+        props.builder
+          ? h(
+              'datalist',
+              { id: id + '-formats' },
+              [
+                'email',
+                'uri',
+                'date',
+                'date-time',
+                'time',
+                'uuid',
+                'hostname',
+                'ipv4',
+                'ipv6',
+              ].map((format) => h('option', { value: format })),
+            )
+          : h(
+              'p',
+              { class: 'text-sm text-muted-foreground' },
+              t([
+                'Format describes a string. Formivue validates registered formats by default.',
+                'Le format décrit une chaîne. Formivue valide les formats enregistrés par défaut.',
+                'El formato describe una cadena. Formivue valida por defecto los formatos registrados.',
+              ]),
+            ),
+        annotation(
+          'pattern',
+          ['Regular expression', 'Expression régulière', 'Expresión regular'],
+          props.builder
+            ? { placeholder: '^…$', class: control + ' font-mono' }
+            : {},
+        ),
+        typeof current.pattern === 'string'
+          ? label(
+              t(['Pattern sample', 'Exemple à tester', 'Ejemplo para probar']),
+              h('input', {
+                id: id + '-sample',
+                class: control,
+                value: example.value ?? '',
+                'aria-describedby': patternResult.value
+                  ? id + '-result'
+                  : undefined,
+                onInput: (event: Event) => {
+                  example.value = valueFrom(event)
+                },
+              }),
+            )
+          : null,
+        patternResult.value
+          ? h(
+              'p',
+              {
+                id: id + '-result',
+                role: 'status',
+                class: 'text-sm text-muted-foreground',
+              },
+              patternResult.value,
+            )
+          : null,
+      ]
+      const objectRules = () => [
+        rules.named('properties'),
+        rules.required(),
+        rules.named('patternProperties'),
+        rules.child('additionalProperties'),
+        rules.child('propertyNames'),
+        rules.dependencies(),
+        rules.named('dependentSchemas'),
+        rules.child('unevaluatedProperties'),
+      ]
+      const arrayRules = () => [
+        rules.child('items'),
+        rules.branches('prefixItems'),
+        rules.child('contains'),
+        numberControls(['minContains', 'maxContains']),
+        rules.child('unevaluatedItems'),
+      ]
+      const groups: Record<Family, () => VNodeChild[]> = {
+        types: () => [typeControls(), ...allowedValues(), constant()],
+        numbers: () => [numberControls(numberKeys)],
+        strings: stringRules,
+        objects: () => [
+          numberControls(['minProperties', 'maxProperties']),
+          ...objectRules(),
+        ],
+        arrays: () => [
+          numberControls(['minItems', 'maxItems']),
+          flag('uniqueItems'),
+          ...arrayRules(),
+        ],
+        combinations: () => [
+          ...['allOf', 'anyOf', 'oneOf'].map(rules.branches),
+          ...['not', 'if', 'then', 'else'].map(rules.child),
+        ],
+        content: () => [
+          annotation('contentEncoding', labels.contentEncoding),
+          annotation('contentMediaType', labels.contentMediaType),
+          rules.child('contentSchema'),
+        ],
+        resources: () => [
+          ...resources
+            .filter((keyword) => keyword !== '$schema' || resourceRoot)
+            .map((keyword) => annotation(keyword, labels[keyword])),
+          resourceRoot &&
+            button(
+              [
+                'Use 2020-12 dialect',
+                'Utiliser le dialecte 2020-12',
+                'Usar el dialecto 2020-12',
+              ],
+              () => edit('$schema', draft2020),
+            ),
+          rules.named('$defs'),
+          resourceRoot && rules.vocabulary(),
+        ],
+        annotations: () => [...titles(), visibility(), ...suggestedValues()],
+      }
+      const feedback = () =>
+        localError.value
+          ? h(
+              'p',
+              { role: 'alert', class: 'text-sm text-destructive' },
+              localError.value,
+            )
+          : null
+      const isRuleSchema = isJsonObject(node.value)
+      if (props.builder) {
+        const parentPath = currentPath.path.slice(0, -2)
+        const key = currentPath.path[currentPath.path.length - 1]
+        const parent =
+          currentPath.path[currentPath.path.length - 2] === 'properties' &&
+          locations.value.some(
+            ({ pointer }) => pointer === jsonPointer(parentPath),
+          )
+            ? valueAt(props.modelValue, parentPath)
+            : undefined
+        const requiredControl = () =>
+          isJsonObject(parent)
+            ? h(
+                'label',
+                {
+                  class:
+                    'flex items-center gap-2.5 rounded-lg border bg-background px-4 py-3 font-medium',
+                },
+                [
+                  h('input', {
+                    type: 'checkbox',
+                    checked:
+                      Array.isArray(parent.required) &&
+                      parent.required.includes(key),
+                    onChange: (event: Event) => {
+                      const next = copyJson(props.modelValue) as Model
+                      setRequiredProperty(
+                        valueAt(next, parentPath) as Model,
+                        key,
+                        (event.target as HTMLInputElement).checked,
+                      )
+                      emit('update:modelValue', next)
+                    },
+                  }),
+                  t([
+                    'Required field',
+                    'Champ obligatoire',
+                    'Campo obligatorio',
+                  ]),
+                ],
+              )
+            : null
+        const card = (title: Message, children: VNodeChild[]) =>
+          h(
+            'section',
+            { class: 'grid min-w-0 gap-3 rounded-lg border bg-background p-4' },
+            [
+              h('h3', { class: 'text-sm font-semibold' }, t(title)),
+              ...children,
+            ],
+          )
+        const disclosure = (title: Message, render: () => VNodeChild[]) =>
+          h('details', { class: 'min-w-0 rounded-lg border bg-background' }, [
+            h(
+              'summary',
+              {
+                class:
+                  'cursor-pointer px-4 py-3 font-medium hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring',
+              },
+              t(title),
+            ),
+            h('div', { class: 'grid min-w-0 gap-3 border-t p-4' }, render()),
+          ])
+        const validation = () => {
+          if (!isRuleSchema)
+            return [
+              requiredControl(),
+              h(
+                'p',
+                { class: 'rounded-lg border bg-muted/40 p-4' },
+                node.value
+                  ? t([
+                      'This schema accepts every value.',
+                      'Ce schéma accepte toute valeur.',
+                      'Este esquema acepta cualquier valor.',
+                    ])
+                  : t([
+                      'This schema rejects every value.',
+                      'Ce schéma refuse toute valeur.',
+                      'Este esquema rechaza cualquier valor.',
+                    ]),
+              ),
+            ]
+          const showRules = (types: string[], keys: string[]) =>
+            types.some((type) => selectedTypes.includes(type)) ||
+            keys.some((key) =>
+              Object.prototype.hasOwnProperty.call(current, key),
+            )
+          return [
+            feedback(),
+            requiredControl(),
+            ...references(),
+            showRules(
+              ['string'],
+              ['minLength', 'maxLength', 'pattern', 'format'],
+            )
+              ? card(
+                  ['Text rules', 'Règles de texte', 'Reglas de texto'],
+                  stringRules(),
+                )
+              : null,
+            showRules(['number', 'integer'], numberKeys)
+              ? card(
+                  ['Number limits', 'Limites numériques', 'Límites numéricos'],
+                  [
+                    numberControls(['minimum', 'maximum']),
+                    disclosure(
+                      [
+                        'Exclusive limits and multiples',
+                        'Limites exclusives et multiples',
+                        'Límites exclusivos y múltiplos',
+                      ],
+                      () => [
+                        numberControls([
+                          'exclusiveMinimum',
+                          'exclusiveMaximum',
+                          'multipleOf',
+                        ]),
+                      ],
+                    ),
+                  ],
+                )
+              : null,
+            showRules(['array'], ['minItems', 'maxItems', 'uniqueItems'])
+              ? card(
+                  ['List size', 'Taille de la liste', 'Tamaño de la lista'],
+                  [
+                    numberControls(['minItems', 'maxItems']),
+                    flag('uniqueItems'),
+                  ],
+                )
+              : null,
+            showRules(['object'], ['minProperties', 'maxProperties'])
+              ? card(
+                  ['Object size', 'Taille de l’objet', 'Tamaño del objeto'],
+                  [numberControls(['minProperties', 'maxProperties'])],
+                )
+              : null,
+            card(allowedValuesLabel, [
+              ...allowedValues(false),
+              h('div', { class: 'border-t pt-3' }, [constant()]),
+            ]),
+          ]
+        }
+        const title =
+          directBindings
+            .map(({ componentId }) => props.componentLabel?.(componentId))
+            .find(Boolean) ||
+          (typeof current.title === 'string' && current.title) ||
+          (currentPath.path.length
+            ? currentPath.path[currentPath.path.length - 1]
+            : t(['Root schema', 'Schéma racine', 'Esquema raíz']))
+        return h(
+          'div',
+          {
+            ref: builderRoot,
+            tabindex: -1,
+            class: 'grid min-w-0 content-start',
+          },
+          [
+            h(SchemaBuilder, {
+              modelValue: props.modelValue,
+              t,
+              selected: inspecting.value ? currentPath.pointer : undefined,
+              linked: linked.value,
+              componentLabel: (pointer) =>
+                usages.value
+                  .get(pointer)
+                  ?.map(({ componentId }) =>
+                    props.componentLabel?.(componentId),
+                  )
+                  .find(Boolean),
+              onInspect: openInspector,
+              'onUpdate:modelValue': (value) =>
+                emit('update:modelValue', value),
+            }),
+            h(
+              FieldSettings,
+              {
+                open: inspecting.value,
+                title,
+                path: pathLabel,
+                typeLabel: selectedTypes.map(typeLabel).join(' / '),
+                section: section.value,
+                hasBindings:
+                  !!directBindings.length ||
+                  !!extension?.some((node) => node.type !== Comment),
+                back: history.value.length ? back : undefined,
+                restoreFocus,
+                t,
+                onClose: close,
+                'onUpdate:section': (value) => {
+                  section.value = value
+                },
+              },
+              {
+                validation,
+                general: () =>
+                  isRuleSchema
+                    ? [
+                        feedback(),
+                        card(
+                          [
+                            'Field details',
+                            'Détails du champ',
+                            'Detalles del campo',
+                          ],
+                          titles(),
+                        ),
+                        card(
+                          [
+                            'Access and lifecycle',
+                            'Accès et cycle de vie',
+                            'Acceso y ciclo de vida',
+                          ],
+                          [visibility()],
+                        ),
+                        card(
+                          [
+                            'Defaults and examples',
+                            'Valeur par défaut et exemples',
+                            'Valor predeterminado y ejemplos',
+                          ],
+                          suggestedValues(),
+                        ),
+                      ]
+                    : [schemaForm()],
+                bindings: () => [
+                  directBindings.length
+                    ? card(
+                        [
+                          'Canvas components',
+                          'Composants du canevas',
+                          'Componentes del lienzo',
+                        ],
+                        bindingRows(),
+                      )
+                    : null,
+                  extension,
+                ],
+                advanced: () => [
+                  feedback(),
+                  card(
+                    ['Schema and types', 'Schéma et types', 'Esquema y tipos'],
+                    [schemaForm(), isRuleSchema ? typeControls() : null],
+                  ),
+                  ...(isRuleSchema
+                    ? [
+                        disclosure(families.objects, objectRules),
+                        disclosure(families.arrays, arrayRules),
+                        disclosure(families.combinations, groups.combinations),
+                        disclosure(families.resources, groups.resources),
+                        disclosure(families.content, groups.content),
+                      ]
+                    : []),
+                ],
+              },
+            ),
+          ],
+        )
+      }
       const inspector = h(
         'div',
         {
@@ -620,9 +1270,7 @@ export const DataSchemaEditor = defineComponent({
                         type: 'button',
                         class:
                           'schema-tree-back rounded border px-2 py-1 text-sm',
-                        onClick: () => {
-                          inspecting.value = false
-                        },
+                        onClick: close,
                       },
                       t([
                         'Schema tree',
@@ -630,15 +1278,7 @@ export const DataSchemaEditor = defineComponent({
                         'Árbol del esquema',
                       ]),
                     ),
-                    h(
-                      'h3',
-                      { class: 'font-semibold break-all' },
-                      location.value.data
-                        ? jsonPointer(
-                            location.value.data.map((part) => part ?? '*'),
-                          ) || '/'
-                        : location.value.pointer,
-                    ),
+                    h('h3', { class: 'font-semibold break-all' }, pathLabel),
                   ],
                 )
               : label(
@@ -647,7 +1287,7 @@ export const DataSchemaEditor = defineComponent({
                     'select',
                     {
                       class: control,
-                      value: location.value.pointer,
+                      value: currentPath.pointer,
                       onChange: (event: Event) => select(valueFrom(event)),
                     },
                     locations.value.map(({ pointer }) =>
@@ -659,344 +1299,61 @@ export const DataSchemaEditor = defineComponent({
                     ),
                   ),
                 ),
-            dynamicTarget !== undefined
-              ? button(
-                  [
-                    'Open dynamic reference',
-                    'Ouvrir la référence dynamique',
-                    'Abrir referencia dinámica',
-                  ],
-                  () => select(dynamicTarget),
-                )
-              : null,
-            refTarget !== undefined &&
-            locations.value.some(({ pointer }) => pointer === refTarget)
-              ? button(
-                  ['Open reference', 'Ouvrir la référence', 'Abrir referencia'],
-                  () => select(refTarget),
-                )
-              : null,
+            ...references(),
           ]),
-          props.tree &&
-            h('div', { class: 'grid gap-2' }, [
-              ...(usages.value.get(location.value.pointer) ?? []).map(
-                ({ componentId, property, types }) => {
-                  const component = props.componentLabel?.(componentId)
-                  return h(
-                    'div',
-                    {
-                      key: componentId + property,
-                      class: 'flex flex-wrap items-center gap-2 text-sm',
-                    },
-                    [
-                      h('span', [
-                        component ?? componentId,
-                        ' · ',
-                        property,
-                        ' · ',
-                        types
-                          .map((type) =>
-                            typeNames[type] ? t(typeNames[type]) : type,
-                          )
-                          .join(' / '),
-                      ]),
-                      (!props.componentLabel || component) &&
-                        button(
-                          [
-                            'Select on canvas',
-                            'Sélectionner sur le canevas',
-                            'Seleccionar en el lienzo',
-                          ],
-                          () => emit('navigate', componentId),
-                        ),
-                    ],
-                  )
-                },
-              ),
-              slots.inspector?.({
-                path: location.value.data ?? referencedDataPath(),
-                pointer: location.value.pointer,
-                objects: locations.value.flatMap(({ data, path }) => {
-                  if (!data) return []
-                  const schema = valueAt(props.modelValue, path)
-                  return isJsonObject(schema) &&
-                    (schema.type === 'object' ||
-                      (Array.isArray(schema.type) &&
-                        schema.type.includes('object')))
-                    ? [data]
-                    : []
-                }),
-              }),
-            ]),
-          location.value.path.length
-            ? label(
-                t(['Schema form', 'Forme du schéma', 'Forma del esquema']),
-                h(
-                  'select',
-                  {
-                    'aria-label': t([
-                      'Schema form',
-                      'Forme du schéma',
-                      'Forma del esquema',
-                    ]),
-                    class: control,
-                    value:
-                      typeof node.value === 'boolean'
-                        ? String(node.value)
-                        : 'object',
-                    onChange: (event: Event) => {
-                      const next = valueFrom(event)
-                      emit(
-                        'update:modelValue',
-                        replaceSubschema(
-                          props.modelValue,
-                          location.value.path,
-                          next === 'object' ? {} : next === 'true',
-                        ) as Model,
-                      )
-                    },
-                  },
-                  [
-                    h('option', { value: 'object' }, t(typeNames.object)),
-                    h(
-                      'option',
-                      { value: 'true' },
-                      t([
-                        'True · accepts every value',
-                        'Vrai · accepte toute valeur',
-                        'Verdadero · acepta cualquier valor',
-                      ]),
-                    ),
-                    h(
-                      'option',
-                      { value: 'false' },
-                      t([
-                        'False · rejects every value',
-                        'Faux · refuse toute valeur',
-                        'Falso · rechaza cualquier valor',
-                      ]),
-                    ),
-                  ],
-                ),
-              )
+          props.tree
+            ? h('div', { class: 'grid gap-2' }, [...bindingRows(), extension])
             : null,
-          props.tree &&
-            isJsonObject(node.value) &&
-            h(
-              'select',
-              {
-                class: control,
-                'aria-label': t([
-                  'Add a rule',
-                  'Ajouter une règle',
-                  'Añadir una regla',
-                ]),
-                value: '',
-                onChange: (event: Event) => {
-                  const control = event.target as HTMLSelectElement
-                  const target = document.getElementById(
-                    id + '-' + control.value,
-                  )
-                  control.value = ''
-                  target?.focus()
-                  target?.scrollIntoView?.({ block: 'nearest' })
-                },
-              },
-              [
-                h(
-                  'option',
-                  { value: '' },
-                  t(['Add a rule', 'Ajouter une règle', 'Añadir una regla']),
-                ),
-                ...(Object.keys(families) as Family[])
-                  .filter((family) => enabledFamilies[family])
-                  .map((family) =>
-                    h(
-                      'option',
-                      { value: family, key: family },
-                      t(families[family]),
-                    ),
-                  ),
-              ],
-            ),
-          localError.value
+          schemaForm(),
+          props.tree && isRuleSchema
             ? h(
-                'p',
-                { role: 'alert', class: 'text-destructive text-sm' },
-                localError.value,
+                'select',
+                {
+                  class: control,
+                  'aria-label': t([
+                    'Add a rule',
+                    'Ajouter une règle',
+                    'Añadir una regla',
+                  ]),
+                  value: '',
+                  onChange: (event: Event) => {
+                    const select = event.target as HTMLSelectElement
+                    const target = document.getElementById(
+                      id + '-' + select.value,
+                    )
+                    select.value = ''
+                    target?.focus()
+                    target?.scrollIntoView?.({ block: 'nearest' })
+                  },
+                },
+                [
+                  h(
+                    'option',
+                    { value: '' },
+                    t(['Add a rule', 'Ajouter une règle', 'Añadir una regla']),
+                  ),
+                  ...(Object.keys(families) as Family[])
+                    .filter((family) => enabledFamilies[family])
+                    .map((family) =>
+                      h(
+                        'option',
+                        { value: family, key: family },
+                        t(families[family]),
+                      ),
+                    ),
+                ],
               )
             : null,
-          !isJsonObject(node.value)
-            ? h('p', { class: 'text-sm' }, String(node.value))
-            : h('div', { class: 'grid gap-3 xl:grid-cols-2' }, [
-                group('types', [
-                  h(
-                    'div',
-                    { class: 'flex flex-wrap gap-3' },
-                    types.map((type) =>
-                      h('label', { class: 'flex items-center gap-1 text-sm' }, [
-                        h('input', {
-                          type: 'checkbox',
-                          checked: selectedTypes.includes(type),
-                          onChange: (event: Event) => {
-                            const next = (event.target as HTMLInputElement)
-                              .checked
-                              ? [...selectedTypes, type]
-                              : selectedTypes.filter((item) => item !== type)
-                            edit('type', next.length > 1 ? next : next[0])
-                          },
-                        }),
-                        t(typeNames[type]),
-                      ]),
-                    ),
-                  ),
-                  ...list('enum', [
-                    'Allowed values',
-                    'Valeurs autorisées',
-                    'Valores permitidos',
-                  ]),
-                  optionalValue('const', [
-                    'Constant',
-                    'Constante',
-                    'Constante',
-                  ]),
-                ]),
-                enabledFamilies.numbers
-                  ? group('numbers', [
-                      numberControls([
-                        'minimum',
-                        'maximum',
-                        'exclusiveMinimum',
-                        'exclusiveMaximum',
-                        'multipleOf',
-                      ]),
-                    ])
-                  : null,
-                enabledFamilies.strings
-                  ? group('strings', [
-                      numberControls(['minLength', 'maxLength']),
-                      annotation('pattern', [
-                        'Regular expression',
-                        'Expression régulière',
-                        'Expresión regular',
-                      ]),
-                      annotation('format', ['Format', 'Format', 'Formato']),
-                      h(
-                        'p',
-                        { class: 'text-sm text-muted-foreground' },
-                        t([
-                          'Format describes a string. Formivue validates registered formats by default.',
-                          'Le format décrit une chaîne. Formivue valide les formats enregistrés par défaut.',
-                          'El formato describe una cadena. Formivue valida por defecto los formatos registrados.',
-                        ]),
-                      ),
-                      typeof current.pattern === 'string'
-                        ? label(
-                            t([
-                              'Pattern sample',
-                              'Exemple à tester',
-                              'Ejemplo para probar',
-                            ]),
-                            h('input', {
-                              id,
-                              class: control,
-                              value: example.value,
-                              'aria-describedby': id + '-result',
-                              onInput: (event: Event) => {
-                                example.value = valueFrom(event)
-                              },
-                            }),
-                          )
-                        : null,
-                      patternResult.value
-                        ? h(
-                            'p',
-                            {
-                              id: id + '-result',
-                              role: 'status',
-                              class: 'text-sm text-muted-foreground',
-                            },
-                            patternResult.value,
-                          )
-                        : null,
-                    ])
-                  : null,
-                enabledFamilies.objects
-                  ? group('objects', [
-                      numberControls(['minProperties', 'maxProperties']),
-                      rules.named('properties'),
-                      rules.required(),
-                      rules.named('patternProperties'),
-                      rules.child('additionalProperties'),
-                      rules.child('propertyNames'),
-                      rules.dependencies(),
-                      rules.named('dependentSchemas'),
-                      rules.child('unevaluatedProperties'),
-                    ])
-                  : null,
-                enabledFamilies.arrays
-                  ? group('arrays', [
-                      numberControls(['minItems', 'maxItems']),
-                      flag('uniqueItems'),
-                      rules.child('items'),
-                      rules.branches('prefixItems'),
-                      rules.child('contains'),
-                      numberControls(['minContains', 'maxContains']),
-                      rules.child('unevaluatedItems'),
-                    ])
-                  : null,
-                group('combinations', [
-                  ...['allOf', 'anyOf', 'oneOf'].map(rules.branches),
-                  ...['not', 'if', 'then', 'else'].map(rules.child),
-                ]),
-                group('content', [
-                  annotation('contentEncoding', labels.contentEncoding),
-                  annotation('contentMediaType', labels.contentMediaType),
-                  rules.child('contentSchema'),
-                  h(
-                    'p',
-                    { class: 'text-sm text-muted-foreground' },
-                    t([
-                      'Content keywords describe embedded data. Content validation requires a configured checker.',
-                      'Ces mots-clés décrivent les données intégrées. Leur validation nécessite un contrôle configuré.',
-                      'Estas palabras clave describen los datos integrados. Validarlos requiere un verificador configurado.',
-                    ]),
-                  ),
-                ]),
-                group('resources', [
-                  ...resources
-                    .filter((keyword) => keyword !== '$schema' || resourceRoot)
-                    .map((keyword) => annotation(keyword, labels[keyword])),
-                  resourceRoot &&
-                    button(
-                      [
-                        'Use 2020-12 dialect',
-                        'Utiliser le dialecte 2020-12',
-                        'Usar el dialecto 2020-12',
-                      ],
-                      () => edit('$schema', draft2020),
-                    ),
-                  rules.named('$defs'),
-                  resourceRoot && rules.vocabulary(),
-                ]),
-                group('annotations', [
-                  annotation('title', ['Title', 'Titre', 'Título']),
-                  annotation('description', [
-                    'Description',
-                    'Description',
-                    'Descripción',
-                  ]),
-                  flag('readOnly'),
-                  flag('writeOnly'),
-                  flag('deprecated'),
-                  optionalValue('default', [
-                    'Default value',
-                    'Valeur par défaut',
-                    'Valor predeterminado',
-                  ]),
-                  ...list('examples', ['Examples', 'Exemples', 'Ejemplos']),
-                ]),
-              ]),
+          feedback(),
+          isRuleSchema
+            ? h(
+                'div',
+                { class: 'grid gap-3 xl:grid-cols-2' },
+                (Object.keys(families) as Family[])
+                  .filter((family) => enabledFamilies[family])
+                  .map((family) => group(family, groups[family]())),
+              )
+            : h('p', { class: 'text-sm' }, String(node.value)),
         ],
       )
       if (!props.tree) return inspector

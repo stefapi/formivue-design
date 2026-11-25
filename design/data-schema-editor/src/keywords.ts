@@ -1,5 +1,17 @@
 export type Message = readonly [string, string, string]
 
+export const typeNames = {
+  object: ['Object', 'Objet', 'Objeto'],
+  array: ['Array', 'Tableau', 'Lista'],
+  string: ['String', 'Chaîne', 'Cadena'],
+  integer: ['Integer', 'Entier', 'Entero'],
+  number: ['Number', 'Nombre', 'Número'],
+  boolean: ['Boolean', 'Booléen', 'Booleano'],
+  null: ['Null', 'Nul', 'Nulo'],
+} satisfies Record<string, Message>
+
+export const types = Object.keys(typeNames) as (keyof typeof typeNames)[]
+
 export const schemaMaps = [
   'properties',
   'patternProperties',

@@ -24,6 +24,19 @@ const addable = ['Add', 'Ajouter', 'Añadir'] as const
 const open = ['Open', 'Ouvrir', 'Abrir'] as const
 const nameOf = ['Name', 'Nom', 'Nombre'] as const
 
+export function setRequiredProperty(
+  parent: Record<string, unknown>,
+  name: string,
+  checked: boolean,
+) {
+  const names = Array.isArray(parent.required) ? parent.required : []
+  const next = checked
+    ? [...new Set([...names, name])]
+    : names.filter((entry) => entry !== name)
+  if (next.length) parent.required = next
+  else delete parent.required
+}
+
 export function createRuleControls({
   current,
   path,

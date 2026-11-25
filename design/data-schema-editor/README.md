@@ -2,7 +2,8 @@
 
 `DataSchemaEditor` edits a controlled JSON Schema draft. The caller owns the
 draft and validates it before compiling the form. Enable `tree` for a schema
-inspector. Pass the dependencies returned by `compileFormDocuments` to show
+inspector or use `builder` for inline field rows and a rules inspector. Pass
+the dependencies returned by `compileFormDocuments` to show
 where each schema is used, including through local anchors and references.
 The `navigate` event returns a stable component ID. The `inspector` slot is
 available for application actions such as variant renaming.

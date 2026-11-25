@@ -2,6 +2,8 @@ import {
   computed,
   defineComponent,
   h,
+  nextTick,
+  onMounted,
   ref,
   useId,
   type Component,
@@ -28,6 +30,7 @@ import { exampleLocale, message, type Message } from '../../../shared/language'
 import { documentError } from '../../../shared/document-messages'
 import type { DocumentProject } from '../service/document-project'
 import type { DocumentProjectArchive } from '../service/document-project-archive'
+import { downloadJson } from '../service/download-json'
 import { TestDataWidget } from './TestDataWidget'
 import { CanvasReconciliationWidget } from './CanvasReconciliationWidget'
 import { ProjectArchiveWidget } from './ProjectArchiveWidget'
@@ -35,6 +38,11 @@ import { ProjectArchiveWidget } from './ProjectArchiveWidget'
 const schemaTab: Message = ['Schema', 'Schéma', 'Esquema']
 const testTab: Message = ['Test data', 'Données d’essai', 'Datos de prueba']
 const baseName: Message = ['Base model', 'Modèle de base', 'Modelo base']
+const sourceTitle: Message = [
+  'Schema source',
+  'Source du schéma',
+  'Código del esquema',
+]
 const selectClass =
   'min-w-0 rounded-md border border-input bg-background px-2 py-1 text-sm'
 
@@ -47,12 +55,8 @@ function parsed<T>(read: () => T) {
 }
 
 function readObject<T>(source: string, path: string): T {
-  try {
-    const candidate = JSON.parse(source)
-    if (isJsonObject(candidate)) return candidate as T
-  } catch {
-    // The user can fix or replace the draft in the JSON view.
-  }
+  const candidate = JSON.parse(source)
+  if (isJsonObject(candidate)) return candidate as T
   throw new DocumentValidationError([
     { path, code: 'invalid_json_object', message: 'Expected a JSON object' },
   ])
@@ -75,6 +79,7 @@ const RenameProperty = defineComponent({
     path: { type: Array as PropType<(string | null)[]>, required: true },
     model: { type: Object as PropType<DocumentProject>, required: true },
     objects: { type: Array as PropType<(string | null)[][]>, required: true },
+    onConfirmed: { type: Function as PropType<() => void>, required: true },
     componentLabel: {
       type: Function as PropType<(id: string) => string | undefined>,
       required: true,
@@ -88,11 +93,18 @@ const RenameProperty = defineComponent({
     const destination = ref(parent)
     const error = ref<unknown>()
     const review = ref<ReturnType<DocumentProject['reviewRename']>>()
+    const reviewPanel = ref<HTMLElement>()
+    let reviewTrigger: HTMLElement | undefined
+    const formClass =
+      'grid min-w-0 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]'
+    const submitClass =
+      'h-8 rounded-md border bg-background px-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50'
     const move = computed(
       () => 'createdObjects' in (review.value?.impact ?? {}),
     )
     const reviewChange = (event: Event, moving = false) => {
       event.preventDefault()
+      reviewTrigger = (event as SubmitEvent).submitter ?? undefined
       error.value = undefined
       review.value = undefined
       try {
@@ -111,6 +123,7 @@ const RenameProperty = defineComponent({
               path: props.path,
               key: key.value.trim(),
             })
+        if (review.value) void nextTick(() => reviewPanel.value?.focus())
       } catch (cause) {
         error.value = cause
       }
@@ -126,199 +139,242 @@ const RenameProperty = defineComponent({
       ),
     )
     return () =>
-      h('div', { class: 'grid gap-2 rounded-md border p-2' }, [
-        h(
-          'form',
-          {
-            class: 'flex flex-wrap items-end gap-2',
-            onSubmit: (event: Event) => reviewChange(event),
-          },
-          [
-            h('label', { class: 'grid gap-1 text-sm' }, [
-              message(['JSON key', 'Clé JSON', 'Clave JSON']),
-              h('input', {
-                class: selectClass,
-                value: key.value,
-                placeholder: props.path[props.path.length - 1],
-                onInput(event: Event) {
-                  key.value = (event.target as HTMLInputElement).value
-                  error.value = undefined
-                  review.value = undefined
-                },
-              }),
-            ]),
-            h(
-              'button',
-              {
-                class:
-                  'rounded-md border px-3 py-1 text-sm disabled:opacity-50',
-                type: 'submit',
-                disabled:
-                  !key.value.trim() ||
-                  key.value.trim() === props.path[props.path.length - 1],
-              },
-              message([
-                'Review rename',
-                'Examiner le renommage',
-                'Revisar el cambio de nombre',
-              ]),
-            ),
-          ],
-        ),
-        h('details', { class: 'min-w-0 text-sm' }, [
+      h(
+        'section',
+        { class: 'grid min-w-0 gap-4 rounded-lg border bg-background p-4' },
+        [
           h(
-            'summary',
-            { class: 'cursor-pointer font-medium' },
+            'h3',
+            { class: 'text-sm font-semibold' },
             message([
-              'Move to another object',
-              'Déplacer vers un autre objet',
-              'Mover a otro objeto',
+              'JSON key in this variant',
+              'Clé JSON dans cette variante',
+              'Clave JSON en esta variante',
             ]),
           ),
           h(
             'form',
             {
-              class: 'mt-2 flex flex-wrap items-end gap-2',
-              onSubmit: (event: Event) => reviewChange(event, true),
+              class: formClass,
+              onSubmit: (event: Event) => reviewChange(event),
             },
             [
-              h('label', { class: 'grid min-w-0 gap-1' }, [
-                message([
-                  'Destination object (JSON Pointer)',
-                  'Objet de destination (JSON Pointer)',
-                  'Objeto de destino (JSON Pointer)',
-                ]),
-                h('input', {
-                  class: selectClass,
-                  value: destination.value,
-                  list: id,
-                  onInput(event: Event) {
-                    destination.value = (
-                      event.target as HTMLInputElement
-                    ).value.trim()
-                    error.value = undefined
-                    review.value = undefined
-                  },
-                }),
-              ]),
               h(
-                'datalist',
-                { id },
-                [...new Set(['/', ...targets.value])].map((path) =>
-                  h('option', { value: path }),
-                ),
+                'label',
+                { class: 'grid min-w-0 gap-1.5 text-sm font-medium' },
+                [
+                  message(['New key', 'Nouvelle clé', 'Nueva clave']),
+                  h('input', {
+                    class: selectClass,
+                    value: key.value,
+                    placeholder: props.path[props.path.length - 1],
+                    onInput(event: Event) {
+                      key.value = (event.target as HTMLInputElement).value
+                      error.value = undefined
+                      review.value = undefined
+                    },
+                  }),
+                ],
               ),
               h(
                 'button',
                 {
-                  class: 'rounded-md border px-3 py-1 disabled:opacity-50',
+                  class: submitClass,
                   type: 'submit',
-                  disabled: !destination.value || destination.value === parent,
+                  disabled:
+                    !key.value.trim() ||
+                    key.value.trim() === props.path[props.path.length - 1],
                 },
                 message([
-                  'Review move',
-                  'Examiner le déplacement',
-                  'Revisar el traslado',
+                  'Review rename',
+                  'Examiner le renommage',
+                  'Revisar el cambio de nombre',
                 ]),
               ),
             ],
           ),
-          h(
-            'p',
-            { class: 'mt-1 text-muted-foreground' },
-            message([
-              'Use a path in the current record, for example /metrics. Use / for the current record itself.',
-              'Indiquez un chemin dans l’enregistrement courant, par exemple /indicateurs. Utilisez / pour l’enregistrement lui-même.',
-              'Indica una ruta en el registro actual, por ejemplo /indicadores. Usa / para el propio registro.',
-            ]),
-          ),
-        ]),
-        review.value
-          ? h('div', { class: 'flex flex-wrap items-center gap-2 text-sm' }, [
-              h('p', { class: 'break-all', role: 'status' }, [
-                review.value.impact.from,
-                ' → ',
-                review.value.impact.to,
-                ' · ',
-                message(
-                  [
-                    'Linked components: {count}',
-                    'Composants liés : {count}',
-                    'Componentes vinculados: {count}',
-                  ],
-                  { count: review.value.impact.componentIds.length },
-                ),
+          h('details', { class: 'min-w-0 border-t pt-3 text-sm' }, [
+            h(
+              'summary',
+              { class: 'cursor-pointer font-medium' },
+              message([
+                'Move to another object',
+                'Déplacer vers un autre objet',
+                'Mover a otro objeto',
               ]),
-              ...('createdObjects' in review.value.impact
-                ? [
-                    review.value.impact.createdObjects.length
-                      ? h(
-                          'p',
-                          { class: 'w-full break-all' },
-                          message(
-                            [
-                              'Objects to create: {paths}',
-                              'Objets à créer : {paths}',
-                              'Objetos por crear: {paths}',
-                            ],
-                            {
-                              paths:
-                                review.value.impact.createdObjects.join(', '),
-                            },
-                          ),
-                        )
-                      : null,
+            ),
+            h(
+              'form',
+              {
+                class: 'mt-3 ' + formClass,
+                onSubmit: (event: Event) => reviewChange(event, true),
+              },
+              [
+                h('label', { class: 'grid min-w-0 gap-1.5 font-medium' }, [
+                  message([
+                    'Destination object',
+                    'Objet de destination',
+                    'Objeto de destino',
+                  ]),
+                  h('input', {
+                    class: selectClass,
+                    value: destination.value,
+                    list: id,
+                    onInput(event: Event) {
+                      destination.value = (
+                        event.target as HTMLInputElement
+                      ).value.trim()
+                      error.value = undefined
+                      review.value = undefined
+                    },
+                  }),
+                ]),
+                h(
+                  'datalist',
+                  { id },
+                  [...new Set(['/', ...targets.value])].map((path) =>
+                    h('option', { value: path }),
+                  ),
+                ),
+                h(
+                  'button',
+                  {
+                    class: submitClass,
+                    type: 'submit',
+                    disabled:
+                      !destination.value || destination.value === parent,
+                  },
+                  message([
+                    'Review move',
+                    'Examiner le déplacement',
+                    'Revisar el traslado',
+                  ]),
+                ),
+              ],
+            ),
+            h(
+              'p',
+              { class: 'mt-2 text-xs text-muted-foreground' },
+              message([
+                'Choose an object or enter a path like /metrics. Use / for the current record.',
+                'Choisissez un objet ou saisissez un chemin comme /indicateurs. Utilisez / pour l’enregistrement courant.',
+                'Elige un objeto o escribe una ruta como /indicadores. Usa / para el registro actual.',
+              ]),
+            ),
+          ]),
+          review.value
+            ? h(
+                'div',
+                {
+                  ref: reviewPanel,
+                  tabindex: -1,
+                  class:
+                    'grid min-w-0 gap-2 rounded-md border bg-muted/45 p-3 text-sm',
+                },
+                [
+                  h('div', { class: 'grid min-w-0 gap-1', role: 'status' }, [
+                    h('p', { class: 'font-mono text-xs break-all' }, [
+                      review.value.impact.from,
+                      ' → ',
+                      review.value.impact.to,
+                    ]),
                     h(
-                      'ul',
-                      { class: 'w-full space-y-1' },
-                      review.value.impact.dependencies.map(
-                        ({ componentId, property, path }) =>
-                          h('li', { class: 'break-all' }, [
-                            props.componentLabel(componentId) ?? componentId,
-                            ' · ',
-                            property,
-                            ' · ',
-                            jsonPointer(path.map((part) => part ?? '*')),
-                          ]),
+                      'p',
+                      message(
+                        [
+                          'Linked components: {count}',
+                          'Composants liés : {count}',
+                          'Componentes vinculados: {count}',
+                        ],
+                        { count: review.value.impact.componentIds.length },
                       ),
                     ),
-                  ]
-                : []),
-              action(
-                move.value
-                  ? [
-                      'Confirm move',
-                      'Confirmer le déplacement',
-                      'Confirmar el traslado',
-                    ]
-                  : [
-                      'Confirm rename',
-                      'Confirmer le renommage',
-                      'Confirmar el cambio de nombre',
-                    ],
-                () => {
-                  const confirmed = review.value.confirm()
-                  review.value = undefined
-                  if (!confirmed)
-                    error.value = new DocumentValidationError([
-                      {
-                        path: '/',
-                        code: 'stale_rename',
-                        message: 'The draft changed. Review the change again.',
+                  ]),
+                  ...('createdObjects' in review.value.impact
+                    ? [
+                        review.value.impact.createdObjects.length
+                          ? h(
+                              'p',
+                              { class: 'w-full break-all' },
+                              message(
+                                [
+                                  'Objects to create: {paths}',
+                                  'Objets à créer : {paths}',
+                                  'Objetos por crear: {paths}',
+                                ],
+                                {
+                                  paths:
+                                    review.value.impact.createdObjects.join(
+                                      ', ',
+                                    ),
+                                },
+                              ),
+                            )
+                          : null,
+                        h(
+                          'ul',
+                          { class: 'w-full space-y-1' },
+                          review.value.impact.dependencies.map(
+                            ({ componentId, property, path }) =>
+                              h('li', { class: 'break-all' }, [
+                                props.componentLabel(componentId) ??
+                                  componentId,
+                                ' · ',
+                                property,
+                                ' · ',
+                                jsonPointer(path.map((part) => part ?? '*')),
+                              ]),
+                          ),
+                        ),
+                      ]
+                    : []),
+                  h('div', { class: 'flex flex-wrap items-center gap-2' }, [
+                    action(
+                      move.value
+                        ? [
+                            'Confirm move',
+                            'Confirmer le déplacement',
+                            'Confirmar el traslado',
+                          ]
+                        : [
+                            'Confirm rename',
+                            'Confirmer le renommage',
+                            'Confirmar el cambio de nombre',
+                          ],
+                      () => {
+                        const confirmed = review.value.confirm()
+                        review.value = undefined
+                        if (confirmed) props.onConfirmed()
+                        else
+                          error.value = new DocumentValidationError([
+                            {
+                              path: '/',
+                              code: 'stale_rename',
+                              message:
+                                'The draft changed. Review the change again.',
+                            },
+                          ])
                       },
-                    ])
-                },
-              ),
-            ])
-          : null,
-        error.value
-          ? h(
-              'p',
-              { role: 'alert', class: 'text-sm text-destructive' },
-              documentError(error.value),
-            )
-          : null,
-      ])
+                      false,
+                      true,
+                    ),
+                    action(['Cancel', 'Annuler', 'Cancelar'], () => {
+                      review.value = undefined
+                      reviewTrigger?.focus()
+                    }),
+                  ]),
+                ],
+              )
+            : null,
+          error.value
+            ? h(
+                'p',
+                { role: 'alert', class: 'text-sm text-destructive' },
+                documentError(error.value),
+              )
+            : null,
+        ],
+      )
   },
 })
 
@@ -350,6 +406,7 @@ export const DataModelWidget = defineComponent({
   },
   setup(props) {
     const tab = ref<'schema' | 'data'>('schema')
+    const showSource = ref(true)
     const name = ref('')
     const error = ref<unknown>()
     const applied = ref(false)
@@ -415,6 +472,14 @@ export const DataModelWidget = defineComponent({
         error.value = cause
       }
     }
+    onMounted(() => {
+      if (!files.value) run(() => props.model.generate(props.tree))
+    })
+    function editSource(dataSchema: string) {
+      props.model.edit({ ...files.value, dataSchema })
+      error.value = undefined
+      applied.value = false
+    }
     function update(part: 'dataSchema' | 'data', value: object) {
       props.model.edit({
         ...files.value,
@@ -446,21 +511,50 @@ export const DataModelWidget = defineComponent({
       const project = props.model.project.value
       const selected = props.model.selected.value
       const dependencies = compiled.value.value?.dependencies ?? []
+      const validationIssues = [
+        issue(
+          [
+            'Schema validation',
+            'Validation du schéma',
+            'Validación del esquema',
+          ],
+          validation.value.error,
+        ),
+        issue(
+          [
+            'UI compatibility',
+            'Compatibilité avec l’interface',
+            'Compatibilidad con la interfaz',
+          ],
+          compiled.value.error,
+        ),
+        issue(
+          [
+            'Test data validation',
+            'Validation des données d’essai',
+            'Validación de los datos de prueba',
+          ],
+          dataIssues.value,
+        ),
+      ].filter(Boolean)
       return h(
         'section',
         {
           class:
-            'data-model-view flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-3',
+            'data-model-view flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-y-auto p-3 sm:p-5',
           'data-click-stop-propagation': 'true',
         },
         [
           h(
             'header',
-            { class: 'flex flex-wrap items-center justify-between gap-2' },
+            {
+              class:
+                'flex flex-wrap items-center justify-between gap-3 border-b pb-3',
+            },
             [
               h(
                 'h2',
-                { class: 'text-lg font-semibold' },
+                { class: 'text-xl font-semibold tracking-tight' },
                 message(['Data model', 'Modèle de données', 'Modelo de datos']),
               ),
               h('div', { class: 'flex flex-wrap gap-2' }, [
@@ -489,18 +583,6 @@ export const DataModelWidget = defineComponent({
               ]),
             ],
           ),
-          h(ProjectArchiveWidget, {
-            tree: props.tree,
-            model: props.model,
-            onImport: (archive) => {
-              props.onImport(archive)
-              name.value = ''
-              error.value = undefined
-              applied.value = false
-              reconciled.value = false
-              tab.value = 'schema'
-            },
-          }),
           h('div', { class: 'flex flex-wrap items-end gap-2' }, [
             action(
               [
@@ -534,49 +616,80 @@ export const DataModelWidget = defineComponent({
                   ],
                 ),
               ]),
-            project &&
-              h('label', { class: 'grid gap-1 text-sm' }, [
+            h('details', { class: 'data-model-project' }, [
+              h(
+                'summary',
+                { class: 'cursor-pointer text-sm font-medium' },
                 message([
-                  'Variant name',
-                  'Nom de la variante',
-                  'Nombre de la variante',
+                  'Project and variants',
+                  'Projet et variantes',
+                  'Proyecto y variantes',
                 ]),
-                h('input', {
-                  class: selectClass,
-                  value: name.value,
-                  onInput: (event: Event) => {
-                    name.value = (event.target as HTMLInputElement).value
+              ),
+              h('div', { class: 'data-model-project-content' }, [
+                h(ProjectArchiveWidget, {
+                  tree: props.tree,
+                  model: props.model,
+                  onImport: (archive) => {
+                    props.onImport(archive)
+                    name.value = ''
+                    error.value = undefined
+                    applied.value = false
+                    reconciled.value = false
+                    tab.value = 'schema'
                   },
                 }),
-              ]),
-            ...(project
-              ? [
-                  action(
-                    ['Create variant', 'Créer une variante', 'Crear variante'],
-                    () =>
-                      run(() => {
-                        props.model.addVariant(name.value, false)
-                        name.value = ''
+                h('div', { class: 'flex flex-wrap items-end gap-2' }, [
+                  project &&
+                    h('label', { class: 'grid gap-1 text-sm' }, [
+                      message([
+                        'Variant name',
+                        'Nom de la variante',
+                        'Nombre de la variante',
+                      ]),
+                      h('input', {
+                        class: selectClass,
+                        value: name.value,
+                        onInput: (event: Event) => {
+                          name.value = (event.target as HTMLInputElement).value
+                        },
                       }),
-                    !name.value.trim(),
-                  ),
-                  selected
-                    ? action(
-                        [
-                          'Duplicate variant',
-                          'Dupliquer la variante',
-                          'Duplicar variante',
-                        ],
-                        () =>
-                          run(() => {
-                            props.model.addVariant(name.value, true)
-                            name.value = ''
-                          }),
-                        !name.value.trim(),
-                      )
-                    : null,
-                ]
-              : []),
+                    ]),
+                  ...(project
+                    ? [
+                        action(
+                          [
+                            'Create variant',
+                            'Créer une variante',
+                            'Crear variante',
+                          ],
+                          () =>
+                            run(() => {
+                              props.model.addVariant(name.value, false)
+                              name.value = ''
+                            }),
+                          !name.value.trim(),
+                        ),
+                        selected
+                          ? action(
+                              [
+                                'Duplicate variant',
+                                'Dupliquer la variante',
+                                'Duplicar variante',
+                              ],
+                              () =>
+                                run(() => {
+                                  props.model.addVariant(name.value, true)
+                                  name.value = ''
+                                }),
+                              !name.value.trim(),
+                            )
+                          : null,
+                      ]
+                    : []),
+                ]),
+              ]),
+            ]),
           ]),
           props.model.storageError.value
             ? h(
@@ -637,6 +750,17 @@ export const DataModelWidget = defineComponent({
                         () => message(label),
                       ),
                     ),
+                    tab.value === 'schema' &&
+                      action(
+                        showSource.value || !schema.value.value
+                          ? ['Hide JSON', 'Masquer le JSON', 'Ocultar JSON']
+                          : ['Show JSON', 'Afficher le JSON', 'Mostrar JSON'],
+                        () => {
+                          showSource.value = !showSource.value
+                        },
+                        !schema.value.value,
+                      ),
+                    h('span', { class: 'grow' }),
                     action(
                       [
                         'Apply to preview',
@@ -670,69 +794,145 @@ export const DataModelWidget = defineComponent({
                       ),
                   ],
                 ),
-                issue(
-                  [
-                    'Schema validation',
-                    'Validation du schéma',
-                    'Validación del esquema',
-                  ],
-                  validation.value.error,
-                ),
-                issue(
-                  [
-                    'UI compatibility',
-                    'Compatibilité avec l’interface',
-                    'Compatibilidad con la interfaz',
-                  ],
-                  compiled.value.error,
-                ),
-                issue(
-                  [
-                    'Test data validation',
-                    'Validation des données d’essai',
-                    'Validación de los datos de prueba',
-                  ],
-                  dataIssues.value,
-                ),
-                tab.value === 'schema' && schema.value.value
+                validationIssues.length
                   ? h(
-                      DataSchemaEditor,
+                      'details',
                       {
-                        key: selected,
-                        tree: true,
-                        modelValue: schema.value.value,
-                        locale: exampleLocale.value,
-                        dependencies,
-                        componentLabel: props.componentLabel,
-                        onNavigate: (id) => props.onNavigate(id),
-                        'onUpdate:modelValue': (value) =>
-                          update('dataSchema', value),
+                        class:
+                          'rounded-md border border-destructive/35 px-3 py-2 text-sm',
                       },
-                      {
-                        inspector: ({
-                          path,
-                          pointer,
-                          objects,
-                        }: {
-                          path?: (string | null)[]
-                          pointer: string
-                          objects: (string | null)[][]
-                        }) =>
-                          selected &&
-                          typeof path?.[path.length - 1] === 'string'
-                            ? h(RenameProperty, {
-                                key: pointer,
-                                model: props.model,
-                                path,
-                                objects,
-                                componentLabel: props.componentLabel,
-                              })
-                            : null,
-                      },
+                      [
+                        h(
+                          'summary',
+                          {
+                            class:
+                              'cursor-pointer font-medium text-destructive',
+                          },
+                          message([
+                            'Validation issues',
+                            'Erreurs de validation',
+                            'Errores de validación',
+                          ]),
+                        ),
+                        h(
+                          'div',
+                          { class: 'mt-2 grid gap-2' },
+                          validationIssues,
+                        ),
+                      ],
                     )
-                  : tab.value === 'data' &&
-                      schema.value.value &&
-                      data.value.value
+                  : null,
+                tab.value === 'schema'
+                  ? h(
+                      'div',
+                      {
+                        class: 'data-model-schema',
+                        'data-show-source':
+                          showSource.value || !schema.value.value,
+                      },
+                      [
+                        schema.value.value
+                          ? h(
+                              DataSchemaEditor,
+                              {
+                                key: selected,
+                                builder: true,
+                                modelValue: schema.value.value,
+                                locale: exampleLocale.value,
+                                dependencies,
+                                componentLabel: props.componentLabel,
+                                onNavigate: (id) => props.onNavigate(id),
+                                'onUpdate:modelValue': (value) =>
+                                  update('dataSchema', value),
+                              },
+                              {
+                                inspector: ({
+                                  path,
+                                  pointer,
+                                  objects,
+                                  close,
+                                }: {
+                                  path?: (string | null)[]
+                                  pointer: string
+                                  objects: (string | null)[][]
+                                  close: () => void
+                                }) =>
+                                  selected &&
+                                  typeof path?.[path.length - 1] === 'string'
+                                    ? h(RenameProperty, {
+                                        key: pointer,
+                                        model: props.model,
+                                        path,
+                                        objects,
+                                        onConfirmed: close,
+                                        componentLabel: props.componentLabel,
+                                      })
+                                    : null,
+                              },
+                            )
+                          : h(
+                              'p',
+                              {
+                                role: 'status',
+                                class:
+                                  'rounded-lg border bg-muted/40 p-4 text-sm',
+                              },
+                              message([
+                                'Correct the JSON source to resume visual editing.',
+                                'Corrigez la source JSON pour reprendre l’édition visuelle.',
+                                'Corrige el código JSON para continuar la edición visual.',
+                              ]),
+                            ),
+                        showSource.value || !schema.value.value
+                          ? h(
+                              'section',
+                              {
+                                class: 'data-model-source',
+                                'aria-label': message(sourceTitle),
+                              },
+                              [
+                                h('div', { class: 'schema-builder-header' }, [
+                                  h(
+                                    'h3',
+                                    { class: 'font-semibold' },
+                                    message(sourceTitle),
+                                  ),
+                                  action(
+                                    [
+                                      'Download JSON',
+                                      'Télécharger le JSON',
+                                      'Descargar JSON',
+                                    ],
+                                    () =>
+                                      downloadJson(
+                                        'data.schema.json',
+                                        files.value.dataSchema,
+                                      ),
+                                    !schema.value.value,
+                                  ),
+                                ]),
+                                h('textarea', {
+                                  class: 'data-model-source-code',
+                                  'aria-label': 'data.schema.json',
+                                  'aria-invalid': schema.value.error
+                                    ? 'true'
+                                    : undefined,
+                                  value: schemaSource.value,
+                                  spellcheck: false,
+                                  autocapitalize: 'off',
+                                  wrap: 'off',
+                                  onInput: (event: Event) =>
+                                    editSource(
+                                      (event.target as HTMLTextAreaElement)
+                                        .value,
+                                    ),
+                                }),
+                              ],
+                            )
+                          : null,
+                      ],
+                    )
+                  : schema.value.value && data.value.value
                     ? h(TestDataWidget, {
                         key: selected,
                         tree: props.tree,

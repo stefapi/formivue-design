@@ -150,7 +150,7 @@ export const DocumentEditorWidget = defineComponent({
               ),
             ],
           ),
-          selected === 'dataSchema' && schema.value
+          !props.onModel && selected === 'dataSchema' && schema.value
             ? h(
                 Button,
                 {
@@ -300,7 +300,10 @@ export const DocumentEditorWidget = defineComponent({
                 onChange: props.onChange,
               }),
             )
-          : selected === 'dataSchema' && visualSchema.value && schema.value
+          : !props.onModel &&
+              selected === 'dataSchema' &&
+              visualSchema.value &&
+              schema.value
             ? h(DataSchemaEditor, {
                 modelValue: schema.value,
                 locale: exampleLocale.value,
