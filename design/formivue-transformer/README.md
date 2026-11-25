@@ -33,6 +33,14 @@ repository and license: see [`package-meta.json`](../../package-meta.json).
 
 ## Separate UI, schema and data documents
 
+Document import and compilation use restricted rendering by default.
+`parseFormDocuments`, `compileFormDocuments`, `createFormDocument` and legacy
+`transformToTreeNode` reject executable rendering settings such as JavaScript
+expressions and reactions. Use declarative `bindings` for data-driven props.
+For content explicitly trusted by the application, pass `{ trusted: true }`
+to each relevant import and compilation call. Keep this choice outside the
+imported JSON.
+
 `transformToFormDocuments(tree)` migrates the designer tree to three separate
 documents. For a saved `{ form, schema }` export, use `splitFormSchema(export)`.
 The old import and export APIs are also available. A custom expression used as a

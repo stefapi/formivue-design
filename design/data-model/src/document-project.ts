@@ -2,6 +2,7 @@ import { computed, shallowRef } from 'vue'
 import { isEqual } from '@formivue/shared'
 import type { ITreeNode, TreeNode } from '@formivue-design/core'
 import {
+  assertSafeDocumentUi,
   compileFormDocuments,
   createFormDocumentProject,
   createFormDocumentVariant,
@@ -34,6 +35,7 @@ import {
 import {
   parseDocumentProject,
   stringifyDocumentProject,
+  validateDocumentProjectArchive,
   type DocumentProjectArchive,
   type ProjectDraft as Draft,
   type PendingReconciliation,
@@ -492,7 +494,7 @@ export function useDocumentProject({
     const saved = state.value
     const draft = current.value
     if (!saved.project || !saved.selected || !draft) return
-    const { dataSchema, data } = parseFormDocuments(draft.files)
+    const { dataSchema, data } = parseFormDocuments(draft.files, options)
     const candidate = {
       ...saved.project,
       variants: saved.project.variants.map((variant) =>
@@ -532,6 +534,7 @@ export function useDocumentProject({
   }
 
   function apply(documents: FormDocuments) {
+    assertSafeDocumentUi(documents.ui, options)
     const saved = state.value
     const existing = saved.project
     let name = saved.selected
@@ -641,8 +644,12 @@ export function useDocumentProject({
       return parseDocumentProject(source, options)
     },
     importArchive(archive: DocumentProjectArchive, tree?: TreeNode) {
+      const { state: restored } = validateDocumentProjectArchive(
+        archive,
+        options,
+      )
       reconciliation.value = undefined
-      update(archive.state)
+      update(restored)
       if (tree) restoreReconciliation(tree)
     },
     restoreReconciliation,
@@ -658,7 +665,11 @@ export function useDocumentProject({
     apply,
     resetDraft,
     restorePreview() {
-      if (state.value.applied) applyPreview(state.value.applied)
+      const applied = state.value.applied
+      if (applied) {
+        assertSafeDocumentUi(applied.ui, options)
+        applyPreview(applied)
+      }
     },
     clearPreview() {
       update({ ...state.value, applied: undefined })

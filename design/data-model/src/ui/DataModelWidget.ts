@@ -789,7 +789,9 @@ export const DataModelWidget = defineComponent({
                       ],
                       () =>
                         run(() => {
-                          props.model.apply(parseFormDocuments(files.value))
+                          props.model.apply(
+                            parseFormDocuments(files.value, props.options),
+                          )
                           applied.value = true
                         }),
                       blocked.value,

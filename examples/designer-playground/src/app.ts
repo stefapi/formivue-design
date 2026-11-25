@@ -102,7 +102,8 @@ import {
   DataModelWidget,
   DocumentEditorWidget,
 } from '@formivue-design/data-model/ui'
-import { exampleLocale } from '../../shared/language'
+import { exampleLocale, message } from '../../shared/language'
+import { documentError } from './document-messages'
 import { createVariantsDemo } from './service/variants-demo'
 import type {
   AdvancedDesignerComponents,
@@ -245,12 +246,23 @@ export const App = defineComponent({
     useObserver()
     const registry = { ...components, ...props.advanced?.components }
     const materials = { ...Materials, ...props.advanced?.materials }
+    const trusted = ref(false)
+    const restoreError = ref('')
     const documentOptions = {
       contracts: props.advanced?.documentContracts,
+      get trusted() {
+        return trusted.value
+      },
       hasComponent: (name: string) =>
         name
           .split('.')
-          .reduce((value, key) => value?.[key], materials as any) != null,
+          .reduce(
+            (value, key) =>
+              Object.prototype.hasOwnProperty.call(value ?? {}, key)
+                ? value[key]
+                : undefined,
+            materials as any,
+          ) != null,
     }
     const preview = useDocumentPreview(documentOptions)
     onUnmounted(preview.clear)
@@ -297,10 +309,25 @@ export const App = defineComponent({
         engine.workbench.currentWorkspace.operation.selection.clear()
       })
       model.importArchive(archive, engine.getCurrentTree())
+      restoreError.value = ''
+    }
+    const enableTrustedMode = () => {
+      if (
+        window.confirm(
+          message([
+            'Trusted documents can run JavaScript with access to this page. Enable this mode only for documents you trust. The setting lasts until you reload.',
+            'Les documents approuvés peuvent exécuter du JavaScript avec accès à cette page. Activez ce mode uniquement pour des documents de confiance. Le réglage dure jusqu’au rechargement.',
+            'Los documentos de confianza pueden ejecutar JavaScript con acceso a esta página. Activa este modo solo para documentos de confianza. El ajuste se mantiene hasta que recargues la página.',
+          ]),
+        )
+      )
+        trusted.value = true
     }
     onMounted(() => {
-      const restored = loadInitialSchema(engine, advanced, profile)
-      if (demo && !restored) {
+      const restored = loadInitialSchema(engine, advanced, profile, (error) => {
+        restoreError.value = documentError(error)
+      })
+      if (demo && restored === false) {
         const project = createVariantsDemo(engine, documentOptions)
         if (!model.project.value) model.install(project)
         saveSchema(engine, advanced, profile)
@@ -311,8 +338,12 @@ export const App = defineComponent({
           // Older canvas saves remain editable and generation can report incompatibilities.
         }
       }
-      model.restoreReconciliation(engine.getCurrentTree())
-      model.restorePreview()
+      try {
+        model.restoreReconciliation(engine.getCurrentTree())
+        model.restorePreview()
+      } catch (error) {
+        restoreError.value = documentError(error)
+      }
       if (demo) openDataModel()
     })
     const navigateToCanvas = async (id?: string) => {
@@ -537,8 +568,38 @@ export const App = defineComponent({
                                   'PREVIEW',
                                 ],
                               }),
+                              h(
+                                'button',
+                                {
+                                  type: 'button',
+                                  disabled: trusted.value,
+                                  onClick: enableTrustedMode,
+                                  class:
+                                    'rounded border border-input px-2 py-1 text-xs',
+                                },
+                                trusted.value
+                                  ? message([
+                                      'Trusted JavaScript enabled',
+                                      'JavaScript de confiance activé',
+                                      'JavaScript de confianza activado',
+                                    ])
+                                  : message([
+                                      'Enable trusted JavaScript',
+                                      'Activer le JavaScript de confiance',
+                                      'Activar JavaScript de confianza',
+                                    ]),
+                              ),
                             ],
                           }),
+                          restoreError.value &&
+                            h(
+                              'p',
+                              {
+                                role: 'alert',
+                                class: 'p-2 text-sm text-destructive',
+                              },
+                              restoreError.value,
+                            ),
                           h(
                             ViewportPanel,
                             { style: { height: '100%' } },
@@ -611,6 +672,7 @@ export const App = defineComponent({
                                           tree,
                                           locale: exampleLocale.value,
                                           showVisualSchema: false,
+                                          trusted: trusted.value,
                                           contracts: documentOptions.contracts,
                                           hasComponent:
                                             documentOptions.hasComponent,
@@ -633,6 +695,7 @@ export const App = defineComponent({
                                             h(SchemaEditorWidget, {
                                               tree,
                                               onChange,
+                                              trusted: trusted.value,
                                             }),
                                           ],
                                         },
@@ -654,6 +717,7 @@ export const App = defineComponent({
                                     default: ({ tree }: { tree: any }) =>
                                       h(PreviewWidget, {
                                         tree,
+                                        trusted: trusted.value,
                                         materials: props.advanced?.materials,
                                         frame: props.advanced?.previewFrame,
                                         document: preview.document.value,

@@ -3,8 +3,13 @@ import { ITreeNode } from '@formivue-design/core'
 import { clone, uid } from '@formivue-design/shared'
 import { splitFormSchema } from './document-migration'
 import type { DocumentContractOptions } from './document-contracts'
+import {
+  assertSafeDocumentCanvas,
+  assertSafeLegacySchema,
+  type DocumentTrustOptions,
+} from './document-trust'
 
-export interface ITransformerOptions {
+export interface ITransformerOptions extends DocumentTrustOptions {
   designableFieldName?: string
   designableFormName?: string
 }
@@ -86,6 +91,7 @@ export const transformToTreeNode = (
   formivue: IFormivueSchema = {},
   options?: ITransformerOptions,
 ) => {
+  assertSafeLegacySchema(formivue, options)
   const realOptions = createOptions(options)
   const root: ITreeNode = {
     id: formivue.schema?.['x-designable-id'],
@@ -135,10 +141,16 @@ export const transformToTreeNode = (
     schema['x-designable-id'] = schema['x-designable-id'] || uid()
     appendTreeNode(root, schema)
   })
+  assertSafeDocumentCanvas(root, options)
   return root
 }
 
 export * from './documents'
+export {
+  assertSafeDocumentCanvas,
+  assertSafeDocumentUi,
+  type DocumentTrustOptions,
+} from './document-trust'
 export type { DataSchema } from './document-schema'
 export {
   inlineBinding as parseDocumentBindingExpression,

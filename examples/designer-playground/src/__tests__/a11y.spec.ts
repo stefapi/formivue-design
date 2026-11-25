@@ -101,6 +101,30 @@ describe('playground formivue-vue — a11y (V8)', () => {
     document.body.appendChild(root)
   })
 
+  test('requires confirmation to enable JavaScript for the current playground session', async () => {
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true)
+    try {
+      const wrapper = mount(App, { attachTo: document.body })
+      mounted.push({ wrapper, engine: (globalThis as any).engine })
+      const button = () =>
+        wrapper
+          .findAll('button')
+          .find(
+            (candidate) => candidate.text() === 'Enable trusted JavaScript',
+          )!
+      await button().trigger('click')
+      expect(button()).toBeDefined()
+      await button().trigger('click')
+      expect(wrapper.text()).toContain('Trusted JavaScript enabled')
+      expect(confirm).toHaveBeenCalledTimes(2)
+    } finally {
+      confirm.mockRestore()
+    }
+  })
+
   test('the sidebar opens the data model in place of the component palette', async () => {
     const wrapper = mount(App, { attachTo: document.body })
     mounted.push({ wrapper, engine: (globalThis as any).engine })

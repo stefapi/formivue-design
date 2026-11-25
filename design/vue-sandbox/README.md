@@ -1,6 +1,12 @@
 # @formivue-design/vue-sandbox
 
-**Sandbox** iframe of the Vue designer. The preview content (`ViewPanel` preview) lives in
+**Sandbox** is a same-origin preview iframe for trusted content and assets only.
+It shares the parent page's origin and receives references to the designer and
+workspace. Load only scripts, styles and schemas you would trust to run in the
+parent page. For untrusted previews, use a separate origin and exchange only
+validated, serializable messages.
+
+The preview content (`ViewPanel` preview) lives in
 an isolated iframe, driven from the host window.
 
 - **`Sandbox`** — `defineComponent` component rendering the full-height,

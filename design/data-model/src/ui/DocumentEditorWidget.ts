@@ -35,6 +35,7 @@ export const DocumentEditorWidget = defineComponent({
       CompileFormDocumentOptions['hasComponent']
     >,
     locale: String,
+    trusted: Boolean,
     showVisualSchema: { type: Boolean, default: true },
     documents: Object as PropType<FormDocuments>,
     draft: Object as PropType<FormDocumentJson>,
@@ -98,10 +99,15 @@ export const DocumentEditorWidget = defineComponent({
 
     const download = (key: keyof FormDocuments) => {
       try {
-        const session = createFormDocument(parseFormDocuments(contents.value), {
+        const options = {
           contracts: props.contracts,
           hasComponent: props.hasComponent,
-        })
+          trusted: props.trusted,
+        }
+        const session = createFormDocument(
+          parseFormDocuments(contents.value, options),
+          options,
+        )
         try {
           const canonical = stringifyFormDocuments(session.exportDocuments())
           downloadJson(files[key], canonical[key])
@@ -242,7 +248,7 @@ export const DocumentEditorWidget = defineComponent({
                     onClick: () => {
                       try {
                         const conflicts = props.onApply(
-                          parseFormDocuments(contents.value),
+                          parseFormDocuments(contents.value, props),
                         )
                         error.value =
                           conflicts && conflicts.length

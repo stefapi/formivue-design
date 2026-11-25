@@ -129,6 +129,7 @@ afterEach(() => {
 function designerFor(
   name: Name,
   setup?: (node: TreeNode, root: TreeNode) => void,
+  trusted = false,
 ) {
   const engine = createDesigner({ rootComponentName: 'Form' })
   const { operation } = engine.workbench.ensureWorkspace({
@@ -170,7 +171,7 @@ function designerFor(
                   }: {
                     tree: TreeNode
                     onChange: (tree: ITreeNode) => void
-                  }) => h(SchemaEditorWidget, { tree, onChange }),
+                  }) => h(SchemaEditorWidget, { tree, onChange, trusted }),
                 },
               ),
               h(
@@ -181,6 +182,7 @@ function designerFor(
                     h(PreviewWidget, {
                       tree,
                       materials,
+                      trusted,
                       frame: AdvancedPreviewFrame,
                     }),
                 },
@@ -2462,39 +2464,43 @@ describe('advanced settings through the designer and JSON preview', () => {
     '%s and its steps edit navigation, branches, validation and submission',
     async (name) => {
       const step = `${name}Step` as const
-      const studio = designerFor(name, (node, root) => {
-        node.children[0].setProps({ name: 'intro' })
-        const main = child('main', step, {
-          'x-component-props': { title: 'Main question' },
-        })
-        main.append(
-          child('branchAnswer', 'Input', {
-            type: 'string',
-            title: 'Branch answer',
-            'x-decorator': 'FormItem',
-          }),
-        )
-        node.append(
-          main,
-          child('extra', step, {
-            'x-component-props': { title: 'Extra question' },
-          }),
-          child('review', step, { 'x-component-props': { title: 'Review' } }),
-        )
-        root.append(
-          child('approval', 'Input', {
-            type: 'string',
-            title: 'External approval',
-            'x-decorator': 'FormItem',
-            required: true,
-          }),
-          child('submitted', 'Input', {
-            type: 'string',
-            title: 'Submission receipt',
-            'x-decorator': 'FormItem',
-          }),
-        )
-      })
+      const studio = designerFor(
+        name,
+        (node, root) => {
+          node.children[0].setProps({ name: 'intro' })
+          const main = child('main', step, {
+            'x-component-props': { title: 'Main question' },
+          })
+          main.append(
+            child('branchAnswer', 'Input', {
+              type: 'string',
+              title: 'Branch answer',
+              'x-decorator': 'FormItem',
+            }),
+          )
+          node.append(
+            main,
+            child('extra', step, {
+              'x-component-props': { title: 'Extra question' },
+            }),
+            child('review', step, { 'x-component-props': { title: 'Review' } }),
+          )
+          root.append(
+            child('approval', 'Input', {
+              type: 'string',
+              title: 'External approval',
+              'x-decorator': 'FormItem',
+              required: true,
+            }),
+            child('submitted', 'Input', {
+              type: 'string',
+              title: 'Submission receipt',
+              'x-decorator': 'FormItem',
+            }),
+          )
+        },
+        true,
+      )
       await editSettings(studio, studio.node, name, {
         label: 'Edited flow',
         previousText: 'Back in flow',

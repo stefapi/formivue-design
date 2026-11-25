@@ -25,6 +25,11 @@ import {
 import { schemaLookup, type DataSchema } from './document-schema'
 import { projectDocumentConstraints } from './document-projection'
 import { visitUiNodes } from './document-paths'
+import {
+  assertSafeDocumentUi,
+  assertSafeRenderMetadata,
+  type DocumentTrustOptions,
+} from './document-trust'
 
 export interface DataBinding {
   path: string
@@ -65,7 +70,8 @@ export interface FormDocuments {
   data: JsonObject
 }
 
-export interface CompileFormDocumentOptions extends DocumentContractOptions {
+export interface CompileFormDocumentOptions
+  extends DocumentContractOptions, DocumentTrustOptions {
   hasComponent?: (component: string) => boolean
   schemaValidation?: DataSchemaValidationOptions
 }
@@ -76,6 +82,7 @@ export function compileFormDocuments(
     contracts = standardDocumentContracts,
     hasComponent,
     schemaValidation,
+    trusted,
   }: CompileFormDocumentOptions = {},
 ) {
   if (
@@ -101,6 +108,7 @@ export function compileFormDocuments(
         message: 'Expected a JSON Schema object',
       },
     ])
+  assertSafeDocumentUi(ui, { trusted })
   const lookup = schemaLookup(dataSchema, schemaValidation?.resources)
   const describeSchema = (
     schema: DataSchema,
@@ -340,6 +348,8 @@ export function compileFormDocuments(
 
     let props: JsonObject = { ...node.props }
     if (expected?.normalizeProps) props = expected.normalizeProps(props)
+    if (trusted !== true)
+      assertSafeRenderMetadata(props, ['ui', node.id, 'props'])
     const bindingContracts = expected?.bindings ?? {}
     for (const [prop, contract] of Object.entries(bindingContracts)) {
       if (Object.prototype.hasOwnProperty.call(props, prop))
@@ -695,7 +705,16 @@ export function compileFormDocuments(
     }
     if (node.kind === 'array') {
       const defaults = newItemDefaults(lookup.child(target, null))
-      if (defaults !== undefined) props.itemDefault = defaults
+      if (defaults !== undefined) {
+        if (trusted !== true)
+          assertSafeRenderMetadata(defaults, [
+            'dataSchema',
+            ...path.filter((part) => part !== null),
+            'items',
+            'default',
+          ])
+        props.itemDefault = defaults
+      }
     }
     if (node.component) field['x-component'] = node.component
     if (Object.keys(props).length) field['x-component-props'] = props
@@ -719,6 +738,12 @@ export function compileFormDocuments(
       field.items = compileNode(node.item, [...path, null], true)?.field
     } else if (node.kind === 'field' && type === 'array') {
       // Scalar lists (TagsInput, choices and uploads) have no item widget.
+      if (trusted !== true)
+        assertSafeRenderMetadata(items, [
+          'dataSchema',
+          ...path.filter((part) => part !== null),
+          'items',
+        ])
       field.items = items as ISchema
     }
     return { path: bind.length ? bind : [node.key], field }
@@ -871,7 +896,10 @@ export function createFormDocument(
 
 export type FormDocumentJson = Record<keyof FormDocuments, string>
 
-export function parseFormDocuments(files: FormDocumentJson): FormDocuments {
+export function parseFormDocuments(
+  files: FormDocumentJson,
+  options: DocumentTrustOptions = {},
+): FormDocuments {
   const parse = (part: keyof FormDocuments) => {
     try {
       return JSON.parse(files[part])
@@ -881,8 +909,10 @@ export function parseFormDocuments(files: FormDocumentJson): FormDocuments {
       ])
     }
   }
+  const ui = parse('ui')
+  assertSafeDocumentUi(ui, options)
   return {
-    ui: parse('ui'),
+    ui,
     dataSchema: parse('dataSchema'),
     data: parse('data'),
   }

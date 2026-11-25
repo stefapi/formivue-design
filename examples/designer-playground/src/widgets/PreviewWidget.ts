@@ -10,6 +10,7 @@ import { createSchemaField, FormProvider } from '@formivue/vue'
 import { observer } from '@formivue/reactive-vue'
 import { TreeNode } from '@formivue-design/core'
 import {
+  assertSafeDocumentCanvas,
   transformToSchema,
   type createFormDocument,
 } from '@formivue-design/formivue-transformer'
@@ -17,7 +18,11 @@ import type { DraftFormPreview } from '@formivue-design/data-model/ui'
 // ATTENTION piège du port : le barrel de @formivue-design/formivue-vue exporte le
 // MATÉRIAU DESIGNER FormLayout (= withContainer → DroppableWidget du chrome) ;
 // la binding réelle vit dans la carte Materials (FormLayout vue-ui pur).
-import { conflictMessage, validationMessage } from '../document-messages'
+import {
+  conflictMessage,
+  documentError,
+  validationMessage,
+} from '../document-messages'
 import { Materials } from '@formivue-design/formivue-vue'
 
 export const PreviewWidget = observer(
@@ -29,6 +34,7 @@ export const PreviewWidget = observer(
       frame: Object as PropType<Component>,
       document: Object as PropType<ReturnType<typeof createFormDocument>>,
       draft: Object as PropType<DraftFormPreview>,
+      trusted: Boolean,
     },
     setup(props) {
       // sémantique useMemo(() => createForm(), []) d'ère : un form par
@@ -42,6 +48,17 @@ export const PreviewWidget = observer(
         const conflicts = active?.conflicts ?? []
         const issues = active?.issues ?? []
         const draft = props.draft
+        if (!active && !draft && !props.trusted) {
+          try {
+            assertSafeDocumentCanvas(props.tree.serialize())
+          } catch (error) {
+            return h(
+              'p',
+              { role: 'alert', class: 'p-2 text-sm text-destructive' },
+              documentError(error),
+            )
+          }
+        }
         const { form: formProps, schema } = active
           ? { form: active.formProps, schema: active.schema }
           : (draft?.compiled ?? transformToSchema(props.tree))

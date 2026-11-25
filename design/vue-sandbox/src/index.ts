@@ -1,6 +1,6 @@
 // @formivue-design/vue-sandbox — port de @formivue-design/react-sandbox (ét. 3.4).
-// L'iframe + le bridge postMessage/global restent framework-agnostic ;
-// seul le montage du contenu passe de ReactDOM.render à createApp().
+// Same-origin preview for trusted assets and content. The frame shares the
+// host designer and workspace through direct references.
 import {
   createApp,
   defineComponent,

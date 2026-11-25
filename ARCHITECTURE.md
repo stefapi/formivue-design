@@ -45,7 +45,7 @@ flowchart LR
 | Property panel and specialized editors such as data sources and reactions                       | `design/vue-settings-form`, `design/formivue-setters`          |
 | Import and export of UI, data schema and data documents                                         | `design/formivue-transformer`                                  |
 | Designer data model projects, drafts, reconciliation, preview sessions and document editors     | `design/data-model`                                            |
-| Sandbox iframe and its communication                                                            | `design/vue-sandbox`                                           |
+| Same-origin preview iframe for trusted content                                                  | `design/vue-sandbox`                                           |
 
 ## Advanced components
 
@@ -99,6 +99,12 @@ the data schema for the existing renderer. The headless data document in
 before publishing them. It reconciles editable rows by key and keeps local
 drafts when remote updates overlap. Applications own remote subscriptions and
 revisions. The combined `{ form, schema }` format remains available.
+
+Documents, project archives and legacy schema imports use restricted rendering
+by default. The transformer accepts declarative bindings and rejects executable
+rendering settings. Applications can pass `{ trusted: true }` only after
+explicitly trusting the source. The trust setting belongs to the application
+session. The same-origin `vue-sandbox` iframe is for trusted content and assets.
 
 The transformer includes the standard component contracts. Applications pass
 a registry to document migration and compilation to add contracts from

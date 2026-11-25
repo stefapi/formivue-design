@@ -39,12 +39,13 @@ function renderExport(
   children: ITreeNode[],
   options?: Parameters<typeof createForm>[0],
   scope = {},
-  frame = false,
+  { frame = false, trusted = false } = {},
 ) {
   const tree = new TreeNode({ componentName: 'Form', children })
   const exported = JSON.parse(JSON.stringify(transformToSchema(tree)))
   expect(
-    transformToSchema(transformToTreeNode(exported)).schema.properties,
+    transformToSchema(transformToTreeNode(exported, { trusted })).schema
+      .properties,
   ).toMatchObject(exported.schema.properties)
   const form = createForm(options)
   const view = mount(
@@ -107,6 +108,7 @@ describe('advanced schema bindings', () => {
         ],
         undefined,
         { submit },
+        { trusted: true },
       )
       const press = async (label: string) => {
         const button = view
@@ -210,7 +212,7 @@ describe('advanced schema bindings', () => {
         ],
         undefined,
         {},
-        frame,
+        { frame },
       )
       try {
         expect(form.query('overlay.answer').take()).toBeDefined()

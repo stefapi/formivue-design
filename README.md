@@ -133,7 +133,7 @@ npm install @formivue-design/core @formivue-design/vue \
 | `@formivue-design/core`                 | designer engine — `TreeNode`, drivers, `TransformHelper`          |
 | `@formivue-design/vue-ui`               | headless design system — reka-ui + shadcn-vue + Tailwind 4        |
 | `@formivue-design/vue`                  | designer Vue widgets and panels                                   |
-| `@formivue-design/vue-sandbox`          | schema rendering in a sandboxed iframe                            |
+| `@formivue-design/vue-sandbox`          | same-origin preview iframe for trusted content                    |
 | `@formivue-design/vue-settings-form`    | properties panel (`SettingsForm`, `setNpmCDNRegistry`)            |
 | `@formivue-design/formivue-vue`         | formivue materials for the canvas (widgets + Behaviors/Resources) |
 | `@formivue-design/formivue-setters`     | property setters (`DataSourceSetter`, `ReactionsSetter`…)         |

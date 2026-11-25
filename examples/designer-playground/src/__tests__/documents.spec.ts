@@ -473,7 +473,6 @@ describe('separate UI, schema and data documents', () => {
     initial.ui.nodes.push(
       makeNode('preferences', {
         kind: 'object',
-        component: 'Object',
         bind: '/preferences',
         children: [
           makeNode('detail', {

@@ -5,6 +5,11 @@ export type Message = readonly [
 ]
 
 const contractIssues: Record<string, Message> = {
+  untrusted_rendering: [
+    'This rendering setting requires explicitly trusted content.',
+    'Ce réglage de rendu nécessite un contenu explicitement approuvé.',
+    'Este ajuste de renderizado requiere contenido de confianza explícita.',
+  ],
   project_archive_invalid: [
     'Invalid project archive section.',
     'Section de l’archive du projet invalide.',

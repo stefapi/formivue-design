@@ -1,5 +1,7 @@
 import type { ITreeNode } from '@formivue-design/core'
 import {
+  assertSafeDocumentCanvas,
+  assertSafeDocumentUi,
   canvasReconciliationChoices,
   createFormDocument,
   exportFormDocumentVariant,
@@ -122,7 +124,11 @@ function readCanvas(value: unknown) {
   return nodeAt(value, '/canvas')
 }
 
-function validatePathHistory(value: Record<string, unknown>, path: string) {
+function validatePathHistory(
+  value: Record<string, unknown>,
+  path: string,
+  options: CompileFormDocumentOptions,
+) {
   const key = (part: unknown) =>
     typeof part === 'string' &&
     part.length > 0 &&
@@ -162,6 +168,13 @@ function validatePathHistory(value: Record<string, unknown>, path: string) {
       invalidArchive(location)
     validateAt(location + '/node', () => {
       copyJson(node)
+      assertSafeDocumentUi(
+        {
+          version: 1,
+          nodes: [node as unknown as FormDocuments['ui']['nodes'][number]],
+        },
+        options,
+      )
     })
   })
 }
@@ -183,7 +196,7 @@ function readDocuments(
 
 export function parseDocumentProject(
   source: string,
-  options: CompileFormDocumentOptions,
+  options: CompileFormDocumentOptions = {},
 ): DocumentProjectArchive {
   let parsed: unknown
   try {
@@ -195,7 +208,14 @@ export function parseDocumentProject(
       'project_archive_json',
     )
   }
-  const archive = objectAt(parsed, '/')
+  return validateDocumentProjectArchive(parsed, options)
+}
+
+export function validateDocumentProjectArchive(
+  source: unknown,
+  options: CompileFormDocumentOptions,
+): DocumentProjectArchive {
+  const archive = objectAt(source, '/')
   if (archive.format !== archiveFormat || archive.version !== 1)
     invalidArchive(
       '/',
@@ -203,6 +223,7 @@ export function parseDocumentProject(
       'project_archive_version',
     )
   const canvas = readCanvas(archive.canvas)
+  assertSafeDocumentCanvas(canvas, options)
   const state = objectAt(archive.state, '/state')
   if (state.version !== 1) invalidArchive('/state/version')
   const drafts = objectAt(state.drafts, '/state/drafts')
@@ -234,7 +255,7 @@ export function parseDocumentProject(
         invalidArchive(location + '/name')
       objectAt(variant.dataSchema, location + '/dataSchema')
       objectAt(variant.data, location + '/data')
-      validatePathHistory(variant, location)
+      validatePathHistory(variant, location, options)
       validateAt(location, () => {
         exportFormDocumentVariant(project, variant.name as string, options)
       })
@@ -255,7 +276,17 @@ export function parseDocumentProject(
     // Draft documents are editor text and may be incomplete or invalid JSON.
     for (const key of ['ui', 'dataSchema', 'data'])
       if (typeof files[key] !== 'string') invalidArchive(path + '/files/' + key)
-    validatePathHistory(draft, path)
+    validateAt(path + '/files', () => {
+      let ui: FormDocuments['ui']
+      try {
+        ui = JSON.parse(files.ui as string)
+      } catch {
+        // Broken draft JSON is preserved as editor text.
+        return
+      }
+      assertSafeDocumentUi(ui, options)
+    })
+    validatePathHistory(draft, path, options)
     if (variant)
       validateAt(path, () => {
         materializeFormDocumentVariant(

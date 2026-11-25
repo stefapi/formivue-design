@@ -129,7 +129,9 @@ describe('advanced schema contract', () => {
     })
     root.children.forEach(visit)
     const exported = JSON.parse(JSON.stringify(transformToSchema(root)))
-    const restored = new TreeNode(transformToTreeNode(exported))
+    const restored = new TreeNode(
+      transformToTreeNode(exported, { trusted: true }),
+    )
     expect(JSON.parse(JSON.stringify(transformToSchema(restored)))).toEqual(
       exported,
     )

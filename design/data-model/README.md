@@ -33,6 +33,12 @@ the canvas, applied documents, drafts and any pending reconciliation choices.
 `parseDocumentProject` and `stringifyDocumentProject` provide independent
 access to the version 1 archive format.
 
+Project archives and JSON documents use restricted rendering by default.
+For explicitly trusted content, pass `{ trusted: true }` in the project and
+preview options and to the JSON editor's `trusted` prop. Archives cannot set
+this option. The playground asks for confirmation and resets the choice on
+reload.
+
 The package declares `vue` as a peer and `@babel/types` as an optional peer
 for type checking. Vue 3.5's compiler declarations reference Babel types.
 When checking dependency declarations with an isolated `node_modules`
