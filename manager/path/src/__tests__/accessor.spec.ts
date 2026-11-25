@@ -15,6 +15,67 @@ test('test getIn and setIn', () => {
   expect(getIn(value, 'a.b.c')).toEqual(1111)
 })
 
+test('accessors ignore inherited properties at every level', () => {
+  const inherited = { label: 'inherited' }
+  const read = vi.fn(() => inherited)
+  const write = vi.fn()
+  const entry = Object.create(
+    Object.defineProperty({}, 'details', { get: read, set: write }),
+  )
+  const value = { entry }
+  expect(getIn(value, 'entry.details')).toBeUndefined()
+  expect(getIn(value, 'entry.details.label')).toBeUndefined()
+  expect(Path.existIn(value, 'entry.details')).toBe(false)
+  expect(Path.existIn(value, 'entry.details.label')).toBe(false)
+  setIn(value, 'entry.details', { label: 'replacement' })
+  setIn(value, 'entry.details.label', 'replacement')
+  Path.deleteIn(value, 'entry.details.label')
+  expect(Path.ensureIn(value, 'entry.details', {})).toBeUndefined()
+  expect(Object.hasOwn(entry, 'details')).toBe(false)
+  expect(inherited.label).toBe('inherited')
+  expect(read).not.toHaveBeenCalled()
+  expect(write).not.toHaveBeenCalled()
+
+  Object.defineProperty(entry, 'details', {
+    value: Object.assign(Object.create(null), { label: 'own' }),
+  })
+  expect(Path.existIn(value, 'entry.details.label')).toBe(true)
+  expect(getIn(value, 'entry.details.label')).toBe('own')
+  setIn(value, 'entry.details.label', 'updated')
+  expect(getIn(value, 'entry.details.label')).toBe('updated')
+  Path.deleteIn(value, 'entry.details.label')
+  expect(Path.existIn(value, 'entry.details.label')).toBe(false)
+})
+
+test('destructured access projects only own properties', () => {
+  const read = vi.fn(() => 'inherited')
+  const entry = Object.assign(
+    Object.create(Object.defineProperty({}, 'hidden', { get: read })),
+    { visible: 'own' },
+  )
+  const value = { entry }
+  const pattern = 'entry.{label:visible,extra:hidden}'
+  expect(getIn(value, pattern)).toEqual({ label: 'own' })
+  expect(Path.existIn(value, pattern)).toBe(false)
+  expect(Path.existIn(value, 'entry.{label:visible}')).toBe(true)
+  setIn(value, pattern, { label: 'updated', extra: 'ignored' })
+  expect(getIn(value, pattern)).toEqual({ label: 'updated' })
+  Path.deleteIn(value, pattern)
+  expect(Object.keys(entry)).toEqual([])
+  expect(read).not.toHaveBeenCalled()
+})
+
+test('reserved path segments are ignored even when they are own properties', () => {
+  const value = { row: { constructor: 'label', visible: 'own' } }
+  const pattern = 'row.{label:visible,extra:constructor}'
+  expect(getIn(value, 'row.constructor')).toBeUndefined()
+  expect(getIn(value, pattern)).toBeUndefined()
+  expect(Path.existIn(value, pattern)).toBe(false)
+  setIn(value, pattern, { label: 'updated' })
+  Path.deleteIn(value, 'row.constructor')
+  expect(value.row).toEqual({ constructor: 'label', visible: 'own' })
+})
+
 test('test getIn with destructor', () => {
   const value = { array: [{ aa: 123, bb: 321 }] }
   expect(getIn(value, 'array.0.[aa,bb]')).toEqual([123, 321])

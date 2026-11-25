@@ -16,9 +16,7 @@ type Mutators = {
   existIn?: (segments: Segments, source: any, start: number) => boolean
 }
 
-const DestructorCache = new Map()
-
-const isValid = (val: any) => val !== undefined && val !== null
+const DestructorCache = new Map<string, DestructorRules>()
 
 export const getDestructor = (source: string) => {
   return DestructorCache.get(source)
@@ -125,9 +123,8 @@ export const getInByDestructor = (
       response = []
     }
   }
-  source = isValid(source) ? source : {}
   rules.forEach(({ key, path }) => {
-    mutators.setIn(path, response, source[key])
+    mutators.setIn(path, response, mutators.getIn([key], source))
   })
   return response
 }
@@ -145,10 +142,9 @@ export const deleteInByDestructor = (
 export const existInByDestructor = (
   source: any,
   rules: DestructorRules,
-  start: number,
   mutators: Mutators,
 ) => {
   return rules.every(({ key }) => {
-    return mutators.existIn([key], source, start)
+    return mutators.existIn([key], source, 0)
   })
 }

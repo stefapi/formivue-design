@@ -15,6 +15,38 @@ import {
 } from '@formivue-design/formivue-vue'
 import { PreviewWidget } from '../widgets/PreviewWidget'
 
+test.each([false, true])(
+  'preview applies the canvas render policy with trusted=%s',
+  (trusted) => {
+    const engine = createDesigner({ rootComponentName: 'Form' })
+    const { tree } = engine.workbench.ensureWorkspace({ id: 'form' }).operation
+    tree.from({
+      componentName: 'Form',
+      props: { action: '/submit', 'aria-label': 'Account' },
+      children: [
+        {
+          componentName: 'Field',
+          props: {
+            type: 'void',
+            'x-component': 'FormLayout',
+            'x-component-props': { tag: 'section', 'data-section': 'details' },
+          },
+        },
+      ],
+    })
+    const preview = mount(PreviewWidget, { props: { tree, trusted } })
+    try {
+      const form = preview.get('form')
+      expect(form.attributes('aria-label')).toBe('Account')
+      expect(form.attributes('action')).toBe(trusted ? '/submit' : undefined)
+      expect(form.get('section').attributes('data-section')).toBe('details')
+    } finally {
+      preview.unmount()
+      engine.unmount()
+    }
+  },
+)
+
 test('Carte, Grille, Onglets et Accordéon gardent les styles du canevas en aperçu', async () => {
   const field = { type: 'string', 'x-component': 'Input' }
   const fields = () => ({ first: { ...field }, second: { ...field } })

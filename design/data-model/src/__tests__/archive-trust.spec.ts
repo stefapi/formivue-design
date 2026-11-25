@@ -83,3 +83,34 @@ test('checks applied documents and editable UI drafts inside an archive', () => 
     expect(parseDocumentProject(source, { trusted: true }).state).toEqual(state)
   }
 })
+
+test('filters canvas render attributes before restoring a restricted archive', () => {
+  const props = {
+    layout: 'vertical',
+    'aria-label': 'Account',
+    action: 'https://example.test/submit',
+  }
+  const root = {
+    ...canvas(),
+    props,
+    children: [
+      {
+        id: 'layout',
+        componentName: 'FormLayout',
+        props: { tag: 'section', target: '_blank', 'data-section': 'details' },
+        children: [],
+      },
+    ],
+  }
+  const source = stringifyDocumentProject(root, initial())
+  const restored = parseDocumentProject(source).canvas
+  expect(restored.props).toEqual({
+    layout: 'vertical',
+    'aria-label': 'Account',
+  })
+  expect(restored.children[0].props).toEqual({
+    tag: 'section',
+    'data-section': 'details',
+  })
+  expect(parseDocumentProject(source, { trusted: true }).canvas).toEqual(root)
+})

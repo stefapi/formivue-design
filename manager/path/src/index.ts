@@ -32,12 +32,33 @@ const isAssignable = (val: any) =>
 const isNumberIndex = (val: any) =>
   isStr(val) ? /^\d+$/.test(val) : isNum(val)
 
+const hasOwnProperty = Object.prototype.hasOwnProperty
+const reservedSegment = /^(?:__proto__|constructor|prototype)$/u
+
+const isReservedSegment = (segment: string | number) =>
+  typeof segment === 'string' && reservedSegment.test(segment)
+
+const hasReservedSegment = (segments: Segments) =>
+  segments.some((segment) => {
+    if (isReservedSegment(segment)) return true
+    return getDestructor(segment as string)?.some(
+      ({ key, path }) => isReservedSegment(key) || path.some(isReservedSegment),
+    )
+  })
+
+const owns = (source: any, index: string | number) =>
+  isValid(source) &&
+  // The `has` trap keeps missing paths reactive without reading inherited values.
+  (!isAssignable(source) || Reflect.has(source, index)) &&
+  hasOwnProperty.call(source, index)
+
 const getIn = (segments: Segments, source: any) => {
+  if (hasReservedSegment(segments)) return
   for (let i = 0; i < segments.length; i++) {
     const index = segments[i]
     const rules = getDestructor(index as string)
     if (!rules) {
-      if (!isValid(source)) return
+      if (!owns(source, index)) return
       source = source[index]
     } else {
       source = getInByDestructor(source, rules, { setIn, getIn })
@@ -48,6 +69,7 @@ const getIn = (segments: Segments, source: any) => {
 }
 
 const setIn = (segments: Segments, source: any, value: any) => {
+  if (hasReservedSegment(segments)) return
   for (let i = 0; i < segments.length; i++) {
     const index = segments[i]
     const rules = getDestructor(index as string)
@@ -56,9 +78,12 @@ const setIn = (segments: Segments, source: any, value: any) => {
       if (isArr(source) && !isNumberIndex(index)) {
         return
       }
-      if (!isValid(source[index])) {
+      const own = hasOwnProperty.call(source, index)
+      if (!own && Reflect.has(source, index)) return
+      const current = own ? source[index] : undefined
+      if (!isValid(current)) {
         if (value === undefined) {
-          if (source[index] === null) source[index] = value
+          if (current === null) source[index] = value
           return
         }
         if (i < segments.length - 1) {
@@ -67,7 +92,9 @@ const setIn = (segments: Segments, source: any, value: any) => {
       }
       if (i === segments.length - 1) {
         source[index] = value
+        return
       }
+      if (!own && !hasOwnProperty.call(source, index)) return
       source = source[index]
     } else {
       setInByDestructor(source, rules, value, { setIn, getIn })
@@ -77,16 +104,17 @@ const setIn = (segments: Segments, source: any, value: any) => {
 }
 
 const deleteIn = (segments: Segments, source: any) => {
+  if (hasReservedSegment(segments)) return
   for (let i = 0; i < segments.length; i++) {
     const index = segments[i]
     const rules = getDestructor(index as string)
     if (!rules) {
-      if (i === segments.length - 1 && isValid(source)) {
+      if (!isAssignable(source) || !owns(source, index)) return
+      if (i === segments.length - 1) {
         delete source[index]
         return
       }
 
-      if (!isValid(source) || !isAssignable(source)) return
       source = source[index]
       if (!isObj(source)) {
         return
@@ -102,28 +130,20 @@ const deleteIn = (segments: Segments, source: any) => {
   }
 }
 
-const hasOwnProperty = Object.prototype.hasOwnProperty
-
 const existIn = (segments: Segments, source: any, start: number | Path) => {
   if (start instanceof Path) {
     start = start.length
   }
+  if (hasReservedSegment(segments.slice(start))) return false
   for (let i = start; i < segments.length; i++) {
     const index = segments[i]
     const rules = getDestructor(index as string)
     if (!rules) {
-      if (i === segments.length - 1) {
-        return hasOwnProperty.call(source, index)
-      }
-
-      if (!isValid(source) || !isAssignable(source)) return false
+      if (!owns(source, index)) return false
+      if (i === segments.length - 1) return true
       source = source[index]
-
-      if (!isObj(source)) {
-        return false
-      }
     } else {
-      return existInByDestructor(source, rules, start, {
+      return existInByDestructor(source, rules, {
         setIn,
         getIn,
         deleteIn,

@@ -1,8 +1,10 @@
+import type { ITreeNode } from '@formivue-design/core'
 import {
   DocumentValidationError,
   isJsonObject,
   jsonPointer,
   pointerSegments,
+  type JsonObject,
 } from '@formivue/json-schema'
 import { inlineBinding } from './document-migration'
 import type { UiDocument } from './documents'
@@ -44,6 +46,11 @@ const htmlTags = new Set([
   'fieldset',
   'legend',
 ])
+const presentationAttrs =
+  /^(?:id|class|style|title|role|lang|dir|tabindex|hidden|aria-[\w-]+|data-[\w-]+)$/iu
+const layoutProps = /^(?:layout|label-?align|label-?width|size)$/iu
+const restrictedComponentAttrs =
+  /^(?:action|form|formaction|formenctype|formmethod|formnovalidate|formtarget|ref|reffor|refkey)$/iu
 const activeTags =
   /^(?:script|style|iframe|frame|frameset|object|embed|applet|link|meta|base|svg|math)$/iu
 const urlAttributes = /^(?:action|formaction|href|src|xlink:href)$/iu
@@ -69,6 +76,67 @@ const nestedSchemas = new Set([
   'anyOf',
   'oneOf',
 ])
+
+function filterRenderProps(props: JsonObject, component: unknown) {
+  return Object.fromEntries(
+    Object.entries(props).filter(([key, value]) => {
+      if (component === 'FormLayout') {
+        return (
+          presentationAttrs.test(key) ||
+          layoutProps.test(key) ||
+          (key === 'tag' &&
+            (value == null ||
+              (typeof value === 'string' &&
+                value !== 'normal' &&
+                htmlTags.has(value))))
+        )
+      }
+      if (typeof component === 'string' && htmlTags.has(component))
+        return presentationAttrs.test(key)
+      return !restrictedComponentAttrs.test(key.replace(/[-_]/gu, ''))
+    }),
+  )
+}
+
+export function filterDocumentFormProps(
+  props: JsonObject,
+  { trusted }: DocumentTrustOptions = {},
+) {
+  return trusted === true ? props : filterRenderProps(props, 'FormLayout')
+}
+
+function filterSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(filterSchema)
+  if (!isJsonObject(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => {
+      if (key === 'x-component-props' || key === 'x-decorator-props') {
+        const target =
+          key === 'x-component-props' ? 'x-component' : 'x-decorator'
+        if (isJsonObject(child))
+          return [key, filterRenderProps(child, value[target])]
+      }
+      if (schemaMaps.has(key) && isJsonObject(child))
+        return [
+          key,
+          Object.fromEntries(
+            Object.entries(child).map(([name, schema]) => [
+              name,
+              filterSchema(schema),
+            ]),
+          ),
+        ]
+      return [key, nestedSchemas.has(key) ? filterSchema(child) : child]
+    }),
+  )
+}
+
+export function filterDocumentSchema<S>(
+  schema: S,
+  { trusted }: DocumentTrustOptions = {},
+): S {
+  return trusted === true ? schema : (filterSchema(schema) as S)
+}
 
 export function rejectUntrustedRendering(
   path: readonly (string | number)[],
@@ -218,6 +286,7 @@ export function assertSafeDocumentUi(
 export function assertSafeDocumentCanvas(
   canvas: unknown,
   { trusted }: DocumentTrustOptions = {},
+  formName = 'Form',
 ) {
   if (trusted === true) return
   function nodeAt(node: unknown, path: readonly (string | number)[]) {
@@ -225,8 +294,8 @@ export function assertSafeDocumentCanvas(
     assertSafeRenderMetadata(
       node.props,
       [...path, 'props'],
-      node.componentName !== 'Form',
-      node.componentName !== 'Form',
+      node.componentName !== formName,
+      node.componentName !== formName,
     )
     if (isJsonObject(node.props) && node.props['x-component'] === 'Text') {
       const props = node.props['x-component-props']
@@ -248,6 +317,32 @@ export function assertSafeDocumentCanvas(
       )
   }
   nodeAt(canvas, ['canvas'])
+}
+
+export function filterDocumentCanvas(
+  canvas: ITreeNode,
+  options: DocumentTrustOptions = {},
+  formName = 'Form',
+): ITreeNode {
+  if (options.trusted === true) return canvas
+  assertSafeDocumentCanvas(canvas, options, formName)
+  function filterNode(node: ITreeNode): ITreeNode {
+    return {
+      ...node,
+      ...(isJsonObject(node.props)
+        ? {
+            props:
+              node.componentName === formName
+                ? filterDocumentFormProps(node.props)
+                : filterDocumentSchema(
+                    filterRenderProps(node.props, node.componentName),
+                  ),
+          }
+        : {}),
+      ...(node.children ? { children: node.children.map(filterNode) } : {}),
+    }
+  }
+  return filterNode(canvas)
 }
 
 export function assertSafeLegacySchema(

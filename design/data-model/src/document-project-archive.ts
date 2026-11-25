@@ -1,7 +1,7 @@
 import type { ITreeNode } from '@formivue-design/core'
 import {
-  assertSafeDocumentCanvas,
   assertSafeDocumentUi,
+  filterDocumentCanvas,
   canvasReconciliationChoices,
   createFormDocument,
   exportFormDocumentVariant,
@@ -222,8 +222,7 @@ export function validateDocumentProjectArchive(
       'Unsupported project archive format or version.',
       'project_archive_version',
     )
-  const canvas = readCanvas(archive.canvas)
-  assertSafeDocumentCanvas(canvas, options)
+  const canvas = filterDocumentCanvas(readCanvas(archive.canvas), options)
   const state = objectAt(archive.state, '/state')
   if (state.version !== 1) invalidArchive('/state/version')
   const drafts = objectAt(state.drafts, '/state/drafts')

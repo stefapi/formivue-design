@@ -10,9 +10,10 @@ import { createSchemaField, FormProvider } from '@formivue/vue'
 import { observer } from '@formivue/reactive-vue'
 import { TreeNode } from '@formivue-design/core'
 import {
-  assertSafeDocumentCanvas,
+  filterDocumentCanvas,
   transformToSchema,
   type createFormDocument,
+  type IFormivueSchema,
 } from '@formivue-design/formivue-transformer'
 import type { DraftFormPreview } from '@formivue-design/data-model/ui'
 // ATTENTION piège du port : le barrel de @formivue-design/formivue-vue exporte le
@@ -48,20 +49,23 @@ export const PreviewWidget = observer(
         const conflicts = active?.conflicts ?? []
         const issues = active?.issues ?? []
         const draft = props.draft
-        if (!active && !draft && !props.trusted) {
-          try {
-            assertSafeDocumentCanvas(props.tree.serialize())
-          } catch (error) {
-            return h(
-              'p',
-              { role: 'alert', class: 'p-2 text-sm text-destructive' },
-              documentError(error),
-            )
-          }
-        }
-        const { form: formProps, schema } = active
+        let compiled: IFormivueSchema | undefined = active
           ? { form: active.formProps, schema: active.schema }
-          : (draft?.compiled ?? transformToSchema(props.tree))
+          : draft?.compiled
+        try {
+          compiled ??= transformToSchema(
+            props.trusted
+              ? props.tree
+              : filterDocumentCanvas(props.tree.serialize()),
+          )
+        } catch (error) {
+          return h(
+            'p',
+            { role: 'alert', class: 'p-2 text-sm text-destructive' },
+            documentError(error),
+          )
+        }
+        const { form: formProps, schema } = compiled
         const currentForm = active?.form ?? draft?.form ?? form
         const renderForm = () =>
           h(

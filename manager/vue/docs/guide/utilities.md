@@ -23,6 +23,10 @@ Zero-runtime-dependency toolbox shared by every package:
 The path/pattern language used by `query`, `setValuesIn`, effect hook
 patterns, etc.
 
+Accessors traverse only own properties, including destructured paths. They
+ignore paths containing the reserved segments `__proto__`, `constructor` or
+`prototype`.
+
 ```ts
 import { FormPath } from '@formivue/shared' // re-exported by core & vue
 

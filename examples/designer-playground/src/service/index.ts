@@ -5,7 +5,7 @@
 import type { Engine, ITreeNode } from '@formivue-design/core'
 import type { DocumentProjectPersistence } from '@formivue-design/data-model'
 import {
-  assertSafeDocumentCanvas,
+  filterDocumentCanvas,
   transformToSchema,
   transformToTreeNode,
 } from '@formivue-design/formivue-transformer'
@@ -53,8 +53,9 @@ export const loadInitialSchema = (
   try {
     const storedSchema = localStorage.getItem(storageKey(advanced, profile))
     const saved = storedSchema ? JSON.parse(storedSchema) : undefined
-    const tree = saved?.canvas ?? transformToTreeNode(saved)
-    assertSafeDocumentCanvas(tree)
+    const tree = saved?.canvas
+      ? filterDocumentCanvas(saved.canvas)
+      : transformToTreeNode(saved)
     designer.setCurrentTree(tree)
     return !!storedSchema
   } catch (error) {

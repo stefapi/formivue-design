@@ -4,8 +4,8 @@ import { clone, uid } from '@formivue-design/shared'
 import { splitFormSchema } from './document-migration'
 import type { DocumentContractOptions } from './document-contracts'
 import {
-  assertSafeDocumentCanvas,
   assertSafeLegacySchema,
+  filterDocumentCanvas,
   type DocumentTrustOptions,
 } from './document-trust'
 
@@ -141,14 +141,14 @@ export const transformToTreeNode = (
     schema['x-designable-id'] = schema['x-designable-id'] || uid()
     appendTreeNode(root, schema)
   })
-  assertSafeDocumentCanvas(root, options)
-  return root
+  return filterDocumentCanvas(root, options, realOptions.designableFormName)
 }
 
 export * from './documents'
 export {
   assertSafeDocumentCanvas,
   assertSafeDocumentUi,
+  filterDocumentCanvas,
   type DocumentTrustOptions,
 } from './document-trust'
 export type { DataSchema } from './document-schema'

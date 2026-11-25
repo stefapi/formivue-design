@@ -9,10 +9,12 @@ import type { ITreeNode } from '@formivue-design/core'
 // import statique : résolu via les node_modules du transformer → fork v3 en link: (ESM pur)
 import { createForm } from '@formivue/core'
 
+const formLayout = { layout: 'horizontal', labelWidth: 120 }
+
 const makeTree = (): ITreeNode => ({
   id: 'root',
   componentName: 'Form',
-  props: { labelCol: 6, wrapperCol: 18 },
+  props: { ...formLayout },
   children: [
     {
       id: 'field-a',
@@ -32,7 +34,7 @@ const makeTree = (): ITreeNode => ({
 describe('formivue-transformer', () => {
   test('transformToSchema : form + properties nommées + x-index', () => {
     const { form, schema } = transformToSchema(makeTree())
-    expect(form).toEqual({ labelCol: 6, wrapperCol: 18 })
+    expect(form).toEqual(formLayout)
     expect(schema.type).toBe('object')
     expect(Object.keys(schema.properties)).toEqual(['fieldA', 'fieldB'])
     expect(schema.properties.fieldA).toMatchObject({
@@ -59,7 +61,7 @@ describe('formivue-transformer', () => {
     const schema = transformToSchema(tree)
     const backToTree = transformToTreeNode(schema)
     expect(backToTree.componentName).toBe('Form')
-    expect(backToTree.props).toEqual({ labelCol: 6, wrapperCol: 18 })
+    expect(backToTree.props).toEqual(formLayout)
     expect(backToTree.children.map((child) => child.props.name)).toEqual([
       'fieldA',
       'fieldB',

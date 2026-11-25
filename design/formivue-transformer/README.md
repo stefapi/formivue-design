@@ -37,6 +37,10 @@ Document import and compilation use restricted rendering by default.
 `parseFormDocuments`, `compileFormDocuments`, `createFormDocument` and legacy
 `transformToTreeNode` reject executable rendering settings such as JavaScript
 expressions and reactions. Use declarative `bindings` for data-driven props.
+Restricted rendering keeps layout, presentation and accessibility attributes
+on form layouts and keeps presentation and accessibility attributes on native
+tags. Submission destinations and Vue refs are removed from component props.
+For example, an imported Upload keeps files local when its `action` is removed.
 For content explicitly trusted by the application, pass `{ trusted: true }`
 to each relevant import and compilation call. Keep this choice outside the
 imported JSON.

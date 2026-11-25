@@ -28,6 +28,8 @@ import { visitUiNodes } from './document-paths'
 import {
   assertSafeDocumentUi,
   assertSafeRenderMetadata,
+  filterDocumentFormProps,
+  filterDocumentSchema,
   type DocumentTrustOptions,
 } from './document-trust'
 
@@ -806,8 +808,8 @@ export function compileFormDocuments(
   if (issues.some(({ severity }) => severity !== 'warning'))
     throw new DocumentValidationError(issues)
   return {
-    form: ui.form ?? {},
-    schema,
+    form: filterDocumentFormProps(ui.form ?? {}, { trusted }),
+    schema: filterDocumentSchema(schema, { trusted }),
     rowKeys,
     dependencies,
     diagnostics: issues,
