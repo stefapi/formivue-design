@@ -2,7 +2,9 @@
 
 ## Description
 
-Mainly used to access the manual tracking dependency tool of React/Vue. The tracker function will not be executed repeatedly when the dependency changes. It requires the user to manually execute it repeatedly, which will only trigger the scheduler
+`Tracker` records the observable dependencies read by a function. When a
+dependency changes, it calls the supplied scheduler. Call `track` when the
+work should run again and collect its current dependencies.
 
 ## Signature
 

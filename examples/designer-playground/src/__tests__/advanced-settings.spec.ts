@@ -112,6 +112,13 @@ const materials = { ...AdvancedMaterials, ...ChartMaterials }
 type Name = keyof typeof schemas
 type Values = Record<string, unknown>
 
+// Les graphiques résolvent leur locale `Intl` depuis la langue du designer
+// (ChartDesignerLocale injecte GlobalRegistry.getDesignerLanguage()). Les
+// attentes doivent donc formater avec cette même langue, et non avec la locale
+// du système (`Intl.NumberFormat(undefined)` suit LANG, variable selon la
+// machine : fr-FR, en-US…).
+const CHART_LOCALE = 'en-US'
+
 let cleanups: (() => void)[]
 beforeEach(() => {
   cleanups = []
@@ -1675,7 +1682,7 @@ describe('advanced settings through the designer and JSON preview', () => {
         decimalPlaces: digits,
       })
 
-      const numberFormat = new Intl.NumberFormat(undefined, {
+      const numberFormat = new Intl.NumberFormat(CHART_LOCALE, {
         ...options,
         minimumFractionDigits: digits,
         maximumFractionDigits: digits,
@@ -1818,7 +1825,7 @@ describe('advanced settings through the designer and JSON preview', () => {
       )
       const view = await previewAfterImport(studio)
       const figure = view.get('figure')
-      const euro = new Intl.NumberFormat(undefined, {
+      const euro = new Intl.NumberFormat(CHART_LOCALE, {
         style: 'currency',
         currency: 'EUR',
       })
@@ -2007,7 +2014,7 @@ describe('advanced settings through the designer and JSON preview', () => {
       first: [
         'A',
         ...['2026-11-01', '2026-11-04'].map((date) =>
-          new Intl.DateTimeFormat(undefined, {
+          new Intl.DateTimeFormat(CHART_LOCALE, {
             dateStyle: 'medium',
             timeZone: 'UTC',
           }).format(Date.parse(date)),

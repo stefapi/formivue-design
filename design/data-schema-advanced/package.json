@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/data-schema-advanced",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "description": "Advanced component contracts for Formivue data documents",
   "type": "module",
   "main": "./dist/index.mjs",

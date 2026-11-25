@@ -1,43 +1,35 @@
-# @formivue/path
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 
-## 4.0.0
+## 3.1.1
 
-No changes in this release.
+### Patch Changes
 
-## 3.0.0-beta.0
+- official 3.1 release with datamodel editing
 
-### Major Changes
+Notable changes to `@formivue/path` are recorded here.
 
-- v3.0.0 — ESM-only, Vue 3.5, zero external runtime deps
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-  #### Breaking changes
-  - **ESM-only (A1)**: all packages are now `"type": "module"` with an `exports`
-    map (types → import). The CommonJS builds (`lib/`) are removed. Use a
-    bundler (Vite, webpack 5+), or `esm.sh` if you `require()` them.
-  - **UMD/CDN builds removed (A2)**: `dist/*.umd.*.js` and the `unpkg`/`jsdelivr`
-    entries are gone.
-  - **Node engines**: `node >= 24` (was `8.x–11.x`).
-  - **Peer**: `vue ^3.4` (tested on 3.5); `typescript` peer removed from
-    `@formivue/json-schema`.
-  - **`@formivue/shared`**: the six `*-case` packages are inlined — no external
-    runtime dependency on any `@formivue/*` package beyond `@formivue/path`
-    (zero new transitive deps in consumer lockfiles).
-  - **`@formivue/grid`**: `@juggle/resize-observer` polyfill removed, native
-    `ResizeObserver` is used (SSR-safe).
+## [Unreleased]
 
-  #### Features
-  - `@formivue/validator/zod`: new `zodValidator(schema)` export — use any zod
-    `ZodType` as a formivue field validator (peer `zod ^3 || ^4`).
-  - French locale (`setValidateLanguage('fr')`) — 35 translated messages.
-  - `useFormValues` reactive→Vue bridge documented (examples playground), plus
-    a guide on when to use `@formivue/reactive` vs Vue reactivity.
+## [3.1.0] - 2026-11-25
 
-  #### Fixes
-  - `markObservable`/`markRaw` no longer crash on arrow functions without
-    `prototype` (previously masked by ES5 transpilation).
+### Security
+
+- Limit path operations to own properties and reject reserved prototype-related segments. Apply the same checks to destructuring paths. ([`f82a085`](https://github.com/stefapi/formivue-design/commit/f82a0853848dd5e57165f1873343f1eb80588b93))
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released `FormPath` for parsing and matching paths and for reading, writing, and deleting nested values.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/manager/path

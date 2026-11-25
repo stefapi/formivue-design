@@ -12,7 +12,8 @@ To explain, the View (view layer) is responsible for maintaining the UI structur
 
 So, what should the Formivue solution be positioned in MVVM?
 
-Obviously, Formivue provides two tiers of View and ViewModel capabilities. View is @formivue/react @formivue/vue, which is specifically used to bridge communication with @formivue/core. Therefore, @formivue/core is positioned at the ViewModel layer. ,
+`@formivue/vue` connects the View to the form state in `@formivue/core`.
+The core form and field models act as the ViewModel.
 
 Where is the Model layer?
 
@@ -22,10 +23,7 @@ Therefore, this also makes formivue's intrusion into the business very low, beca
 
 ## FP architecture
 
-Remember before the React team used the simplest expression **UI = fn(State)** to express the entire React system? Such a functional UI is very simple and clear. Will it conflict with the MVVM model?
-
-There is no conflict, because in the MVVM mode, the relationship between View and ViewModel is actually approximately equal to **UI = fn(State)**, because ViewModel is a congestion model injected with logic, which is related to **fn(State) ** can achieve the same goal, but it is a more OOP expression, but **fn(State)** is a more functional expression, the state exists as an anemia model, through one function after another, Immutable updates to the anemia model are finally reflected in the UI.
-
-Therefore, from the perspective of separation of logic and data, functional expression is clearer, but functional expression requires all data to be Immutable. Therefore, in scenarios with high performance requirements, the benefits of using a functional model will not be too great, of course, this is only the case in the js language. On the contrary, the MVVM model requires more data for Reactive data, that is, a responsive data model that can manipulate data by reference, so that data changes can be accurately monitored, and finally reflected on the UI.
-
-Therefore, in the form scenario, the performance advantage of the MVVM mode will be better. The most important thing is that most of the GUI products that have survived for decades almost all use MVVM coincidentally. It seems that in the front-end field, the function The type system will be more academic. In terms of the actual benefits to the business, MVVM is still the first choice.
+A rendering function can express the view as **UI = render(state)**.
+In Formivue, a Vue template or render function reads observable form and field
+state. User input flows back through the field model, and changes to state
+schedule updates for dependent views.

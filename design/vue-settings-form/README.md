@@ -17,14 +17,13 @@ The properties panel of the Vue designer.
   `MonacoInput`, the style setters (`Box`, `Border`, `BorderRadius`,
   `Background`, `BoxShadow`, `Font`, `Display`, `Flex`), `FoldItem`,
   `CollapseItem`, `InputItems`, `DrawerSetter`.
-- **Monaco** — `@monaco-editor/loader` (framework-agnostic) kept;
-  `@monaco-editor/react` (React) replaced with an **in-house Vue
-  wrapper** (`create`/`setValue`/`dispose`/`onMount`). Serve the installed
+- **Monaco** — the Vue wrapper uses `@monaco-editor/loader` and handles
+  editor creation, value updates and disposal. Serve the installed
   Monaco distribution's `min/vs` directory at `/editor-assets/monaco/vs`.
   The shared [demo Vite config](../../scripts/vite.config.base.mts) serves
   those files and the Formivue type declarations. For a different local base,
   call `setNpmCDNRegistry(base, 'monaco/vs')` before mounting the app.
-  Legacy-era `monokai`/`chrome-devtools` themes are kept.
+  The editor provides the `monokai` and `chrome-devtools` themes.
 
 ## Styles
 

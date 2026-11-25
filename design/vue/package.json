@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/vue",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -21,9 +21,9 @@
     "@types/dateformat": "^5.0.3"
   },
   "peerDependencies": {
-    "@formivue/reactive": "^3.0.3",
-    "@formivue/reactive-vue": "^3.0.3",
-    "@formivue/vue": "^3.0.3",
+    "@formivue/reactive": "^3.1.0",
+    "@formivue/reactive-vue": "^3.1.0",
+    "@formivue/vue": "^3.1.0",
     "vue": "^3.5.0"
   },
   "dependencies": {

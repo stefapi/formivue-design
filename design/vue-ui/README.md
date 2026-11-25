@@ -17,8 +17,7 @@ in-house controls such as Tree, the data-driven Table, and the form block.
   `Tabs`, `Collapsible` (chevron), `NumberField` (Plus/Minus), `Slider`,
   `Switch`, `Tooltip` (arrow), `Popover`, `Card`, `Table`, `Label`.
 - The **public** components (`Button`, `Select`…) wrap the `ui/` layer while
-  keeping the designer's antd-like form-friendly contract (`type`/`size`,
-  `value`/`onChange`).
+  exposing the designer's control contract (`type`/`size`, `value`/`onChange`).
 - **`cn()` = clsx + tailwind-merge** (`src/lib/utils.ts`), `cva`
   (class-variance-authority), **@lucide/vue** icons.
 - **Zero formivue dependency**: this package is a pure UI library. The bridge

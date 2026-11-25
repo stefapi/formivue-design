@@ -1,6 +1,6 @@
 {
   "name": "@formivue/validator",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "license": "MIT",
   "type": "module",
   "description": "Validation framework for formivue — rules, formats, locales, zod bridge",

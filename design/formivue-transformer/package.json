@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/formivue-transformer",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "license": "MIT",
   "main": "./dist/index.mjs",
   "repository": {
@@ -24,8 +24,8 @@
     "@formivue/json-schema": "workspace:*"
   },
   "peerDependencies": {
-    "@formivue/core": "^3.0.3",
-    "@formivue/json-schema": "^3.0.3"
+    "@formivue/core": "^3.1.0",
+    "@formivue/json-schema": "^3.1.0"
   },
   "dependencies": {
     "@formivue-design/core": "workspace:*",

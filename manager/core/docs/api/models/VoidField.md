@@ -369,27 +369,15 @@ Note: If you want to manually consume the type, just export it directly from the
 
 ### FieldMessage
 
-```ts
-type FieldMessage = string | JSXElement
-```
-
-If under the UI framework that supports JSX, we can directly pass the Node of JSX, otherwise, we can only pass the string
+See [field messages](./Field.md#fieldmessage) for titles and descriptions.
 
 ### FieldComponent
 
-```ts
-type FieldComponent = string | JSXComponentConstructor
-```
-
-Field component, if we use it in a framework that supports JSX, FieldComponent recommends to store the JSX component reference directly, otherwise it can store a component identification string and distribute it during actual rendering.
+See [field components](./Field.md#fieldcomponent) for component bindings.
 
 ### FieldDecorator
 
-```ts
-type FieldDecorator = string | JSXComponentConstructor
-```
-
-Field decorator, if we use it in a framework that supports JSX, FieldDecorator recommends to store the JSX component reference directly, otherwise it can store a component identification string and distribute it during actual rendering.
+See [field decorators](./Field.md#fielddecorator) for wrappers.
 
 ### FieldReaction
 

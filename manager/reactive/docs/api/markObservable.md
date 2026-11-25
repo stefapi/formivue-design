@@ -2,7 +2,9 @@
 
 ## Description
 
-Mark any object or class prototype as being hijacked by observable. React Node and objects with toJSON/toJS methods will be automatically bypassed in @formivue/reactive. In special scenarios, we may hope that the object should be hijacked, so you can use it markObservable mark
+Use `markObservable` to opt an object or class prototype into observation.
+For example, it enables observation for objects with a `toJSON` or `toJS`
+method, which the default observable check skips.
 
 ## Signature
 

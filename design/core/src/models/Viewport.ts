@@ -59,7 +59,12 @@ export class Viewport {
 
   mounted = false
 
-  attachRequest: number
+  // Handle du requestIdle planifiant l'attach réel des drivers. Il doit être
+  // annulé au démontage (detachEvents) : sinon le callback s'exécute après
+  // unmount() et ré-attache les drivers sur un élément détaché — sous vitest,
+  // après teardown de jsdom, `document` n'existe plus et EventDriver lève
+  // « ReferenceError: document is not defined » hors de tout contexte de test.
+  attachRequest: number | null = null
 
   nodeIdAttrName: string
 
@@ -239,7 +244,11 @@ export class Viewport {
     const engine = this.engine
     cancelIdle(this.attachRequest)
     this.attachRequest = requestIdle(() => {
+      this.attachRequest = null
       if (!engine) return
+      // Le délai idle a pu laisser le temps de démonter le viewport : ne pas
+      // ré-attacher les drivers sur un contenu qui n'est plus monté.
+      if (!this.mounted) return
       if (this.isIframe) {
         this.workspace.attachEvents(this.contentWindow, this.contentWindow)
       } else if (isHTMLElement(this.viewportElement)) {
@@ -249,6 +258,8 @@ export class Viewport {
   }
 
   detachEvents() {
+    cancelIdle(this.attachRequest)
+    this.attachRequest = null
     if (this.isIframe) {
       this.workspace.detachEvents(this.contentWindow)
       this.workspace.detachEvents(this.viewportElement)

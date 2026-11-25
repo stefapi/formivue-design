@@ -1,7 +1,7 @@
 {
   "name": "@formivue-design/formivue-runtime",
   "description": "Standard Vue bindings and materials for Formivue schemas",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",

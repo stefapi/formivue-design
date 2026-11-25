@@ -1,58 +1,47 @@
-# @formivue/core
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 - Updated dependencies
-  - @formivue/reactive@3.0.4
-  - @formivue/shared@3.0.4
-  - @formivue/validator@3.0.4
+  - @formivue/reactive@3.1.1
+  - @formivue/shared@3.1.1
+  - @formivue/validator@3.1.1
 
-## 4.0.0
-
-### Patch Changes
-
-- @formivue/reactive@4.0.0
-  - @formivue/shared@4.0.0
-  - @formivue/validator@4.0.0
-
-## 3.0.0-beta.0
-
-### Major Changes
-
-- v3.0.0 — ESM-only, Vue 3.5, zero external runtime deps
-
-  #### Breaking changes
-  - **ESM-only (A1)**: all packages are now `"type": "module"` with an `exports`
-    map (types → import). The CommonJS builds (`lib/`) are removed. Use a
-    bundler (Vite, webpack 5+), or `esm.sh` if you `require()` them.
-  - **UMD/CDN builds removed (A2)**: `dist/*.umd.*.js` and the `unpkg`/`jsdelivr`
-    entries are gone.
-  - **Node engines**: `node >= 24` (was `8.x–11.x`).
-  - **Peer**: `vue ^3.4` (tested on 3.5); `typescript` peer removed from
-    `@formivue/json-schema`.
-  - **`@formivue/shared`**: the six `*-case` packages are inlined — no external
-    runtime dependency on any `@formivue/*` package beyond `@formivue/path`
-    (zero new transitive deps in consumer lockfiles).
-  - **`@formivue/grid`**: `@juggle/resize-observer` polyfill removed, native
-    `ResizeObserver` is used (SSR-safe).
-
-  #### Features
-  - `@formivue/validator/zod`: new `zodValidator(schema)` export — use any zod
-    `ZodType` as a formivue field validator (peer `zod ^3 || ^4`).
-  - French locale (`setValidateLanguage('fr')`) — 35 translated messages.
-  - `useFormValues` reactive→Vue bridge documented (examples playground), plus
-    a guide on when to use `@formivue/reactive` vs Vue reactivity.
-
-  #### Fixes
-  - `markObservable`/`markRaw` no longer crash on arrow functions without
-    `prototype` (previously masked by ES5 transpilation).
+## 3.1.1
 
 ### Patch Changes
 
+- official 3.1 release with datamodel editing
 - Updated dependencies
-  - @formivue/reactive@3.0.0-beta.0
-  - @formivue/shared@3.0.0-beta.0
-  - @formivue/validator@3.0.0-beta.0
+  - @formivue/reactive@3.1.1
+  - @formivue/shared@3.1.1
+  - @formivue/validator@3.1.1
+
+Notable changes to `@formivue/core` are recorded here.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.1.0] - 2026-11-25
+
+### Added
+
+- Add `ArrayField.spliceValue` and `moveValue` to update array values and field addresses without emitting a user input event. ([`6193635`](https://github.com/stefapi/formivue-design/commit/61936356cef37c3642f3c888cfb279293913804d))
+
+### Fixed
+
+- Give the `isDataFieldState` type guard an explicit public return type so its declaration resolves in dependent packages. ([`f6f6651`](https://github.com/stefapi/formivue-design/commit/f6f6651cddcd07209e44c8ad5c6930b3e335fa12))
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released the headless observable form engine, with field models, validation, lifecycle effects, and array field operations.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/manager/core

@@ -1,35 +1,57 @@
-# @formivue-design/formivue-transformer
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 - Updated dependencies
-  - @formivue-design/core@3.0.4
-  - @formivue-design/shared@3.0.4
-  - @formivue/core@3.0.4
-  - @formivue/json-schema@3.0.4
+  - @formivue-design/core@3.1.1
+  - @formivue-design/shared@3.1.1
+  - @formivue/core@3.1.1
+  - @formivue/json-schema@3.1.1
 
-## 4.0.0
-
-### Major Changes
-
-- 24b3aa0: **Generation 2 of the `@formivue-design/*` monorepo — formivue v3 (ESM) + Vue 3 port** (**single grouped major**: the 2.0.0-beta absorbs the ESM migration AND the Vue port).
-
-  - **Pure ESM (B4)**: every package switches to `"type": "module"` with `exports` (`.d.mts` types / `.mjs` import); the CJS and UMD outputs, the era's `module`/`main` fields and the `lib/`+`esm/` artifacts disappear.
-  - **Vue 3.5 port (V1–V8)**: the UI layer moves from React 17 to **Vue 3.5** on the **`@formivue/vue` + `@formivue/reactive-vue`** bindings of the formivue v3 fork (peers `^3.0.1`), with a **headless reka-ui + shadcn-vue + Tailwind 4** UI stack. The `@formivue-design/{core,shared,transformer}` engine (framework-agnostic) survives intact.
-  - **React stack archived (V4/V5)**: `@formivue-design/{react,react-sandbox,react-settings-form}` and `@formivue-design/formivue-antd` leave the workspace (`archive/`), replaced **name for name** by `@formivue-design/{vue,vue-sandbox,vue-settings-form}` and `@formivue-design/formivue-vue` (React → Vue types: `DefineComponent`, `VueComponentProps`). The local bindings `formivue-v3/{react,reactive-react,antd}` (`@formivue/react`, `@formivue/reactive-react`, `@formivue/antd`) leave with them — the fork natively provides the Vue bindings. `react`, `react-dom`, `antd`, `@ant-design/icons`, `@dnd-kit/*`, `moment`, the less pipelines and the per-package `./style.css` **disappear from the repo**.
-  - **Theme = Tailwind 4 CSS tokens (V6)**: utility classes live in the components; the **consumer** provides the Tailwind entry (CSS variables + `@theme inline` + `@source` on the packages' dist — `shadcn-vue init` recipe, dark mode by overriding the variables). No more `theme.less`/`variables.less`.
-  - **Trimmed materials scope (V3)**: `Cascader`, `Rate`, `Transfer`, `TreeSelect`, `Upload` (material component) postponed to the backlog; the setters that used them switch to the in-house Select/Tree.
-  - **a11y = 0 axe-core violation (V8)**: target reached on vue-ui (17-component kitchen sink), the settings panel, the 3 setters and the playground (FORMIVUEDESIGN + PREVIEW views) — a living gate of the vitest suites.
-  - **Tooling**: Node `>=24 <25` + pnpm 10 (`packageManager`) — replaces yarn 1 + lerna 4; TypeScript ~5.9 (`moduleResolution: bundler`, consumes the fork's `.d.mts`); ESLint 9 flat; Vitest replaces jest; Vite 7 examples/playground (webpack 4 KO on Node 24).
-  - **Additive core exports (rule 3)**: `TransformHelper`, `ITransformHelperProps`, `TransformHelperType`, `ResizeDirection`, `ITransformHelperDragStartProps` become public — the era emitted a deep import into the internals that rolldown-dts refuses.
+## 3.1.1
 
 ### Patch Changes
 
-- Updated dependencies [24b3aa0]
-  - @formivue-design/core@4.0.0
-  - @formivue-design/shared@4.0.0
-  - @formivue/core@4.0.0
-  - @formivue/json-schema@4.0.0
+- official 3.1 release with datamodel editing
+- Updated dependencies
+  - @formivue-design/core@3.1.1
+  - @formivue-design/shared@3.1.1
+  - @formivue/core@3.1.1
+  - @formivue/json-schema@3.1.1
+
+Notable changes to `@formivue-design/formivue-transformer` are recorded here.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.1.0] - 2026-11-25
+
+### Added
+
+- Compile separate UI, data schema, and value documents into a live form session that accepts snapshots and patches. ([`6193635`](https://github.com/stefapi/formivue-design/commit/61936356cef37c3642f3c888cfb279293913804d))
+- Register component contracts for typed bindings, dataset columns, and validation. Use the chart and advanced material contracts to check filters and complex controls. ([`3d7ff42`](https://github.com/stefapi/formivue-design/commit/3d7ff42ad481170ffc1784d7c5f21d9696031c8a), [`b1bb9e9`](https://github.com/stefapi/formivue-design/commit/b1bb9e94bd42916eb3c9f622d5c3c5b2e0172c5b))
+- Generate data models from the canvas, preserve variant data when renaming or moving fields, and project supported schema constraints onto runtime controls. ([`e3caa73`](https://github.com/stefapi/formivue-design/commit/e3caa7394ce94b3ab8bdf50c114a1a3577e3eea4), [`6a3cb36`](https://github.com/stefapi/formivue-design/commit/6a3cb36e18fd19d96526d4c911a58232c032d5b9), [`acae2a1`](https://github.com/stefapi/formivue-design/commit/acae2a12cce7c97ded2febbd44944ca48a781c99))
+- Resolve schema branches and local references for bound controls. Reconcile canvas renames and structural changes independently for each variant and persist pending review choices. ([`b579661`](https://github.com/stefapi/formivue-design/commit/b5796615468eb2062bf880328e418f2e2aafad72), [`b0d6f5b`](https://github.com/stefapi/formivue-design/commit/b0d6f5b75501c3540419ee65b3e1acd259709f26), [`bca698e`](https://github.com/stefapi/formivue-design/commit/bca698e13bedf2eb2944c21f776d04b78222e210), [`a894f43`](https://github.com/stefapi/formivue-design/commit/a894f43f06882efa9231de5effc334a899f60073))
+
+### Fixed
+
+- Rebuild missing chart and table row schemas and restore deleted bound fields during reconciliation. Preserve each variant’s type and field settings. ([`a23531d`](https://github.com/stefapi/formivue-design/commit/a23531da349e5c70b3286e565eaed9c0d32c8fd2), [`fe3a778`](https://github.com/stefapi/formivue-design/commit/fe3a778e0d50b05e826de0d2029923397c0c09b8), [`6aff253`](https://github.com/stefapi/formivue-design/commit/6aff2537a83464ee8f27bd98e5eaae42103eb57a))
+
+### Security
+
+- Restrict executable settings in document compilation and combined-schema imports. Require the host to pass `trusted: true` for trusted content. ([`0867154`](https://github.com/stefapi/formivue-design/commit/0867154aad92236654e9a95e16c4b144f37b1b7c))
+- Allow only supported rendering attributes in restricted imports, dropping external submission destinations and Vue refs. ([`f82a085`](https://github.com/stefapi/formivue-design/commit/f82a0853848dd5e57165f1873343f1eb80588b93))
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released conversion between the designer canvas tree and combined Formivue JSON Schema exports.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/design/formivue-transformer

@@ -347,16 +347,21 @@ describe('@formivue-design/vue — studio (intégration)', () => {
 
   test('locales : TextWidget consomme les registres du package (en-US)', () => {
     const engine = createDesigner()
-    const wrapper = mount(
-      defineComponent({
-        components: { TextWidget, Designer },
-        setup() {
-          return () =>
-            h(Designer, { engine } as any, {
-              default: () => h(TextWidget, { token: 'panels.Component' }),
-            })
-        },
-      }),
+    // register : le Designer monte l'engine (drivers sur document) → il doit
+    // être démonté par l'afterEach, comme les autres tests du fichier
+    const wrapper = register(
+      mount(
+        defineComponent({
+          components: { TextWidget, Designer },
+          setup() {
+            return () =>
+              h(Designer, { engine } as any, {
+                default: () => h(TextWidget, { token: 'panels.Component' }),
+              })
+          },
+        }),
+      ),
+      engine,
     )
     expect(wrapper.text()).toBe('Component')
   })

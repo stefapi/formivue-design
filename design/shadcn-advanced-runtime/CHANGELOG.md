@@ -1,33 +1,49 @@
-# @formivue-design/shadcn-advanced-runtime
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 - Updated dependencies
-  - @formivue-design/vue-ui@3.0.4
-  - @formivue/core@3.0.4
-  - @formivue/flow@3.0.4
-  - @formivue/json-schema@3.0.4
-  - @formivue/reactive-vue@3.0.4
-  - @formivue/vue@3.0.4
+  - @formivue-design/vue-ui@3.1.1
+  - @formivue/core@3.1.1
+  - @formivue/flow@3.1.1
+  - @formivue/json-schema@3.1.1
+  - @formivue/reactive-vue@3.1.1
+  - @formivue/vue@3.1.1
 
-## 4.0.0
-
-### Minor Changes
-
-- 40a447b: Add reusable headless form flows, advanced shadcn-vue schema materials, and
-  their designer palette and property editors. Move the standalone designer
-  playground to examples and add Standard and Advanced modes.
+## 3.1.1
 
 ### Patch Changes
 
-- Updated dependencies [40a447b]
-- Updated dependencies [24b3aa0]
-  - @formivue/flow@4.0.0
-  - @formivue-design/vue-ui@4.0.0
-  - @formivue/core@4.0.0
-  - @formivue/json-schema@4.0.0
-  - @formivue/reactive-vue@4.0.0
-  - @formivue/vue@4.0.0
+- official 3.1 release with datamodel editing
+- Updated dependencies
+  - @formivue-design/vue-ui@3.1.1
+  - @formivue/core@3.1.1
+  - @formivue/flow@3.1.1
+  - @formivue/json-schema@3.1.1
+  - @formivue/reactive-vue@3.1.1
+  - @formivue/vue@3.1.1
+
+Notable changes to `@formivue-design/shadcn-advanced-runtime` are recorded here.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.1.0] - 2026-11-25
+
+### Changed
+
+- Update the schema flow examples to use the standalone standard materials and test executable callbacks in explicitly trusted imports. ([`18a74c3`](https://github.com/stefapi/formivue-design/commit/18a74c35863c8d81a5658101656b8912ea7bab3d), [`0867154`](https://github.com/stefapi/formivue-design/commit/0867154aad92236654e9a95e16c4b144f37b1b7c))
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released the `AdvancedMaterials` registry, including advanced inputs, data tables, overlay layouts, Questionnaire, and Stepper.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/design/shadcn-advanced-runtime

@@ -1,58 +1,53 @@
-# @formivue/json-schema
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 - Updated dependencies
-  - @formivue/core@3.0.4
-  - @formivue/reactive@3.0.4
-  - @formivue/shared@3.0.4
+  - @formivue/core@3.1.1
+  - @formivue/reactive@3.1.1
+  - @formivue/shared@3.1.1
 
-## 4.0.0
-
-### Patch Changes
-
-- @formivue/core@4.0.0
-  - @formivue/reactive@4.0.0
-  - @formivue/shared@4.0.0
-
-## 3.0.0-beta.0
-
-### Major Changes
-
-- v3.0.0 — ESM-only, Vue 3.5, zero external runtime deps
-
-  #### Breaking changes
-  - **ESM-only (A1)**: all packages are now `"type": "module"` with an `exports`
-    map (types → import). The CommonJS builds (`lib/`) are removed. Use a
-    bundler (Vite, webpack 5+), or `esm.sh` if you `require()` them.
-  - **UMD/CDN builds removed (A2)**: `dist/*.umd.*.js` and the `unpkg`/`jsdelivr`
-    entries are gone.
-  - **Node engines**: `node >= 24` (was `8.x–11.x`).
-  - **Peer**: `vue ^3.4` (tested on 3.5); `typescript` peer removed from
-    `@formivue/json-schema`.
-  - **`@formivue/shared`**: the six `*-case` packages are inlined — no external
-    runtime dependency on any `@formivue/*` package beyond `@formivue/path`
-    (zero new transitive deps in consumer lockfiles).
-  - **`@formivue/grid`**: `@juggle/resize-observer` polyfill removed, native
-    `ResizeObserver` is used (SSR-safe).
-
-  #### Features
-  - `@formivue/validator/zod`: new `zodValidator(schema)` export — use any zod
-    `ZodType` as a formivue field validator (peer `zod ^3 || ^4`).
-  - French locale (`setValidateLanguage('fr')`) — 35 translated messages.
-  - `useFormValues` reactive→Vue bridge documented (examples playground), plus
-    a guide on when to use `@formivue/reactive` vs Vue reactivity.
-
-  #### Fixes
-  - `markObservable`/`markRaw` no longer crash on arrow functions without
-    `prototype` (previously masked by ES5 transpilation).
+## 3.1.1
 
 ### Patch Changes
 
+- official 3.1 release with datamodel editing
 - Updated dependencies
-  - @formivue/core@3.0.0-beta.0
-  - @formivue/reactive@3.0.0-beta.0
-  - @formivue/shared@3.0.0-beta.0
+  - @formivue/core@3.1.1
+  - @formivue/reactive@3.1.1
+  - @formivue/shared@3.1.1
+
+Notable changes to `@formivue/json-schema` are recorded here.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.1.0] - 2026-11-25
+
+### Added
+
+- Validate document values, apply revisioned patches, and merge remote snapshots with local form edits. ([`6193635`](https://github.com/stefapi/formivue-design/commit/61936356cef37c3642f3c888cfb279293913804d))
+- Validate documents with JSON Schema 2020-12, resolve registered resources, and provide a runner for the dialect conformance suite. ([`b579661`](https://github.com/stefapi/formivue-design/commit/b5796615468eb2062bf880328e418f2e2aafad72))
+- Move values between objects as variant binding paths change. ([`acae2a1`](https://github.com/stefapi/formivue-design/commit/acae2a12cce7c97ded2febbd44944ca48a781c99))
+
+### Changed
+
+- Expose shared document JSON utilities alongside validation, patching, and state APIs, with package-level tests for validation messages. ([`a7415ee`](https://github.com/stefapi/formivue-design/commit/a7415ee2f0614097d7c2fbb9acbbb097da5ac0cc), [`b698b6d`](https://github.com/stefapi/formivue-design/commit/b698b6d75661a93dcf2133db4ace0c033adc9f71))
+
+### Fixed
+
+- Include the rejected value and the expected constant or allowed choices in document validation details. ([`6b85e4a`](https://github.com/stefapi/formivue-design/commit/6b85e4a98920499d87a4bee4f88e1ab8a8743bd9), [`9015f7f`](https://github.com/stefapi/formivue-design/commit/9015f7f346f2cae4e7299829ba1965b36859c27f))
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released the schema driver that maps JSON Schema fields, validators, and reactions onto the Formivue form engine.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/manager/json-schema

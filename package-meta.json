@@ -1,6 +1,6 @@
 {
-  "$comment": "Source unique des métadonnées communes de TOUS les packages du repo (root, manager/, design/, examples/). Appliquée aux package.json par `pnpm meta:sync` (scripts/sync-package-meta.mjs), vérifiée par `pnpm meta:check` (gate chaînée dans `pnpm lint`). Changer la version ICI puis lancer `pnpm meta:sync`.",
-  "version": "3.0.3",
+  "$comment": "Source of shared metadata for the root package and all workspaces in manager/, design/, and examples/. After changing the version here, run pnpm meta:sync to update the package manifests. pnpm meta:check verifies them as part of pnpm lint.",
+  "version": "3.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/stefapi/formivue-design.git"

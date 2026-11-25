@@ -777,23 +777,15 @@ type FieldValidator<Context = any> =
 
 ### FieldMessage
 
-```ts
-type FieldMessage = string | JSXElement
-```
-
-If under the UI framework that supports JSX, we can directly pass the Node of JSX, otherwise, we can only pass the string
+Field titles, descriptions and feedback can use plain strings. Vue consumers
+can also supply renderable content such as a VNode.
 
 ### FieldDataSource
 
-```ts
-type FieldDataSource<ValueType> = Array<{
-  label: string | JSXElement
-  value: ValueType
-  [key: string]: any
-}>
-```
-
-The field data source is actually an array. The form of the content is determined by the user, but we recommend that users express the data source in the form of label/value. It should be noted here that if it is to be used in the UI framework, it is not set directly. To be effective, the dataSource property must be bound to a specific UI component to be effective. For example, using @formivue/react, if you want to bind the state, you can use the connect function, or you can directly get the field instance through useField in the component. consumption.
+`FieldDataSource` is an array of entries with optional `label` and `value`
+properties. Use entries such as `{ label: 'Email', value: 'email' }` for
+choice controls. In Vue, map `dataSource` to the control's options with
+`connect` and `mapProps`, or read it directly with `useField`.
 
 ### FieldValue
 
@@ -801,19 +793,13 @@ The field value type is actually the `Any` type, but it is important to mention 
 
 ### FieldComponent
 
-```ts
-type FieldComponent = string | JSXComponentConstructor
-```
-
-Field component, if we use it in a framework that supports JSX, FieldComponent recommends to store the JSX component reference directly, otherwise it can store a component identification string and distribute it during actual rendering.
+Pass a component reference as `[Input]` or `[Input, props]`. In a JSON
+schema, use a registered name such as `'Input'` in `x-component`.
 
 ### FieldDecorator
 
-```ts
-type FieldDecorator = string | JSXComponentConstructor
-```
-
-Field decorator, if we use it in a framework that supports JSX, FieldDecorator recommends to store the JSX component reference directly, otherwise it can store a component identification string and distribute it during actual rendering.
+Pass a wrapper as `[FormItem]` or `[FormItem, props]`. In a JSON schema,
+use a registered name such as `'FormItem'` in `x-decorator`.
 
 ### FieldReaction
 

@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/data-schema-charts",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "description": "Chart contracts for Formivue data documents",
   "type": "module",
   "main": "./dist/index.mjs",

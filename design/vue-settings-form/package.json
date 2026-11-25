@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/vue-settings-form",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -28,11 +28,11 @@
     "vue": "^3.5.46"
   },
   "peerDependencies": {
-    "@formivue/core": "^3.0.3",
-    "@formivue/reactive": "^3.0.3",
-    "@formivue/reactive-vue": "^3.0.3",
-    "@formivue/shared": "^3.0.3",
-    "@formivue/vue": "^3.0.3",
+    "@formivue/core": "^3.1.0",
+    "@formivue/reactive": "^3.1.0",
+    "@formivue/reactive-vue": "^3.1.0",
+    "@formivue/shared": "^3.1.0",
+    "@formivue/vue": "^3.1.0",
     "vue": "^3.5.0"
   },
   "dependencies": {

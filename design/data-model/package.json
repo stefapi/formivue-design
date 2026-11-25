@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/data-model",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "description": "Formivue designer data model projects, variants and archives",
   "type": "module",
   "main": "./dist/index.mjs",

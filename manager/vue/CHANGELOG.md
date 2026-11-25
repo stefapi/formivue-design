@@ -1,65 +1,52 @@
-# @formivue/vue
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 - Updated dependencies
-  - @formivue/core@3.0.4
-  - @formivue/json-schema@3.0.4
-  - @formivue/reactive@3.0.4
-  - @formivue/reactive-vue@3.0.4
-  - @formivue/shared@3.0.4
+  - @formivue/core@3.1.1
+  - @formivue/json-schema@3.1.1
+  - @formivue/reactive@3.1.1
+  - @formivue/reactive-vue@3.1.1
+  - @formivue/shared@3.1.1
 
-## 4.0.0
-
-### Patch Changes
-
-- @formivue/core@4.0.0
-  - @formivue/json-schema@4.0.0
-  - @formivue/reactive@4.0.0
-  - @formivue/reactive-vue@4.0.0
-  - @formivue/shared@4.0.0
-
-## 3.0.0-beta.0
-
-### Major Changes
-
-- v3.0.0 — ESM-only, Vue 3.5, zero external runtime deps
-
-  #### Breaking changes
-  - **ESM-only (A1)**: all packages are now `"type": "module"` with an `exports`
-    map (types → import). The CommonJS builds (`lib/`) are removed. Use a
-    bundler (Vite, webpack 5+), or `esm.sh` if you `require()` them.
-  - **UMD/CDN builds removed (A2)**: `dist/*.umd.*.js` and the `unpkg`/`jsdelivr`
-    entries are gone.
-  - **Node engines**: `node >= 24` (was `8.x–11.x`).
-  - **Peer**: `vue ^3.4` (tested on 3.5); `typescript` peer removed from
-    `@formivue/json-schema`.
-  - **`@formivue/shared`**: the six `*-case` packages are inlined — no external
-    runtime dependency on any `@formivue/*` package beyond `@formivue/path`
-    (zero new transitive deps in consumer lockfiles).
-  - **`@formivue/grid`**: `@juggle/resize-observer` polyfill removed, native
-    `ResizeObserver` is used (SSR-safe).
-
-  #### Features
-  - `@formivue/validator/zod`: new `zodValidator(schema)` export — use any zod
-    `ZodType` as a formivue field validator (peer `zod ^3 || ^4`).
-  - French locale (`setValidateLanguage('fr')`) — 35 translated messages.
-  - `useFormValues` reactive→Vue bridge documented (examples playground), plus
-    a guide on when to use `@formivue/reactive` vs Vue reactivity.
-
-  #### Fixes
-  - `markObservable`/`markRaw` no longer crash on arrow functions without
-    `prototype` (previously masked by ES5 transpilation).
+## 3.1.1
 
 ### Patch Changes
 
+- official 3.1 release with datamodel editing
 - Updated dependencies
-  - @formivue/core@3.0.0-beta.0
-  - @formivue/json-schema@3.0.0-beta.0
-  - @formivue/reactive@3.0.0-beta.0
-  - @formivue/reactive-vue@3.0.0-beta.0
-  - @formivue/shared@3.0.0-beta.0
-  - @formivue/validator@3.0.0-beta.0
+  - @formivue/core@3.1.1
+  - @formivue/json-schema@3.1.1
+  - @formivue/reactive@3.1.1
+  - @formivue/reactive-vue@3.1.1
+  - @formivue/shared@3.1.1
+
+Notable changes to `@formivue/vue` are recorded here.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.1.0] - 2026-11-25
+
+### Added
+
+- Add a `retain` prop to `FormProvider` so a form session can survive provider unmounting. ([`6193635`](https://github.com/stefapi/formivue-design/commit/61936356cef37c3642f3c888cfb279293913804d))
+
+### Changed
+
+- Hide document fields marked `writeOnly` when rendering outside editable mode. ([`6a3cb36`](https://github.com/stefapi/formivue-design/commit/6a3cb36e18fd19d96526d4c911a58232c032d5b9))
+- Update the guides and usage examples for document trust and the standalone standard renderer. ([`f82a085`](https://github.com/stefapi/formivue-design/commit/f82a0853848dd5e57165f1873343f1eb80588b93), [`262342f`](https://github.com/stefapi/formivue-design/commit/262342ffcfe1d9f308a6ca1ca24631e2b933e777), [`18a74c3`](https://github.com/stefapi/formivue-design/commit/18a74c35863c8d81a5658101656b8912ea7bab3d))
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released Vue 3 field components, `FormProvider`, composables, and a schema component factory for the headless engine.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/manager/vue

@@ -6,14 +6,14 @@
 
 - **`observer(component)`** — `defineComponent` component wrapper: makes
   the component reactive to the `@formivue/reactive` observables used in
-  its rendering (a single invalidation per batch) — the Vue equivalent of
-  the React-era `observer`.
+  its rendering (a single invalidation per batch).
 - **`useObserver(options?)`** — reactive rendering hook (tracking around
   the composable's body, stopped on unmount).
 
 ## Example
 
 ```ts
+import { h } from 'vue'
 import { observer } from '@formivue/reactive-vue'
 import { observable } from '@formivue/reactive'
 

@@ -1,6 +1,6 @@
 {
   "name": "@formivue-design/core",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "license": "MIT",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -22,9 +22,9 @@
     "@formivue/reactive": "workspace:*"
   },
   "peerDependencies": {
-    "@formivue/json-schema": "^3.0.3",
-    "@formivue/path": "^3.0.3",
-    "@formivue/reactive": "^3.0.3"
+    "@formivue/json-schema": "^3.1.0",
+    "@formivue/path": "^3.1.0",
+    "@formivue/reactive": "^3.1.0"
   },
   "dependencies": {
     "@formivue-design/shared": "workspace:*"

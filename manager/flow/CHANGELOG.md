@@ -1,23 +1,39 @@
-# @formivue/flow
+# Changelog
 
-## 3.0.4
+## 3.1.1
 
 ### Patch Changes
 
-- official first release
+- Bug correction
 - Updated dependencies
-  - @formivue/core@3.0.4
-  - @formivue/reactive@3.0.4
+  - @formivue/core@3.1.1
+  - @formivue/reactive@3.1.1
 
-## 4.0.0
-
-### Minor Changes
-
-- 40a447b: Add reusable headless form flows, advanced shadcn-vue schema materials, and
-  their designer palette and property editors. Move the standalone designer
-  playground to examples and add Standard and Advanced modes.
+## 3.1.1
 
 ### Patch Changes
 
-- @formivue/core@4.0.0
-  - @formivue/reactive@4.0.0
+- official 3.1 release with datamodel editing
+- Updated dependencies
+  - @formivue/core@3.1.1
+  - @formivue/reactive@3.1.1
+
+Notable changes to `@formivue/flow` are recorded here.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [3.1.0] - 2026-11-25
+
+Version aligned with the [Formivue 3.1.0 release](../../CHANGELOG.md#310---2026-11-25).
+
+## [3.0.3] - 2026-11-23
+
+### Added
+
+- Released the headless `createFormFlow` controller for conditional step navigation, validation, and final submission.
+
+[Unreleased]: https://github.com/stefapi/formivue-design/compare/18a74c35863c8d81a5658101656b8912ea7bab3d...main
+[3.1.0]: https://github.com/stefapi/formivue-design/compare/8ae97b832cf24cbf950917c87fbcfca6fc900050...18a74c35863c8d81a5658101656b8912ea7bab3d
+[3.0.3]: https://github.com/stefapi/formivue-design/tree/8ae97b832cf24cbf950917c87fbcfca6fc900050/manager/flow

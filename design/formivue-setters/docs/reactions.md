@@ -105,28 +105,21 @@ Available in every `{{expression}}` and in `fulfill.run`
 
 ## Vue stack specifics (reka-ui)
 
-What replaces the React/antd idioms the upstream examples were written
-against:
-
 - **Form-friendly contract** — every control primitive of
   `@formivue-design/vue-ui` (Input, Select, NumberPicker, Checkbox, Radio,
-  Slider, Cascader, …) follows `value` + `onChange(value)`. In Vue,
-  component events are received **as props**, so a reaction hooks into
-  user input with `$props({ onChange(value) { ... } })`. There is no
-  antd `onSearch` / `showSearch` anywhere in the stack.
-- **Select** — no search box; options come from `field.dataSource`
-  (mapped to `options` by the material's `mapProps`), and `multiple:
-boolean` replaces the antd `mode` prop. For dynamic options, drive
-  `$self.loading` + `$self.dataSource`; for cascading reloads, capture
-  `onChange` into an `$observable` state (see example 2 below).
-- **Decorators** — `FormItem` / `FormLayout` are headless: the layout
-  props are `labelWidth`, `layout`, `labelAlign`, `size`. The antd
-  `labelCol` / `wrapperCol` / `colon` grid props do not exist in this
-  port — use `labelWidth` in `decoratorProps` reactions.
+  Slider, Cascader, …) follows `value` + `onChange(value)`. A reaction can
+  handle user input with `$props({ onChange(value) { ... } })`.
+- **Select** — the binding maps `field.dataSource` to the `options` prop.
+  Set `multiple: true` to select multiple options. For dynamic options, update
+  `$self.loading` and `$self.dataSource`. For cascading reloads, capture
+  `onChange` into an `$observable` state.
+- **Decorators** — use `labelWidth`, `layout`, `labelAlign` and `size`
+  to configure form layout. Set `labelWidth` in a `decoratorProps` reaction
+  to change a field's label width.
 - **Registration by name** — components referenced by schemas are
-  strings resolved through the `createSchemaField` components map (the
-  designer supplies a locale-aware preview registry. Standalone forms use
-  `Materials` from `@formivue-design/formivue-runtime`).
+  resolved through the `createSchemaField` component registry. The designer
+  supplies a locale-aware preview registry. Standalone forms can use
+  `Materials` from `@formivue-design/formivue-runtime`.
 - **Monaco typings** — the form opens immediately while
   `initDeclaration` loads the Formivue types for autocompletion.
   The playground serves Monaco and those declarations from its own build.
@@ -176,7 +169,7 @@ $deps.VariableName === 'TARGET_VALUE' ? 'editable' : 'disabled'
   placeholder: $deps.VariableName
 }
 
-// decoratorProps — FormLayout is headless: labelWidth, not antd labelCol
+// decoratorProps — set the field's label width
 {
   labelWidth: 120
 }
@@ -254,22 +247,6 @@ $effect(() => {
     )
 }, [state.selected, $deps.VariableName])
 ```
-
-## Deviations from the React/antd era
-
-The examples were ported from the React/antd generation and adapted;
-the deltas are deliberate and documented:
-
-| Era (React + antd)                        | This port (Vue + reka-ui)                                                                      |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Legacy documentation link                 | This document and the local JSON Schema guide                                                  |
-| `$props({ onSearch(keyword) { ... } })`   | `$props({ onChange(value) { ... } })` — the `value` + `onChange(value)` form-friendly contract |
-| `labelCol` / `wrapperCol` decorator props | `labelWidth` (headless FormLayout)                                                             |
-| Select `mode: 'multiple'` / `showSearch`  | `multiple: boolean`; no search box — cascading pattern via `onChange`                          |
-
-The remaining example expressions (`$deps.VariableName`, ternaries,
-`$observable`, `$effect`, …) are framework-agnostic formivue expressions
-and are kept as is.
 
 ## References
 

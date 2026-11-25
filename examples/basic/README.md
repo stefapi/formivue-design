@@ -4,8 +4,8 @@
 custom `Field`/`Card` canvas components (via
 [`src/content.ts`](./src/content.ts)).
 
-- Same studio as the previous era: `StudioPanel` + `CompositePanel` (tree, palette) +
-  `WorkspacePanel` + `ViewportPanel` + `SettingsPanel`, antd chrome →
+- The studio uses `StudioPanel`, `CompositePanel`, `WorkspacePanel`,
+  `ViewportPanel` and `SettingsPanel` with
   [`@formivue-design/vue-ui`](../../design/vue-ui).
 - `observer` comes from [`@formivue/reactive-vue`](../../manager/reactive-vue);
   styles → the app's Tailwind entry ([`src/styles.css`](./src/styles.css), V6).

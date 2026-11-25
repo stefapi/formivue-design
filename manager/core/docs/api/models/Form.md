@@ -772,11 +772,11 @@ type IFormMergeStrategy = 'overwrite' | 'merge' | 'deepMerge' | 'shallowMerge'
 ### IFieldFactoryProps
 
 ```ts
-interface IFieldFactoryProps {
+interface IFieldFactoryProps<TextType = any> {
   name: FormPathPattern //Field name, the path name of the current node
   basePath?: FormPathPattern //base path
-  title?: string | JSXElement //Field title
-  description?: string | JSXElement //Field description
+  title?: TextType //Field title
+  description?: TextType //Field description
   value?: any //Field value
   initialValue?: any //Field default value
   required?: boolean //Is the field required
@@ -808,11 +808,11 @@ FieldReaction Reference [FieldReaction](Field.md#fieldreaction)
 ### IVoidFieldFactoryProps
 
 ```ts
-interface IFieldFactoryProps {
+interface IVoidFieldFactoryProps<TextType = any> {
   name: FormPathPattern //Field name, the path name of the current node
   basePath?: FormPathPattern //base path
-  title?: string | JSXElement //Field title
-  description?: string | JSXElement //Field description
+  title?: TextType //Field title
+  description?: TextType //Field description
   required?: boolean //Is the field required
   display?: 'none' | 'hidden' | 'visible' //Field display form
   pattern?: 'editable' | 'disabled' | 'readOnly' | 'readPretty' //Field interaction mode

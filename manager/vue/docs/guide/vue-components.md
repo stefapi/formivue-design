@@ -89,7 +89,7 @@ const { SchemaField } = createSchemaField({
 `components`, `name`, `basePath`, `onlyRenderProperties`, `onlyRenderSelf`,
 `mapProperties`, `filterProperties`. The factory additionally returns typed
 markup shortcuts (`SchemaStringField`, `SchemaObjectField`, …) for
-writing forms as JSX-free markup trees.
+composing schemas in Vue templates.
 
 ## `<RecursionField>` / `<ExpressionScope>`
 
