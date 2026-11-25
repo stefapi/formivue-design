@@ -23,45 +23,43 @@ in-house controls such as Tree, the data-driven Table, and the form block.
   (class-variance-authority), **@lucide/vue** icons.
 - **Zero formivue dependency**: this package is a pure UI library. The bridge
   to fields (`connect`/`mapProps`) is done by the consuming packages.
-- **a11y by construction** (V8 of the Vue plan: `axe-core` target = 0) — ARIA
-  roles via reka-ui, explicit `aria-label` wherever the semantics require it
-  (e.g. the Select's `role=combobox` trigger), `role=group` for the Tree
-  subtrees.
+- **Accessibility.** The controls use Reka UI's ARIA roles. Component tests
+  check naming and semantics with axe-core.
 
-## Consumer theme (required)
+## Consumer theme
 
-The classes use **shadcn theme tokens** (`bg-background`,
-`text-foreground`, `bg-primary`, `text-muted-foreground`, `bg-accent`,
-`border-border`, `text-destructive`…). The consumer MUST provide the shadcn
-Tailwind 4 theme in their global CSS (`shadcn-vue init` recipe):
+Import the package stylesheet in the application's Tailwind 4 entry. It
+registers the control classes. The application defines the theme tokens.
+A standard form renderer can import its own stylesheet, which already
+includes these sources.
 
 ```css
-@import 'tailwindcss' @import 'tw-animate-css'
-  /* optional — animate-in/out animations from the registry */ @source
-  '../node_modules/@formivue-design/vue-ui/dist': root {
-  --background: oklch(1 0 0) --foreground: oklch(0.145 0 0)
-    --primary: oklch(0.205 0 0) --primary-foreground: oklch(0.985 0 0)
-    /* …full shadcn tokens (see the shadcn-vue registry)… */
-    --border: oklch(0.922 0 0) --muted: oklch(0.97 0 0)
-    --muted-foreground: oklch(0.556 0 0) --accent: oklch(0.97 0 0)
-    --popover: oklch(1 0 0) --card: oklch(1 0 0)
-    --destructive: oklch(0.577 0.245 27.325);
-}
+@import 'tailwindcss';
+@import '@formivue-design/vue-ui/styles.css';
 
 @theme inline {
-  --color-background: var(--background) --color-foreground: var(--foreground)
-    --color-primary: var(--primary)
-    --color-primary-foreground: var(--primary-foreground)
-    /* …identical mapping for each token… */ --color-border: var(--border)
-    --color-muted: var(--muted)
-    --color-muted-foreground: var(--muted-foreground)
-    --color-accent: var(--accent) --color-popover: var(--popover)
-    --color-card: var(--card) --color-destructive: var(--destructive);
+  --color-background: var(--color-white);
+  --color-foreground: var(--color-slate-900);
+  --color-card: var(--color-white);
+  --color-card-foreground: var(--color-slate-900);
+  --color-popover: var(--color-white);
+  --color-popover-foreground: var(--color-slate-900);
+  --color-primary: var(--color-slate-900);
+  --color-primary-foreground: var(--color-white);
+  --color-secondary: var(--color-slate-100);
+  --color-secondary-foreground: var(--color-slate-900);
+  --color-muted: var(--color-slate-100);
+  --color-muted-foreground: var(--color-slate-600);
+  --color-accent: var(--color-slate-100);
+  --color-accent-foreground: var(--color-slate-900);
+  --color-destructive: var(--color-rose-600);
+  --color-border: var(--color-slate-200);
+  --color-input: var(--color-slate-300);
+  --color-ring: var(--color-indigo-500);
 }
 ```
 
-Dark mode is then done by overriding the variables under `.dark { … }` (no
-class hardcoded in the components).
+Override the theme values in your application to support additional themes.
 
 ## "Form-friendly" contract
 
@@ -113,7 +111,7 @@ use the native time format, and ranges store a pair of strings.
 
 ## Tests
 
-`packages/vue-ui/src/__tests__/` — one suite per family + **axe suite**
+[`src/__tests__`](./src/__tests__) — one suite per family + **axe suite**
 (`a11y.spec.ts`, kitchen-sink, 0-violation target, fork recipe).
 On jsdom: `scripts/test-setup.ts` polyfills `ResizeObserver` and the
 Pointer Capture API (absent from jsdom, required by reka).

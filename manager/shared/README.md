@@ -9,7 +9,7 @@ Shared utilities of the form manager.
   **`isEmpty`**.
 - **`camelCase`/`pascalCase`/`lowerCase`/`upperCase`** (`case`),
   **`deprecate`**.
-- **`path`** — re-export of `Path`/`Pattern`
+- **`FormPath`** and **`FormPathPattern`** — aliases for `Path`/`Pattern`
   ([`@formivue/path`](../path)); **`subscribable`**/**`middleware`** — bus
   and middlewares used by [`@formivue/core`](../core) (and the form
   designer).

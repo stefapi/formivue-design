@@ -10,17 +10,17 @@ Hi! I’m really excited that you are interested in contributing to FormivueDesi
 ## Stack
 
 - **Vue 3.5** (`defineComponent` + `h()`, pure TS — no SFCs in the design packages), formivue v3 bindings **from the integrated manager** `manager/` (`@formivue/vue` + `@formivue/reactive-vue`, self-contained repo — no more fork sibling).
-- **Headless UI**: reka-ui + shadcn-vue recipe (`@formivue-design/vue-ui`) — every style class goes through **Tailwind 4 tokens** (no hard-coded colors); the consumer provides the Tailwind entry (`@source` on the dist, see `README.md`).
-- **a11y = fixing, not reporting**: a component that violates axe-core is fixed before merging (0-violation target, `a11y.spec` suites).
+- **Headless UI.** `@formivue-design/vue-ui` supplies the controls and
+  Tailwind theme contract. `formivue-runtime` binds them to schemas.
+  `formivue-vue` supplies canvas behavior and resources. Follow the
+  [package boundaries](../ARCHITECTURE.md).
+- **Accessibility.** The `a11y.spec` suites check components with axe-core.
 - **API parity**: no public export disappears without a CHANGELOG entry.
 
 ## Issue Reporting Guidelines
 
-- The issue list of this repo is **exclusively** for bug reports and feature requests. Non-conforming issues will be closed immediately.
-
-  - For simple beginner questions, you can get quick answers from
-
-  - For more complicated questions, you can use Google or StackOverflow. Make sure to provide enough information when asking your questions - this makes it easier for others to help you!
+- Use the issue tracker for bug reports and feature requests. Start with the
+  [guides and examples](../README.md#documentation) for usage questions.
 
 - Try to search for your issue, it may have already been answered or even fixed in the development branch.
 
@@ -37,7 +37,8 @@ Hi! I’m really excited that you are interested in contributing to FormivueDesi
 - Only code that's ready for release should be committed to the main branch. All development should be done in dedicated branches.
 - Checkout a **new** topic branch from main branch, and merge back against main branch.
 - Work in the `src` folder and **DO NOT** checkin `dist` in the commits.
-- Make sure `pnpm install`, `pnpm -r build`, `pnpm lint`, `pnpm typecheck` and `pnpm test` pass (Node 24 + pnpm 10, cf. root `README.md`).
+- Run `pnpm install --frozen-lockfile` and `pnpm harness` from the root.
+  See the [development guide](../DEVELOPMENT.md) for the toolchain and demos.
 - If adding new feature:
   - Add accompanying test case.
   - Provide convincing reason to add this feature. Ideally you should open a suggestion issue first and have it greenlighted before working on it.

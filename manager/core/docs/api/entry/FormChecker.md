@@ -10,7 +10,7 @@ order: 4
 
 #### Description
 
-Determine whether an object is a [Form](/api/models/form) object
+Determine whether an object is a [Form](../models/Form.md) object
 
 #### Signature
 
@@ -34,7 +34,7 @@ console.log(isForm(form)) //true
 
 #### Description
 
-Determine whether an object is a [Field](/api/models/field) object
+Determine whether an object is a [Field](../models/Field.md) object
 
 #### Signature
 
@@ -60,7 +60,7 @@ console.log(isField(field)) //true
 
 #### Description
 
-Determine whether an object is [ArrayField](/api/models/array-field) object
+Determine whether an object is [ArrayField](../models/ArrayField.md) object
 
 #### Signature
 
@@ -86,7 +86,7 @@ console.log(isArrayField(field)) //true
 
 #### Description
 
-Determine whether an object is a [ObjectField](/api/models/object-field) object
+Determine whether an object is a [ObjectField](../models/ObjectField.md) object
 
 #### Signature
 
@@ -112,7 +112,7 @@ console.log(isObjectField(field)) //true
 
 #### Description
 
-Determine whether an object is a [VoidField](/api/models/void-field) object
+Determine whether an object is a [VoidField](../models/VoidField.md) object
 
 #### Signature
 
@@ -204,7 +204,7 @@ console.log(isDataField({})) //false
 
 #### Description
 
-Determine whether an object is [IFormState](/api/models/form#iformstate) object
+Determine whether an object is [IFormState](../models/Form.md#iformstate) object
 
 #### Signature
 
@@ -229,7 +229,7 @@ console.log(isFormState(form.getState())) //true
 
 #### Description
 
-Determine whether an object is [IFieldState](/api/models/field#ifieldstate) object
+Determine whether an object is [IFieldState](../models/Field.md#ifieldstate) object
 
 #### Signature
 
@@ -257,7 +257,7 @@ console.log(isFieldState(field.getState())) //true
 
 #### Description
 
-Determine whether an object is [IArrayFieldState](/api/models/array-field#iarrayfieldstate) object
+Determine whether an object is [IArrayFieldState](../models/ArrayField.md#iarrayfieldstate) object
 
 #### Signature
 
@@ -285,7 +285,7 @@ console.log(isArrayFieldState(field.getState())) //true
 
 #### Description
 
-Determine whether an object is [IObjectFieldState](/api/models/object-field#iobjectfieldstate) object
+Determine whether an object is [IObjectFieldState](../models/ObjectField.md#iobjectfieldstate) object
 
 #### Signature
 
@@ -313,7 +313,7 @@ console.log(isObjectFieldState(field.getState())) //true
 
 #### Description
 
-Determine whether an object is [IVoidFieldState](/api/models/void-field#ivoidfieldstate) object
+Determine whether an object is [IVoidFieldState](../models/VoidField.md#ivoidfieldstate) object
 
 #### Signature
 

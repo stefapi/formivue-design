@@ -8,9 +8,8 @@
 - **`parseValidatorDescriptions`** — the declarative schema DSL
   (`"required string"` or `{ required: true, maxLength: 10 }`) becomes
   executable rules.
-- **`validate(value, validator)`** — the engine: rules + localized messages →
-  responses (`ValidateResponse[]`) consumed by the fields
-  ([`@formivue/core`](../core)).
+- **`validate(value, validator)`** returns message arrays grouped by
+  `error`, `warning` and `success`. The field engine consumes this result.
 
 ## Example
 
@@ -18,7 +17,7 @@
 import { validate, parseValidatorDescriptions } from '@formivue/validator'
 
 const rules = parseValidatorDescriptions({ required: true, maxLength: 5 })
-await validate('stef', rules) // → localized error messages if the rules are not met
+const { error } = await validate('longer', rules)
 ```
 
 Reference for the built-in rules: [`rules.ts`/`locale.ts`/`formats.ts`](./src).

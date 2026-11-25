@@ -1,6 +1,7 @@
 # @formivue-design/core
 
-The designer's engine — **framework-agnostic** (no UI dependency)([`@formivue-design/vue`](../vue)).
+The designer's engine manages the tree, workspace state and operations.
+[`@formivue-design/vue`](../vue) supplies the canvas and panels.
 
 - **Observable models** — `Engine` (root), `Workspace` (open forms),
   `Viewport` (visible rectangle), `History` (undo/redo via snapshots),
@@ -20,12 +21,10 @@ The designer's engine — **framework-agnostic** (no UI dependency)([`@formivue-
 ## Example
 
 ```ts
-import { Engine } from '@formivue-design/core'
+import { createDesigner } from '@formivue-design/core'
 
-const engine = new Engine()
-const workspace = engine.appendWorkspace(
-  new Workspace(engine, { id: 'form-1' }),
-)
+const engine = createDesigner()
+const workspace = engine.workbench.ensureWorkspace({ id: 'form-1' })
 const tree = workspace.operation.tree
 ```
 

@@ -20,14 +20,15 @@ measurement. Floating controls can share the grid container with its cells.
 ```ts
 import { Grid } from '@formivue/grid'
 
-const grid = new Grid<HTMLDivElement>(el, {
+const grid = new Grid<HTMLDivElement>({
   maxColumns: 4,
   minColumns: 2,
   columnGap: 8,
 })
+const disconnect = grid.connect(el)
 ```
 
-Consumed by the grid layouts of the formivue materials
-([`@formivue-design/formivue-vue`](../../design/formivue-vue)) and the
-[`@formivue/vue`](../vue) bindings. Version, repository and license: see
-[`package-meta.json`](../../package-meta.json).
+`FormGrid` in the
+[`standard renderer`](../../design/formivue-runtime/README.md) binds the grid
+to its Vue container. Call the function returned by `connect` when the
+container is removed.

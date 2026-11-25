@@ -4,9 +4,8 @@ order: 0
 
 # Introduction
 
-`@formivue/vue` is the Vue binding layer for `@formivue/core`. It binds
-ViewModels to components — it does **not** manage form data or validation
-itself: it is a rendering glue layer that decouples the dirty logic elegantly.
+`@formivue/core` manages form values, validation and field lifecycle.
+`@formivue/vue` binds that state to Vue components.
 
 ## Two kinds of usage
 
@@ -15,12 +14,14 @@ itself: it is a rendering glue layer that decouples the dirty logic elegantly.
 - **JSON-Schema users** — the `SchemaField` component, built on top of the
   former, for dynamic, schema-driven forms.
 
-Both share the same entry point: `FormProvider` distributes the form context.
+Both use `FormProvider` to distribute the form context. Schema-driven apps
+can register their own components or use
+[`@formivue-design/formivue-runtime`](./json-schema.md#render-a-designer-export).
 
 ## Installation
 
 ```bash
-$ npm install --save @formivue/core @formivue/vue
+npm install @formivue/core @formivue/vue vue
 ```
 
 ## Guides
@@ -41,6 +42,6 @@ Reference documentation:
 
 ## Playground
 
-A complete Vite playground (Vue 3.5, strict TypeScript, Tailwind 4,
-reka-ui, axe a11y, zod bridges) lives in the repo under
-`examples/vite-usage` (run `pnpm --filter @formivue/example-vite-usage dev`).
+Run `pnpm demo:playground` from the repository root. The Vite playground
+includes markup fields, validation bridges and a **Designer form** rendered
+with the standard runtime registry.

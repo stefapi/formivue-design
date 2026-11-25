@@ -38,8 +38,8 @@ export default defineConfig({
         link: '/guide/',
       },
       {
-        text: 'GITHUB',
-        link: 'https://github.com/stefapi/formivue',
+        text: 'GitHub',
+        link: 'https://github.com/stefapi/formivue-design',
       },
     ],
     sidebar: {
@@ -48,7 +48,7 @@ export default defineConfig({
           text: 'Guide',
           items: [
             { text: 'Introduction', link: '/guide/' },
-            { text: 'What’s new in v3', link: '/guide/whats-new' },
+            { text: 'Formivue v3', link: '/guide/whats-new' },
           ],
         },
         {

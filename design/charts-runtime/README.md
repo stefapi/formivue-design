@@ -4,13 +4,22 @@ Use the named Vue components directly or merge `ChartMaterials` into your
 `createSchemaField({ components })` registry. The schema uses the component
 name as `x-component`, and passes the mapping in `x-component-props`.
 
-Add `@source '../node_modules/@formivue-design/charts-runtime/dist';` to your
-Tailwind entry for the chart presentation classes.
+Combine `ChartMaterials` with the
+[standard runtime registry](../formivue-runtime/README.md) to render charts
+alongside form controls. Register the chart classes in the Tailwind entry.
+
+```css
+@import 'tailwindcss';
+@import '@formivue-design/formivue-runtime/styles.css';
+@source '../node_modules/@formivue-design/charts-runtime/dist';
+```
 
 Each chart is a void field. Use `BarChart`, `LineChart`, or `AreaChart` with
-`rows`, `xKey`, and `series: [{ key, title }]`. A `rows` expression can point to the values
-of an ArrayTable, for example `{{ $values.sales }}`. Numeric series values
-and categories are matched by row, in the order provided by the source.
+`rows`, `xKey`, and `series: [{ key, title }]`. In a trusted combined schema
+an expression such as `{{ $values.sales }}` can read an ArrayTable. For
+three-document forms, declare `bindings.rows` and register the
+[chart document contracts](../data-schema-charts/README.md). Numeric series
+values and categories are matched by row, in source order.
 
 For a chart with one series per group, set `groupKey` to the grouping column,
 `valueKey` to the numeric column, and `aggregation` to `'sum'` (the default)

@@ -6,23 +6,14 @@ workspace. Load only scripts, styles and schemas you would trust to run in the
 parent page. For untrusted previews, use a separate origin and exchange only
 validated, serializable messages.
 
-The preview content (`ViewPanel` preview) lives in
-an isolated iframe, driven from the host window.
-
-- **`Sandbox`** — `defineComponent` component rendering the full-height,
-  zero-border `iframe`; props `cssAssets` / `jsAssets` (URLs of the assets
-  to load in the iframe), `scope` (`postMessage` scope), `style`;
-  **`useSandboxScope()`** and **`renderSandboxContent(render)`** expose the
-  iframe scope on the content side.
-- **`useSandbox(props)`** — mount composable: returns the iframe `ref` (in
-  Vue 3.5 it is called in `setup` — the legacy era did it from the React
-  render); sequentially loads the `cssAssets` then the `jsAssets`, wires up
-  `postMessage` and load detection.
-- **Unchanged bridge** — `postMessage` + `globalThisPolyfill`: host engine ⇄
-  iframe instance sharing goes through the global `FormivueDesign.Core`
-  (see [`@formivue-design/core`](../core)); the iframe bundles neither
-  `@formivue-design/core` nor `@formivue/reactive` (a single tracking
-  instance).
+- `Sandbox` renders a full-size iframe. Pass asset URLs through
+  `cssAssets` and `jsAssets` and application data through `scope`.
+- `useSandbox(props)` returns the iframe ref. On mount it writes the
+  document and exposes the host designer, workspace and supplied scope to
+  the frame as direct references.
+- Frame code reads the supplied scope with `useSandboxScope()` and
+  mounts the Vue preview with `renderSandboxContent(render)`. The
+  examples share the host's designer and reactive instances.
 
 ## Example
 
@@ -39,7 +30,6 @@ import { Sandbox } from '@formivue-design/vue-sandbox'
 </template>
 ```
 
-Full usage example (driven iframe, `window.FormivueDesign` injected):
-[`examples/sandbox`](../../examples/sandbox) and
+See the complete examples in [`examples/sandbox`](../../examples/sandbox) and
 [`examples/sandbox-multi-workspace`](../../examples/sandbox-multi-workspace).
 Version, repository and license: see [`package-meta.json`](../../package-meta.json).

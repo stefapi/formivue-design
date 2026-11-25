@@ -6,9 +6,14 @@ Arrows show which layer imports the other layer.
 
 ```mermaid
 flowchart LR
-    Apps["Applications and demos"] --> Design["design/ · designer, materials and schema export"]
+    Apps["Applications and demos"] --> Design["design/ · visual editing and schema export"]
+    Apps --> Runtime["design/ · standard renderer"]
     Apps --> Manager["manager/ · headless runtime and Vue bindings"]
+    Design --> Runtime
     Design --> Manager
+    Design --> UI
+    Runtime --> Manager
+    Runtime --> UI["design/vue-ui · headless Vue controls"]
 ```
 
 1. **Keep the manager headless.** `manager/` owns form values, field state,
@@ -28,6 +33,10 @@ flowchart LR
    optional and peer dependencies. The designer playground in
    `examples/designer-playground` composes the standard stack and loads the
    advanced modules on demand. Its registries stay in the application.
+5. **Keep the standard renderer independently installable.**
+   `design/formivue-runtime` combines manager packages with `design/vue-ui`.
+   `design/formivue-vue` adds designer metadata, canvas interactions and
+   locale adapters through public runtime exports.
 
 ## Where changes belong
 
@@ -46,6 +55,8 @@ flowchart LR
 | Property panel and specialized editors such as data sources and reactions                   | `design/vue-settings-form`, `design/formivue-setters`          |
 | Import and export of UI, data schema and data documents                                     | `design/formivue-transformer`                                  |
 | Designer data model projects, drafts, reconciliation, preview sessions and document editors | `design/data-model`                                            |
+| Visual JSON Schema and test data controls                                                   | `design/data-schema-editor`                                    |
+| Document contracts for advanced controls and charts                                         | `design/data-schema-advanced`, `design/data-schema-charts`     |
 | Same-origin preview iframe for trusted content                                              | `design/vue-sandbox`                                           |
 
 ## Advanced components
@@ -81,8 +92,8 @@ flowchart LR
    component keys used in saved forms.
 3. At runtime, `FormProvider` supplies the `Form`. The application can install
    `@formivue-design/formivue-runtime` to use the standard registry.
-   `Materials.FormLayout`
-   receives the root props. `createSchemaField({ components: Materials })`
+   `Materials.FormLayout` receives the root props.
+   `createSchemaField({ components: Materials })`
    maps the schema to fields, and the registry resolves their visual components.
    The designer preview and the **Designer form** section of `pnpm demo:playground`
    use this runtime path. Applications can also supply their own registry.
@@ -109,7 +120,9 @@ Documents, project archives and legacy schema imports use restricted rendering
 by default. The transformer accepts declarative bindings and rejects executable
 rendering settings. Applications can pass `{ trusted: true }` only after
 explicitly trusting the source. The trust setting belongs to the application
-session. The same-origin `vue-sandbox` iframe is for trusted content and assets.
+session. Restricted rendering also filters imported component props and limits
+form layouts and native elements to permitted attributes.
+The same-origin `vue-sandbox` iframe is for trusted content and assets.
 
 The transformer includes the standard component contracts. Applications pass
 a registry to document migration and compilation to add contracts from
@@ -117,7 +130,8 @@ a registry to document migration and compilation to add contracts from
 components. These packages implement the transformer's public extension
 contract. The chart extension imports the chart runtime's headless
 `data-contract` export to reuse mapping and validation rules. The registry
-belongs to the application or session.
+belongs to the application or session. Installing the chart contracts currently
+also installs the chart runtime and Unovis.
 
 `design/data-model` manages the designer's project session. It coordinates
 variants and drafts through the transformer, manages the preview document
@@ -137,5 +151,8 @@ preview renderer and the editor for the combined Formivue JSON format.
   covers serializing an export, rendering it with `Materials`, running a reaction
   and submitting values. Layout tests should include child fields. Array tests
   should check field state after rows move or are deleted.
+- [The standalone runtime test](./design/formivue-runtime/src/__tests__/schema-flow.spec.ts)
+  renders and edits repeatable fields from a serialized schema. The architecture
+  test also checks the runtime's transitive workspace dependencies.
 - `pnpm harness` runs these checks alongside the workspace builds, dependency
   analysis, type checking, tests and smoke checks used in CI.

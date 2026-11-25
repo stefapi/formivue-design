@@ -15,7 +15,7 @@ existing schema registry.
 
 ```ts
 import { createSchemaField } from '@formivue/vue'
-import { Materials } from '@formivue-design/formivue-vue'
+import { Materials } from '@formivue-design/formivue-runtime'
 import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
 
 const { SchemaField } = createSchemaField({
@@ -23,8 +23,17 @@ const { SchemaField } = createSchemaField({
 })
 ```
 
-Add `@source '../node_modules/@formivue-design/shadcn-advanced-runtime/dist';`
-to your Tailwind 4 entry and use the existing shadcn theme tokens.
+Import the standard renderer's stylesheet and register the advanced sources
+in your Tailwind 4 entry. The application supplies the shared theme tokens.
+
+```css
+@import 'tailwindcss';
+@import '@formivue-design/formivue-runtime/styles.css';
+@source '../node_modules/@formivue-design/shadcn-advanced-runtime/dist';
+```
+
+Add the [advanced document contracts](../data-schema-advanced/README.md)
+when compiling three-document forms that use these components.
 
 Use `AdvancedPreviewFrame` around a size-constrained preview to keep advanced
 menus and dialogs inside that preview. The frame supplies its own scroll area.
@@ -36,7 +45,7 @@ For example, `[{ "path": "accountType", "equals": "personal", "next": "review" }
 skips to the step named `review` when the form value matches.
 
 Provide a callback through the Vue `complete` event or the `onSubmit`
-component prop. The prop can reference a callback via a schema expression
+component prop. A trusted schema can reference a callback via an expression
 such as `{{submit}}` in the schema scope. The flow calls it after validating
 the reachable steps and passes the entire form snapshot. A rejected promise
 keeps the final step open so the action can be retried.

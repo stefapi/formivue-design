@@ -32,7 +32,7 @@ setValidateLanguage('zh-CN')
 
 #### Description
 
-Register general regular rules, the current built-in regular library reference: [formats.ts](https://github.com/stefapi/formivue/blob/master/packages/validator/src/formats.ts)
+Register general regular rules, the current built-in regular library reference: [formats.ts](../../../../validator/src/formats.ts)
 
 #### Signature
 
@@ -56,7 +56,7 @@ registerValidateFormats({
 
 #### Description
 
-Global registration verification language package, the current built-in language package reference: [locale.ts](https://github.com/stefapi/formivue/blob/master/packages/validator/src/locale.ts)
+Global registration verification language package, the current built-in language package reference: [locale.ts](../../../../validator/src/locale.ts)
 
 #### Signature
 
@@ -112,7 +112,7 @@ registerValidateMessageTemplateEngine((message, context) => {
 
 #### Description
 
-Register general verification rules, the current built-in rule library reference: [rules.ts](https://github.com/stefapi/formivue/blob/master/packages/validator/src/rules.ts)
+Register general verification rules, the current built-in rule library reference: [rules.ts](../../../../validator/src/rules.ts)
 
 #### Signature
 

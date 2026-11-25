@@ -4,9 +4,9 @@ order: 2
 
 # ArrayField
 
-Call the ArrayField model returned by [createArrayField](/api/models/form#createarrayfield).
+Call the ArrayField model returned by [createArrayField](Form.md#createarrayfield).
 
-Because ArrayField is inherited from the [Field](/api/models/field) model, most APIs can refer to the Field model. This document only explains the extension method
+Because ArrayField is inherited from the [Field](Field.md) model, most APIs can refer to the Field model. This document only explains the extension method
 
 ## Method
 
@@ -146,4 +146,4 @@ interface moveDown {
 
 ### IArrayFieldState
 
-The main attributes refer to [IFieldState](/api/models/field#ifieldstate), but the data type of value is required to be an array
+The main attributes refer to [IFieldState](Field.md#ifieldstate), but the data type of value is required to be an array

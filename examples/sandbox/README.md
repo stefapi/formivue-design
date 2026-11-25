@@ -2,9 +2,10 @@
 
 **Sandbox** example of the Vue 3.5 designer: the canvas lives in an **iframe** driven by the
 `Sandbox` component of [`@formivue-design/vue-sandbox`](../../design/vue-sandbox).
+The iframe shares the host's origin and receives direct references to the
+host designer and workspace. Use trusted preview content and local assets.
 
-- **Previous-era contract adapted to the Vue stack** — the iframe loads the local Vue distribution
-  (the `Vue` global — the previous era loaded `react`/`react-dom`/`antd`/`moment`) **then**
+- The iframe loads the local Vue distribution as the `Vue` global, then
   `./sandbox.bundle.js` (IIFE build of
   [`src/sandbox.ts`](./src/sandbox.ts), which externalizes `vue`,
   `@formivue-design/core` and `@formivue/reactive`).
@@ -17,6 +18,8 @@
 ## Getting started
 
 ```bash
+pnpm install --frozen-lockfile
+pnpm build
 pnpm start:sandbox   # http://127.0.0.1:3002
 ```
 

@@ -2,7 +2,8 @@
 
 ## `@formivue/shared`
 
-Zero-runtime-dependency toolbox shared by every package:
+Common engine utilities. The package re-exports path handling from
+`@formivue/path`.
 
 - **Arrays** — `toArr`, `each`, `map`, `reduce`, `every`, `some`, `find`,
   `findIndex`, `includes`, `move`.
@@ -34,7 +35,9 @@ FormPath.parse('users.*.email') // wildcard
 FormPath.match('*(users)') // alias group → field.address/path both match
 FormPath.getIn(values, 'users.0.name')
 FormPath.setIn(values, 'users.0.name', 'Jane')
-FormPath.deleteIn / existIn / ensureIn / transform
+FormPath.existIn(values, 'users.0.name')
+FormPath.ensureIn(values, 'users.0.status', 'active')
+FormPath.deleteIn(values, 'users.0.status')
 ```
 
 Instance: `concat`, `slice`, `push`, `pop`, `splice`, `parent`, `includes`,
@@ -45,15 +48,15 @@ Instance: `concat`, `slice`, `push`, `pop`, `splice`, `parent`, `includes`,
 
 ## `@formivue/grid`
 
-Reform-layout engine used by `@formivue/antd`-style grid components (or your
-own): computes reactive `grid-template-columns` from the live container
-size, nodes spanning and breakpoints.
+Layout engine used by the standard renderer's `FormGrid`. It computes
+reactive `grid-template-columns` from the live container size, item spans
+and breakpoints.
 
 ```ts
 import { Grid } from '@formivue/grid'
 
 const grid = new Grid({
-  maxColumns: [3, 5, 6],          // per breakpoint
+  maxColumns: [3, 5, 6], // per breakpoint
   minColumns: 2,
   maxWidth: 300,
   minWidth: 100,
@@ -62,16 +65,19 @@ const grid = new Grid({
   colWrap: true,
   breakpoints: [720, 1280, 1920], // defaults
   strictAutoFit: false,
-  shouldVisible(node, grid) { return true },
-  onDigest(grid) { /* layout re-computed */ },
+  shouldVisible(node, grid) {
+    return true
+  },
+  onDigest(grid) {
+    /* layout re-computed */
+  },
   onInitialized(grid) {},
 })
 
 const dispose = grid.connect(containerElement) // native ResizeObserver
-grid.columns / rows / templateColumns / gap / breakpoint / childSize …
+const columns = grid.templateColumns
 ```
 
 Nodes (`GridNode`) expose `index`, `visible`, `column`, `row`, `span`,
 `originSpan`, `element`; `Grid.id(options)` serializes options as a cache
-key. In this fork the layout uses the **native `ResizeObserver`** (the
-`@juggle/resize-observer` polyfill is gone).
+key. Grid layout uses the browser's native `ResizeObserver`.

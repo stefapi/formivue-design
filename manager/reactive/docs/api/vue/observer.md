@@ -1,8 +1,10 @@
 # observer
 
-## describe
+## Description
 
-In Vue, the component rendering method is changed to Reaction, and dependencies are collected every time the view is re-rendered, and dependencies are updated automatically to re-render.
+Wrap a Vue component with `observer` from `@formivue/reactive-vue`.
+The wrapper tracks Formivue observables read during render and schedules
+an update when a tracked value changes.
 
 ### Signature
 

@@ -1,16 +1,11 @@
 # Introduction
 
-The core idea of @formivue/reactive is to refer to [Mobx](https://github.com/mobxjs/mobx), so why reinvent the wheel?
+`@formivue/reactive` is the observable state layer used by the form engine.
+It uses JavaScript proxies to track what an effect reads and notify that
+effect when its dependencies change. The [concept guide](./concept.md)
+explains dependency tracking and the [API examples](../index.md) show how to
+subscribe to state changes.
 
-There are four main reasons:
-
-- mobx does not support dependency collection within actions
-- The observable function of mobx does not support filtering special objects such as react node, moment, and immutable
-- mobx's observable function will automatically turn the function into action
-- The observer of mobx-react-lite does not support React concurrent rendering
-
-For the above reasons, Formivue had to reinvent the wheel, but the wheel strongly relies on Proxy, that is, it does not support IE browser. Of course, reinventing the wheel also has its advantages:
-
-- More controllability, you can do more in-depth optimization and customization for formivue scenes
-- Regardless of the historical burden of Mobx, the code can be cleaner
-- If the Mobx version is Break Change or there are security vulnerabilities, it will have no impact on Formivue
+The Vue bridge lives in `@formivue/reactive-vue`. Its
+[`observer` wrapper](../api/vue/observer.md) tracks reactive data read
+during a Vue component's render.

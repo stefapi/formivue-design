@@ -8,11 +8,10 @@ bridge between the designer's design tree
 - `transformToSchema(tree, options)` — designer tree →
   `{ schema, form }` (formivue `ISchema`: `x-component`, props,
   `x-reactions`…); the node markers become the schema's components.
-- `transformToTreeNode(schema, form, options)` — formivue schema → designer
-  `TreeNode` (import, full round-trip).
-- **Options** — `formivue-designFieldName` (default `'Field'`) and
-  `formivue-designFormName` (default `'Form'`) control the naming of the
-  markers in the exported JSON.
+- `transformToTreeNode({ form, schema }, options)` rebuilds an editable
+  designer tree from a combined export.
+- `designableFieldName` and `designableFormName` select the canvas component
+  names. Their defaults are `Field` and `Form`.
 
 ## Example
 
@@ -22,14 +21,13 @@ import {
   transformToTreeNode,
 } from '@formivue-design/formivue-transformer'
 
-const { schema, form } = transformToSchema(designer.operation.tree)
-// … then, on import:
-const tree = transformToTreeNode(schema, form)
+const exported = transformToSchema(designer.getCurrentTree())
+const tree = transformToTreeNode(exported)
 ```
 
-Used by the playground of
-[`@formivue-design/formivue-vue`](../formivue-vue) (JSON export/import). Version,
-repository and license: see [`package-meta.json`](../../package-meta.json).
+The [designer playground](../../examples/designer-playground/README.md) uses
+these APIs for JSON import and export. Applications render the combined
+export with [`@formivue-design/formivue-runtime`](../formivue-runtime).
 
 ## Separate UI, schema and data documents
 

@@ -10,7 +10,8 @@ Each chart has a material in `src/components`, a property schema in
 matches the key used in JSON. Add `@source` entries for both chart packages'
 `dist` directories to your Tailwind entry.
 
-Charts can use an ArrayTable, a JSON array, or an expression. Select the
+Charts can use an ArrayTable, a JSON array, or an expression in trusted
+schemas. Select the
 component first, then map the columns shown in its properties. The canvas uses
 ArrayTable default rows, and the preview uses runtime form values.
 

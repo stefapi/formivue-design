@@ -4,6 +4,40 @@ order: 1
 
 # Form Effect Hooks
 
+## Examples
+
+Register form effects inside `createForm({ effects })`. This example
+observes changes and submission. A validation failure rejects
+`form.submit()` before the submit callback runs.
+
+```ts
+import {
+  createForm,
+  onFormInit,
+  onFormValuesChange,
+  onFormSubmitValidateFailed,
+  onFormSubmitSuccess,
+} from '@formivue/core'
+
+const form = createForm({
+  effects() {
+    onFormInit(() => console.log('Form initialized'))
+    onFormValuesChange((model) => console.log(model.values))
+    onFormSubmitValidateFailed(() => console.log('Review the form errors'))
+    onFormSubmitSuccess(() => console.log('Form submitted'))
+  },
+})
+
+form.createField({ name: 'email', required: true })
+form.setValuesIn('email', 'hello@example.com')
+await form.submit((values) => console.log(values))
+```
+
+`FormProvider` handles the form's mount and unmount in Vue. For headless
+use, call `form.onMount()` and `form.onUnmount()` around the owner's
+lifecycle. See the [Vue effects guide](../../../../vue/docs/guide/effects.md)
+for the complete list of hooks.
+
 ## onFormInit
 
 #### Description
@@ -15,30 +49,6 @@ Used to monitor the side effect hook of a form initialization, we will trigger t
 ```ts
 interface onFormInit {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormInit } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormInit(() => {
-            setResponse('The form has been initialized')
-          })
-        },
-      }),
-    [],
-  )
-  return <ActionResponse response={response} />
 }
 ```
 
@@ -56,40 +66,6 @@ interface onFormMount {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormMount } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormMount(() => {
-            setResponse('The form has been mounted')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.onMount()
-        }}
-      >
-        Mount form
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormUnmount
 
 #### Description
@@ -101,40 +77,6 @@ Used to monitor the side effect hook that the form has been unloaded, we will tr
 ```ts
 interface onFormUnmount {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormUnmount } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormUnmount(() => {
-            setResponse('Form has been uninstalled')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.onUnmount()
-        }}
-      >
-        Uninstall form
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -152,100 +94,17 @@ interface onFormReact {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormReact } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormReact((form) => {
-            if (form.values.input == 'Hello') {
-              setResponse('Response Hello')
-            } else if (form.values.input == 'World') {
-              setResponse('Response to World')
-            }
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.setValuesIn('input', 'Hello')
-        }}
-      >
-        Hello
-      </button>
-      <button
-        onClick={() => {
-          form.setValuesIn('input', 'World')
-        }}
-      >
-        World
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormValuesChange
 
 #### Description
 
 Side effect hooks for monitoring form value changes
 
-<Alert>
-It should be noted that this hook is triggered synchronously. For some behaviors that trigger `set` operation of `Proxy` multiple times, the results may not be as expected. For example, when deleting elements from array by `splice`, the array length will be the same as before deletion. (<a href="https://github.com/stefapi/formivue/issues/2128">#2128</a>)
-</Alert>
-
 #### Signature
 
 ```ts
 interface onFormValuesChange {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormValuesChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormValuesChange((form) => {
-            setResponse('Form value change: ' + form.values.input)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.setValuesIn('input', 'Hello World')
-        }}
-      >
-        Hello World
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -263,40 +122,6 @@ interface onFormInitialValuesChange {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormInitialValuesChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormInitialValuesChange((form) => {
-            setResponse('Form default value change: ' + form.values.input)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.setInitialValuesIn('input', 'Hello World')
-        }}
-      >
-        Hello World
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormInputChange
 
 #### Description
@@ -308,44 +133,6 @@ Side effect hook for listening to field input
 ```ts
 interface onFormInputChange {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormInputChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormInputChange((form) => {
-            setResponse('Character input change: ' + form.values.input)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form
-            .createField({
-              name: 'input',
-            })
-            .onInput('Hello World')
-        }}
-      >
-        Hello World
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -363,40 +150,6 @@ interface onFormSubmit {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmit } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmit(() => {
-            setResponse('Form has been submitted')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormSubmitStart
 
 #### Description
@@ -408,40 +161,6 @@ Side effect hook for monitoring the start of form submission
 ```ts
 interface onFormSubmitStart {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitStart } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitStart(() => {
-            setResponse('form submission start')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -459,40 +178,6 @@ interface onFormSubmitEnd {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitEnd } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitEnd(() => {
-            setResponse('End of form submission')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormSubmitFailed
 
 #### Description
@@ -504,64 +189,6 @@ Side-effect hooks used to monitor form submission failures
 ```ts
 interface onFormSubmitFailed {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitFailed } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitFailed(() => {
-            setResponse('Form submission failed')
-          })
-        },
-      }),
-    [],
-  )
-  const form2 = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitFailed(() => {
-            setResponse('Form verification failed')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.submit(() => {
-            return Promise.reject('Runtime Error')
-          })
-        }}
-      >
-        Submit Runtime Error
-      </button>
-      <button
-        onClick={() => {
-          form2.createField({
-            name: 'input',
-            required: true,
-          })
-          form2.submit()
-        }}
-      >
-        Submit Validate Error
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -579,40 +206,6 @@ interface onFormSubmitSuccess {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitSuccess } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitSuccess(() => {
-            setResponse('Form submission is successful')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormSubmitValidateStart
 
 #### Description
@@ -624,44 +217,6 @@ Side effect hook used to monitor the start of field validation of the form submi
 ```ts
 interface onFormSubmitValidateStart {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitValidateStart } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitValidateStart(() => {
-            setResponse('Form submission verification starts')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-            required: true,
-          })
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -679,44 +234,6 @@ interface onFormSubmitValidateEnd {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitValidateEnd } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitValidateEnd(() => {
-            setResponse('Form submission verification is over')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-            required: true,
-          })
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormSubmitValidateFailed
 
 #### Description
@@ -728,44 +245,6 @@ Side effect hook used to monitor the field validation failure of the form submis
 ```ts
 interface onFormSubmitValidateFailed {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitValidateFailed } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitValidateFailed(() => {
-            setResponse('Form submission verification failed')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-            required: true,
-          })
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -783,43 +262,6 @@ interface onFormSubmitValidateSuccess {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmitValidateSuccess } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormSubmitValidateSuccess(() => {
-            setResponse('Form submission verification succeeded')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-          })
-          form.submit()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormValidateStart
 
 #### Description
@@ -831,44 +273,6 @@ Side effect hook for monitoring the start of form validation
 ```ts
 interface onFormValidateStart {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormValidateStart } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormValidateStart(() => {
-            setResponse('Form verification starts')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-            required: true,
-          })
-          form.validate()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -886,44 +290,6 @@ interface onFormValidateEnd {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormValidateEnd } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormValidateEnd(() => {
-            setResponse('Form verification end')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-            required: true,
-          })
-          form.validate()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormValidateFailed
 
 #### Description
@@ -938,44 +304,6 @@ interface onFormValidateFailed {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormValidateFailed } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormValidateFailed(() => {
-            setResponse('Form verification failed')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-            required: true,
-          })
-          form.validate()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFormValidateSuccess
 
 #### Description
@@ -987,42 +315,5 @@ Side effect hook for monitoring the start of form validation
 ```ts
 interface onFormValidateSuccess {
   (callback: (form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormValidateSuccess } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFormValidateSuccess(() => {
-            setResponse('Form verification succeeded')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({
-            name: 'input',
-          })
-          form.validate()
-        }}
-      >
-        Submit
-      </button>
-    </ActionResponse>
-  )
 }
 ```

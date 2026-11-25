@@ -50,3 +50,9 @@ Use the same release of the Formivue packages throughout the application.
 With strict declaration checking and a fully isolated Vue 3.5 installation,
 add the optional `@babel/types` peer to resolve declarations used by Vue's
 compiler.
+
+The [engine demo](../../examples/vite-usage/README.md) uses this package to
+render a designer export. Add the
+[advanced](../shadcn-advanced-runtime/README.md) or
+[chart](../charts-runtime/README.md) registry when the schema uses those
+components.

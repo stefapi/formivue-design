@@ -17,6 +17,10 @@
 - **`Pattern`** — the type accepted everywhere: a path, segments, a RegExp,
   `Path`, or a `Path.match()` matcher.
 
+The data accessors traverse own properties, including in destructured paths.
+They skip paths with the reserved segments `__proto__`, `constructor` and
+`prototype`. The engine re-exports `Path` as `FormPath`.
+
 ## Example
 
 ```ts

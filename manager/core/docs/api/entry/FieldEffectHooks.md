@@ -4,6 +4,43 @@ order: 2
 
 # Field Effect Hooks
 
+## Examples
+
+Register field effects inside `createForm({ effects })`. Paths and patterns
+match field addresses and value paths. See [FormPath](./FormPath.md).
+
+```ts
+import {
+  createForm,
+  onFieldInit,
+  onFieldReact,
+  onFieldValueChange,
+} from '@formivue/core'
+
+const form = createForm({
+  initialValues: { accountType: 'personal' },
+  effects() {
+    onFieldInit('company', (field) => {
+      field.title = 'Company'
+    })
+    onFieldReact('company', (field, currentForm) => {
+      field.visible = currentForm.values.accountType === 'business'
+    })
+    onFieldValueChange('company', (field) => console.log(field.value))
+  },
+})
+
+form.createField({ name: 'accountType' })
+const company = form.createField({ name: 'company' })
+form.setValuesIn('accountType', 'business')
+company.setValue('Formivue')
+```
+
+In Vue, field components trigger mount and unmount hooks as part of their
+lifecycle. For headless use, call `field.onMount()` and `field.onUnmount()`
+when attaching and detaching the field. Calling `field.validate()` runs the
+field validation hooks.
+
 ## onFieldInit
 
 #### Description
@@ -15,44 +52,6 @@ Used to monitor the side effect hook of a field initialization, we will trigger 
 ```ts
 interface onFieldInit {
   (pattern: FormPathPattern, callback: (field: Field, form: Form) => void)
-}
-```
-
-<Alert>
-  For the syntax format of FormPathPattern, please refer to <a href="/api/entry/form-path">FormPath</a>
-</Alert>
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldInit } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldInit('target', () => {
-            setResponse('target has been initialized')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({ name: 'target' })
-        }}
-      >
-        Create field
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -70,40 +69,6 @@ interface onFieldMount {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldMount } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldMount('target', () => {
-            setResponse('target is mounted')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({ name: 'target' }).onMount()
-        }}
-      >
-        Create and mount fields
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFieldUnmount
 
 #### Description
@@ -118,50 +83,6 @@ interface onFieldUnmount {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldMount, onFieldUnmount } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldMount('target', () => {
-            setResponse('target is mounted')
-          })
-          onFieldUnmount('target', () => {
-            setResponse('target has been uninstalled')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({ name: 'target' }).onMount()
-        }}
-      >
-        Create and mount fields
-      </button>
-      <button
-        onClick={() => {
-          form.createField({ name: 'target' }).onUnmount()
-        }}
-      >
-        Unload field
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFieldReact
 
 A side-effect hook used to implement field reactive logic. Its core principle is that the callback function will be executed when the field is initialized, and the dependency will be automatically tracked at the same time. The callback function will be executed repeatedly when the dependent data changes.
@@ -173,60 +94,6 @@ interface onFieldReact {
   (pattern: FormPathPattern, callback: (field: Field, form: Form) => void)
 }
 ```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldReact } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects(form) {
-          onFieldReact('target', () => {
-            setResponse(
-              'target ' + (form.values.other === 123 ? 'display' : 'hide'),
-            )
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.createField({ name: 'target' })
-        }}
-      >
-        Initialize target
-      </button>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'other' })
-          field.setValue(123)
-        }}
-      >
-        Assign other = 123
-      </button>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'other' })
-          field.setValue(null)
-        }}
-      >
-        Assign other = null
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
-> This example will track the changes of values.other, if it is equal to 123, it will control the display of the target, otherwise it will be hidden
 
 ## onFieldChange
 
@@ -249,52 +116,6 @@ interface onFieldChange {
 
 You can pass in the specific set of attributes you want to monitor, or you can leave it alone, the default is to monitor value changes
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldChange('target', (field) => {
-            setResponse('target value change:' + field.value)
-          })
-          onFieldChange('target', ['component'], () => {
-            setResponse('target component change')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target' })
-          field.setValue(field.value ? field.value + 1 : 1)
-        }}
-      >
-        Settings
-      </button>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target' })
-          field.setComponent('Input')
-        }}
-      >
-        Set up components
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFieldValueChange
 
 Side effect hooks used to monitor changes in a field value
@@ -304,41 +125,6 @@ Side effect hooks used to monitor changes in a field value
 ```ts
 interface onFieldValueChange {
   (pattern: FormPathPattern, callback: (field: Field, form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldValueChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldValueChange('target', (field) => {
-            setResponse('target value change:' + field.value)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target' })
-          field.setValue(field.value ? field.value + 1 : 1)
-        }}
-      >
-        Settings
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -354,41 +140,6 @@ interface onFieldInitialValueChange {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldInitialValueChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldInitialValueChange('target', (field) => {
-            setResponse('target default value change:' + field.value)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target' })
-          field.setInitialValue(field.value ? field.value + 1 : 1)
-        }}
-      >
-        Settings
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFieldInputValueChange
 
 Used to monitor the side effect hook triggered by a field onInput
@@ -398,41 +149,6 @@ Used to monitor the side effect hook triggered by a field onInput
 ```ts
 interface onFieldInputValueChange {
   (pattern: FormPathPattern, callback: (field: Field, form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldInputValueChange } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldInputValueChange('target', (field) => {
-            setResponse('target value change:' + field.value)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target' })
-          field.onInput(field.value ? field.value + 1 : 1)
-        }}
-      >
-        Call onInput
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -450,41 +166,6 @@ interface onFieldValidateStart {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldValidateStart } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldValidateStart('target', () => {
-            setResponse('target verification start')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target', required: true })
-          field.onInput('')
-        }}
-      >
-        Trigger verification
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFieldValidateEnd
 
 #### Description
@@ -496,41 +177,6 @@ Monitor the side effect hook that triggers the end of a certain field verificati
 ```ts
 interface onFieldValidateEnd {
   (pattern: FormPathPattern, callback: (field: Field, form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldValidateEnd } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldValidateEnd('target', () => {
-            setResponse('target verification is over')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target', required: true })
-          field.onInput('')
-        }}
-      >
-        Trigger verification
-      </button>
-    </ActionResponse>
-  )
 }
 ```
 
@@ -548,41 +194,6 @@ interface onFieldValidateFailed {
 }
 ```
 
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFieldValidateFailed } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldValidateFailed('target', () => {
-            setResponse('target verification failed')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target', required: true })
-          field.onInput('')
-        }}
-      >
-        Trigger verification
-      </button>
-    </ActionResponse>
-  )
-}
-```
-
 ## onFieldValidateSuccess
 
 #### Description
@@ -594,55 +205,5 @@ Monitor the side effect hook that triggers a successful verification of a certai
 ```ts
 interface onFieldValidateSuccess {
   (pattern: FormPathPattern, callback: (field: Field, form: Form) => void)
-}
-```
-
-#### Example
-
-```tsx
-import React, { useMemo, useState } from 'react'
-import {
-  createForm,
-  onFieldValidateFailed,
-  onFieldValidateSuccess,
-} from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
-
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onFieldValidateFailed('target', () => {
-            setResponse('target verification failed')
-          })
-          onFieldValidateSuccess('target', () => {
-            setResponse('target verification succeeded')
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target', required: true })
-          field.onInput('')
-        }}
-      >
-        Trigger failed
-      </button>
-      <button
-        onClick={() => {
-          const field = form.createField({ name: 'target', required: true })
-          field.onInput('123')
-        }}
-      >
-        Triggered successfully
-      </button>
-    </ActionResponse>
-  )
 }
 ```

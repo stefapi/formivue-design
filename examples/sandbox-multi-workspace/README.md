@@ -5,16 +5,18 @@ mechanisms: **two workspaces** (`form-1` / `form-2`) whose canvases each live
 in an **iframe** driven by the `Sandbox` component of
 [`@formivue-design/vue-sandbox`](../../design/vue-sandbox).
 
-- Host ⇄ iframe bridge (`postMessage` + injected `FormivueDesign`/`Formivue`
-  globals): a single instance of the engine and reactive tracking across the
-  iframes (see [`src/main.ts`](./src/main.ts),
-  [`src/sandbox.ts`](./src/sandbox.ts) — IIFE build, `vue` loaded from local assets).
+- The same-origin iframes share direct references to the host workspace and
+  engine. They are for trusted previews. See
+  [`src/main.ts`](./src/main.ts) and
+  [`src/sandbox.ts`](./src/sandbox.ts) for the frame bootstrap.
 - Previous-era inline behaviors/resources kept; styles → the app's Tailwind
   entry ([`src/styles.css`](./src/styles.css)).
 
 ## Getting started
 
 ```bash
+pnpm install --frozen-lockfile
+pnpm build
 pnpm start:sandbox-multi-workspace   # http://127.0.0.1:3003
 ```
 

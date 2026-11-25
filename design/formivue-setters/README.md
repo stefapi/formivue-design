@@ -22,5 +22,5 @@ The material schemas
 ## Tests
 
 ```bash
-pnpm vitest run design/formivue-setters
+pnpm test design/formivue-setters
 ```

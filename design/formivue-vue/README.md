@@ -45,5 +45,5 @@ Vue/reka-ui stack — lives in
 ## Tests
 
 ```bash
-pnpm vitest run design/formivue-vue
+pnpm test design/formivue-vue
 ```

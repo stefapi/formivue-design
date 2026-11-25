@@ -1,64 +1,27 @@
 ---
-title: Formivue-Stefapi unified front-end form solution
+title: Formivue reactivity
 order: 10
-hero:
-  title: Reactive Library
-  desc: DDD-oriented Responsive State Management Solution
-  actions:
-    - text: Home Site
-      link: https://github.com/stefapi/formivue-design
-    - text: Document
-      link: /guide
-features:
-  - title: High Performance
-    desc: Efficient update, Demand rendering
-  - title: Zero Dependencies
-    desc: Cross Device,Cross Framework
-  - title: Smart Tips
-    desc: Embrace Typescript
-footer: Open-source MIT Licensed | Copyright © 2019-present<br />Powered by self
 ---
 
-## Installation
+# Formivue reactivity
+
+`@formivue/reactive` tracks reads of observable state and updates the
+effects that depend on it.
 
 ```bash
-$ npm install --save @formivue/reactive
-
+npm install @formivue/reactive
 ```
 
-## Quick start
+```ts
+import { autorun, observable } from '@formivue/reactive'
 
-```tsx
-/**
- * defaultShowCode: true
- */
-import React from 'react'
-import { observable } from '@formivue/reactive'
-import { observer } from '@formivue/reactive-react'
+const state = observable({ count: 0 })
+const dispose = autorun(() => console.log(state.count))
 
-const obs = observable({
-  value: 'Hello world',
-})
-
-export default observer(() => {
-  return (
-    <div>
-      <div>
-        <input
-          style={{
-            height: 28,
-            padding: '0 8px',
-            border: '2px solid #888',
-            borderRadius: 3,
-          }}
-          value={obs.value}
-          onChange={(e) => {
-            obs.value = e.target.value
-          }}
-        />
-      </div>
-      <div>{obs.value}</div>
-    </div>
-  )
-})
+state.count += 1
+dispose()
 ```
+
+For Vue rendering, use the [`observer` wrapper](./api/vue/observer.md)
+from `@formivue/reactive-vue`. See the [concept guide](./guide/concept.md)
+for tracking, computed values and batches.

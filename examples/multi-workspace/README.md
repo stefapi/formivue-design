@@ -13,6 +13,8 @@
 ## Getting started
 
 ```bash
+pnpm install --frozen-lockfile
+pnpm build
 pnpm start:multi-workspace   # http://127.0.0.1:3001
 ```
 

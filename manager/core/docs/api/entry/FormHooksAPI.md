@@ -27,43 +27,23 @@ interface createEffectHook {
 
 #### Example
 
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, createEffectHook } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
+```ts
+import { createEffectHook, createForm, type Form } from '@formivue/core'
 
-const onCustomEvent = createEffectHook(
-  'custom-event',
-  (payload, form) => (listener) => {
-    listener(payload, form)
-  },
+const onReady = createEffectHook(
+  'app:ready',
+  (message: string, form: Form) =>
+    (listener: (value: string, form: Form) => void) =>
+      listener(message, form),
 )
 
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          onCustomEvent((payload, form) => {
-            setResponse(payload + 'Form:' + form.id)
-          })
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.notify('custom-event', 'This is Custom Event')
-        }}
-      >
-        Notify
-      </button>
-    </ActionResponse>
-  )
-}
+const form = createForm({
+  effects() {
+    onReady((message, model) => console.log(message, model.id))
+  },
+})
+
+form.notify('app:ready', 'Form is ready')
 ```
 
 ## createEffectContext
@@ -85,44 +65,24 @@ interface createEffectContext<T> {
 
 #### Example
 
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, onFormSubmit, createEffectContext } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
+```ts
+import { createEffectContext, createForm, onFormSubmit } from '@formivue/core'
 
-const { provide, consume } = createEffectContext()
+const messages = createEffectContext<string>()
 
-const useMyHook = () => {
-  const setResponse = consume()
-  onFormSubmit(() => {
-    setResponse('Context communication succeeded')
-  })
+function useSubmitMessage() {
+  const message = messages.consume()
+  onFormSubmit(() => console.log(message))
 }
 
-export default () => {
-  const [response, setResponse] = useState('')
-  const form = useMemo(
-    () =>
-      createForm({
-        effects() {
-          provide(setResponse)
-          useMyHook()
-        },
-      }),
-    [],
-  )
-  return (
-    <ActionResponse response={response}>
-      <button
-        onClick={() => {
-          form.submit()
-        }}
-      >
-        submit
-      </button>
-    </ActionResponse>
-  )
-}
+const form = createForm({
+  effects() {
+    messages.provide('Submitting account form')
+    useSubmitMessage()
+  },
+})
+
+await form.submit()
 ```
 
 ## useEffectForm
@@ -141,31 +101,14 @@ interface useEffectForm {
 
 #### Example
 
-```tsx
-import React, { useMemo, useState } from 'react'
-import { createForm, useEffectForm, createEffectContext } from '@formivue/core'
-import { ActionResponse } from './ActionResponse'
+```ts
+import { createForm, onFormMount, useEffectForm } from '@formivue/core'
 
-const { provide, consume } = createEffectContext()
-
-const useMyHook = () => {
+function useFormIdentity() {
   const form = useEffectForm()
-  const setResponse = consume()
-  setResponse('Communication successful:' + form.id)
+  onFormMount(() => console.log(form.id))
 }
 
-export default () => {
-  const [response, setResponse] = useState('')
-  useMemo(
-    () =>
-      createForm({
-        effects() {
-          provide(setResponse)
-          useMyHook()
-        },
-      }),
-    [],
-  )
-  return <ActionResponse response={response} />
-}
+const form = createForm({ effects: useFormIdentity })
+form.onMount()
 ```

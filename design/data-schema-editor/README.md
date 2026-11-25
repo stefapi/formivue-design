@@ -9,7 +9,8 @@ The `navigate` event returns a stable component ID. The `inspector` slot is
 available for application actions such as variant renaming.
 
 Include `@formivue-design/data-schema-editor/styles.css` for the field builder
-and tree inspector layouts.
+and tree inspector layouts. Register the editor's `dist` directory and
+the [`vue-ui` sources](../vue-ui/README.md) in the Tailwind entry.
 
 `DataValuesEditor` edits test values separately. It can supply read-only
 and off-form values or insert a schema example explicitly. Editing the
@@ -17,7 +18,7 @@ schema does not replace test values.
 
 ## Draft 2020-12 coverage
 
-The graphical [keyword round-trip tests](../../examples/designer-playground/src/__tests__/schema-keywords.spec.ts)
+The graphical [keyword round-trip tests](./src/__tests__/schema-keywords.spec.ts)
 start from an empty schema inspector. They add each rule, change it, export
 and reimport the documents, and remove the rule. Subschema tests also switch
 between object, `true` and `false` using the schema form selector.

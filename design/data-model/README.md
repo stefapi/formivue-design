@@ -4,8 +4,9 @@
 reconciliation reviews for a designer canvas. Pass the component contracts
 used by the application and a callback that applies the documents to the
 preview. `useDocumentPreview` supplies this callback when the application
-uses a Formivue document session. It keeps the form and reports conflicts
-when only the data changes. Call `preview.clear()` when closing the preview
+uses a Formivue document session. Data-only updates reuse the preview form
+and report conflicts. Reordering JSON object keys also reuses the session
+and preserves local input. Call `preview.clear()` when closing the preview
 or unmounting its owner.
 
 ```ts
@@ -50,7 +51,9 @@ Import `DataModelWidget` from `@formivue-design/data-model/ui` and include
 `@formivue-design/data-model/styles.css` in the application stylesheet. The
 panel includes the schema and test-data views, reconciliation review and
 archive controls. Configure Tailwind to scan the package's `dist` directory
-alongside the other designer packages.
+and the schema editor sources alongside the other designer packages.
+The [playground stylesheet](../../examples/designer-playground/src/styles.css)
+shows the required source list.
 
 Pass the canvas tree, project session, document options and application locale
 to the panel. The application handles archive installation and navigation to

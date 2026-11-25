@@ -32,7 +32,7 @@ The field is created mainly through the createField/createArrayField/createObjec
 
 The query method is mainly used to query the field. The query method can pass in the path of the field or regular expression to match the field.
 
-Because the detailed rules of the field path are still more complicated, they will be explained in detail in the following [Path System](/api/entry/form-path) article.
+Because the detailed rules of the field path are still more complicated, they will be explained in detail in the following [Path System](../api/entry/FormPath.md) article.
 
 Then calling the query method will return a Query object. The Query object can have a forEach/map/reduce method that traverses all fields in batches, or a take method that takes only the first field that is queried, as well as direct reading of fields. The get method of properties, and the getIn method that can read field properties in depth, the difference between the two methods is that the former can have smart prompts, and the latter has no prompts, so it is recommended that users use the get method.
 
@@ -57,7 +57,7 @@ The field model mainly includes:
 - ObjectField model, which is mainly responsible for managing the state of auto-incremented object fields, and can add or delete the key of the object.
 - The VoidField model is mainly responsible for managing the state of the virtual field. The virtual field is a node that does not pollute the form data, but it can control the display and hiding of its child nodes, and the interactive mode.
 
-Because the field model is very complicated, it will be explained in detail in the following [Field Model](/guide/field) article.
+Because the field model is very complicated, it will be explained in detail in the following [Field Model](field.md) article.
 
 ## Data Model
 
@@ -121,7 +121,8 @@ The core of the form verification model is to verify the validity of the data, a
 - Validation rule management
 - Calibration result management
 
-Because the verification model belongs to the field model, it will be explained in detail in the following [Field Model](/guide/field#Verification Rules)
+See the [field validation rules](field.md#validation-rules) for the field model
+and its validation feedback.
 
 ## Linkage model
 
@@ -151,4 +152,4 @@ The path system is very important. The path system is used everywhere in almost 
 - It can be used to express the model of the relationship between the fields. With the help of the path system, we can find the father of a certain field, can find the father, and can also realize the data inheritance ability of the tree level. Similarly, we can also find the data of a certain field. Adjacent node
 - It can be used to read and write field data, read and write data with deconstruction
 
-The entire path system is actually implemented based on the path DSL of @formivue/path. If you want to know more about the path system, you can take a look at [FormPath API](/api/entry/form-path) in detail
+The entire path system is actually implemented based on the path DSL of @formivue/path. If you want to know more about the path system, you can take a look at [FormPath API](../api/entry/FormPath.md) in detail

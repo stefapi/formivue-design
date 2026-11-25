@@ -4,7 +4,7 @@ order: 5
 
 # Query
 
-The Query object returned by calling the query method in the [Form](/api/models/form#query) or [Field](/api/models/field#query) instance
+The Query object returned by calling the query method in the [Form](Form.md#query) or [Field](Field.md#query) instance
 
 ## Method
 
@@ -99,7 +99,7 @@ interface get {
 
 #### Description
 
-Find the first result from the query result set and read its attributes, support [FormPathPattern](/api/entry/form-path#formpathpattern) path syntax
+Find the first result from the query result set and read its attributes, support [FormPathPattern](../entry/FormPath.md#formpathpattern) path syntax
 
 Note that there must be a corresponding node to be able to read
 

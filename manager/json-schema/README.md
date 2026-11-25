@@ -11,6 +11,9 @@
   between fields (`$deps`, `target`, `fulfill.state`/`fulfill.run`) — the
   engine behind the linked/reactions of schema-driven forms.
 - **`ISchema`** — complete typing of formivue schemas.
+- **Data documents** — `compileDataValidator` validates Draft 2020-12 data
+  and reports issues by JSON Pointer. `createDataDocument` connects a schema
+  to form values and applies revisions, snapshots and JSON Patch updates.
 
 ## Example
 
@@ -29,7 +32,9 @@ const schema = new Schema({
 })
 ```
 
-Consumed by the transformer
+Keep executable reactions and expressions in trusted schemas. For imported
+UI documents, use the restricted entry points in the transformer
 ([`@formivue-design/formivue-transformer`](../../design/formivue-transformer))
-and the [`@formivue/vue`](../vue) bindings. Version, repository and license:
-see [`package-meta.json`](../../package-meta.json).
+before rendering with [`@formivue/vue`](../vue). See the
+[JSON Schema guide](../vue/docs/guide/json-schema.md) for rendering and
+document imports.

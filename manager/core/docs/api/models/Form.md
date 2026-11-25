@@ -4,7 +4,7 @@ order: 0
 
 # Form
 
-Call the core [Form Model](/guide/form) API returned by [createForm](/api/entry/create-form), the following will list all model attributes, if the attribute is writable, then we can directly The reference is to modify the attribute, and @formivue/reactive will respond to trigger the UI update.
+Call the core [Form Model](../../guide/form.md) API returned by [createForm](../entry/createForm.md), the following will list all model attributes, if the attribute is writable, then we can directly The reference is to modify the attribute, and @formivue/reactive will respond to trigger the UI update.
 
 ## Attributes
 
@@ -142,7 +142,7 @@ interface setValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### setInitialValuesIn
 
@@ -158,7 +158,7 @@ interface setInitialValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### existValuesIn
 
@@ -174,7 +174,7 @@ interface existValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### existInitialValuesIn
 
@@ -190,7 +190,7 @@ interface existInitialValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### getValuesIn
 
@@ -206,7 +206,7 @@ interface getValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### getInitialValuesIn
 
@@ -222,7 +222,7 @@ interface getInitialValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### deleteValuesIn
 
@@ -238,7 +238,7 @@ interface deleteValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### deleteInitialValuesIn
 
@@ -254,7 +254,7 @@ interface deleteInitialValuesIn {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### setSubmitting
 
@@ -372,7 +372,7 @@ interface clearErrors {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### clearWarnings
 
@@ -388,7 +388,7 @@ interface clearWarnings {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### clearSuccesses
 
@@ -404,7 +404,7 @@ interface clearSuccesses {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
 ### query
 
@@ -420,9 +420,9 @@ interface query {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
-Query object API reference [Query](/api/models/query)
+Query object API reference [Query](Query.md)
 
 ### queryFeedbacks
 
@@ -438,7 +438,7 @@ interface queryFeedbacks {
 }
 ```
 
-ISearchFeedback Reference [ISearchFeedback](/api/models/field#isearchfeedback)
+ISearchFeedback Reference [ISearchFeedback](Field.md#isearchfeedback)
 
 IFormFeedback Reference [IFormFeedback](#iformfeedback)
 
@@ -583,9 +583,9 @@ interface setFieldState {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
-IGeneralFieldState Reference [IGeneralFieldState](/api/models/field/#igeneralfieldstate)
+IGeneralFieldState Reference [IGeneralFieldState](Field.md#igeneralfieldstate)
 
 ### getFieldState
 
@@ -602,9 +602,9 @@ interface getFieldState<T> {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
-IGeneralFieldState Reference [IGeneralFieldState](/api/models/field/#igeneralfieldstate)
+IGeneralFieldState Reference [IGeneralFieldState](Field.md#igeneralfieldstate)
 
 ### getFormGraph
 
@@ -693,9 +693,9 @@ interface reset {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
-IFieldResetOptions Reference [IFieldResetOptions](/api/models/field/#ifieldresetoptions)
+IFieldResetOptions Reference [IFieldResetOptions](Field.md#ifieldresetoptions)
 
 ## Types of
 
@@ -799,11 +799,11 @@ interface IFieldFactoryProps {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
-FieldValidator Reference [FieldValidator](/api/models/field#fieldvalidator)
+FieldValidator Reference [FieldValidator](Field.md#fieldvalidator)
 
-FieldReaction Reference [FieldReaction](/api/models/field#fieldreaction)
+FieldReaction Reference [FieldReaction](Field.md#fieldreaction)
 
 ### IVoidFieldFactoryProps
 
@@ -828,9 +828,9 @@ interface IFieldFactoryProps {
 }
 ```
 
-FormPathPattern API Reference [FormPath](/api/entry/form-path#formpathpattern)
+FormPathPattern API Reference [FormPath](../entry/FormPath.md#formpathpattern)
 
-FieldReaction Reference [FieldReaction](/api/models/field#fieldreaction)
+FieldReaction Reference [FieldReaction](Field.md#fieldreaction)
 
 > Formivue Typescript type convention
 >

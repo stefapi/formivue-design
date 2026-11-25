@@ -91,23 +91,23 @@ pnpm --filter @formivue/example-vite-usage add -D vite
 
 ## Build
 
-Every package builds as **pure ESM** with `tsdown` (`exports` fields,
-`.d.mts` types, `sideEffects: false`, artifacts under `dist/`).
+Libraries build as ESM with tsdown. Their public exports point to JavaScript
+and TypeScript declarations in `dist/`. Packages with styles can also ship
+a `styles.css` export.
 
 ```bash
 pnpm -r build    # builds the workspace libraries and example apps
 pnpm build       # same thing (root shortcut)
 ```
 
-Order is guaranteed by pnpm (workspace dependency graph): the
-`@formivue/*` packages first, then `@formivue-design/*`, then the apps
-that consume them through their dist.
+pnpm builds dependencies before the workspaces that consume them. Independent
+packages can build in parallel.
 
 A single package:
 
 ```bash
-pnpm --filter @formivue-design/vue-ui build
-pnpm --filter @formivue/vue build
+pnpm --filter '@formivue-design/vue-ui...' build
+pnpm --filter '@formivue/vue...' build
 ```
 
 Special builds:
@@ -121,6 +121,30 @@ The `examples/` apps and the playground consume the packages'
 **`dist/`** (Tailwind `@source` included): after changing a package,
 rebuild it (`pnpm --filter <pkg> build`) to see the change in the demos —
 the Vite server re-reads the dist.
+
+### Standard rendering
+
+`@formivue-design/formivue-runtime` owns the standard schema bindings and
+`Materials`. It uses manager packages and `vue-ui`. Designer materials and
+their `Behavior` and `Resource` entries belong in `formivue-vue`.
+The **Designer form** section of `pnpm demo:playground` consumes the runtime
+directly. See the [package README](./design/formivue-runtime/README.md) for
+the registry and stylesheet imports.
+
+To build local archives of the runtime and its workspace dependencies, run:
+
+```bash
+archive_dir="$(mktemp -d)"
+pnpm --filter '@formivue-design/formivue-runtime...' build
+pnpm -r --filter '@formivue-design/formivue-runtime...' pack --pack-destination "$archive_dir"
+```
+
+Install the runtime archive in a clean Vue app with the matching
+`@formivue/core` and `@formivue/vue` versions. Resolve unpublished workspace
+dependencies from their matching archives or a local registry. Check the
+installed dependency tree, render and submit a form, and build the Tailwind
+entry. For strict declaration checking, see the runtime README's Vue
+compiler type dependency.
 
 ### Data model in the designer playground
 
@@ -138,7 +162,10 @@ Schema keyword. Each rule opens its own editor. **Generate from canvas**
 reconciles canvas changes, and **Project and variants** groups variant creation
 and project archives. Schema and test data edits share a locally persisted draft.
 Applying a valid draft updates the preview. In **JSON documents**, download and import
-`ui.json`, `data.schema.json` and `data.json` to move a variant.
+`ui.json`, `data.schema.json` and `data.json` to move a variant. Use a project
+archive to move the canvas and the editable project together. See the
+[playground guide](./examples/designer-playground/README.md) for the import
+policy and demo URLs.
 
 ## Tests
 
@@ -157,6 +184,7 @@ What `pnpm test` covers:
 | ------------------------------ | ------------------------------------------------------------------------- |
 | `manager/*`                    | engine unit tests: reactive, core, validator, json-schema, vue…           |
 | `design/*`                     | widgets, settings panel, setters, transformer, a11y                       |
+| `design/formivue-runtime`      | standalone schema rendering, row edits and submission                     |
 | `design/data-model`            | project drafts, archives, reconciliation, JSON editor and preview session |
 | `examples/designer-playground` | designer integration with the canvas, preview, charts and tables          |
 | `examples/vite-usage`          | engine playground, validation bridges and a11y                            |
@@ -188,7 +216,7 @@ pnpm knip          # report unused files and dependencies
   `package.json` diverges from [`package-meta.json`](./package-meta.json)
   — after a version bump, always follow up with `pnpm meta:sync`;
 - `pnpm typecheck` checks the `manager/` and `design/` packages and every app
-  (`tsc --noEmit`), plus `vue-tsc` on the Vite example (SFCs included);
+  (`tsc --noEmit`), plus `vue-tsc` on the engine and chart demos;
 - pre-commit: [`simple-git-hooks`](./package.json) → `lint-staged`
   (`eslint --fix` + `prettier` on the changed files).
 
@@ -202,12 +230,14 @@ tree, canvas, properties panel, JSON export):
 | Script                               | URL                   |
 | ------------------------------------ | --------------------- |
 | `pnpm start:playground`              | http://127.0.0.1:3004 |
+| `pnpm start:charts`                  | http://127.0.0.1:3005 |
 | `pnpm start:basic`                   | http://127.0.0.1:3000 |
 | `pnpm start:multi-workspace`         | http://127.0.0.1:3001 |
 | `pnpm start:sandbox`                 | http://127.0.0.1:3002 |
 | `pnpm start:sandbox-multi-workspace` | http://127.0.0.1:3003 |
 
-Add `?mode=advanced` to the designer playground URL to load the advanced palette.
+Use `?mode=advanced` for the advanced palette, `?demo=variants` for the
+model editor demo, or `?mode=live-documents` for the live document example.
 
 **Engine** (`manager/`, inherited from the form manager):
 
@@ -295,10 +325,12 @@ pnpm changeset:publish    # = changeset publish — publishes to npm (access: pu
 Recommended release order:
 
 ```bash
-pnpm -r build && pnpm test && pnpm lint && pnpm format:check   # green gates
+pnpm harness                                                   # check the release candidate
 pnpm changeset:version                                          # consume the changesets
 # edit package-meta.json + pnpm meta:sync                       # realign the single version
-pnpm meta:check && pnpm -r build                                # re-verify after the bump
+pnpm install --lockfile-only                                    # refresh workspace resolutions if needed
+pnpm install --frozen-lockfile
+pnpm harness                                                    # rebuild and verify the release
 pnpm changeset:publish                                          # publish to npm
 git commit -am "chore(versions): <version>" && git push           # + optional tag
 ```
@@ -334,6 +366,7 @@ the workspace packages:
 
 ```bash
 pnpm test design/formivue-vue/src/__tests__/schema-flow.spec.ts
+pnpm test design/formivue-runtime/src/__tests__/schema-flow.spec.ts
 ```
 
 ### Coding agents

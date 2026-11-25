@@ -4,6 +4,8 @@ Add `AdvancedDesignerComponents` to the `ComponentTreeWidget` registry and
 use the `inputs`, `displays`, and `layouts` groups from `AdvancedSources` with
 `ResourceWidget`. Use `AdvancedMaterials` from
 `@formivue-design/shadcn-advanced-runtime` with the preview registry.
+Register the [advanced document contracts](../data-schema-advanced/README.md)
+for data model generation and document compilation.
 
 The package follows the standard materials source layout. Each material defines
 its behavior and palette source under `src/components`. Its property schema

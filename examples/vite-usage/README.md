@@ -5,6 +5,9 @@ The **Vite demos of the form manager** `@formivue/*` show direct usage of the
 
 - **`FormDemo.vue`** — full demo (SFC, Tailwind 4): forms driven by a JSON
   schema, responsive layout, validation.
+- **[Designer form](./src/DesignerSchemaDemo.vue).** Renders a combined
+  schema export with [`formivue-runtime`](../../design/formivue-runtime/README.md)
+  and its Tailwind stylesheet.
 - **Ecosystem bridges** — `zod-bridge.spec.ts` (validation via
   [`zod`](https://github.com/colinhacks/zod): `useFormValues`),
   `m3-vee-validate-bridge.spec.ts`
@@ -15,6 +18,7 @@ The **Vite demos of the form manager** `@formivue/*` show direct usage of the
 ## Getting started
 
 ```bash
+pnpm install --frozen-lockfile
 pnpm demo:playground                                        # Vite dev — http://127.0.0.1:5174
 pnpm --filter @formivue/example-vite-usage test             # vitest (bridges + a11y)
 pnpm --filter @formivue/example-vite-usage run typecheck    # vue-tsc --noEmit
@@ -24,6 +28,6 @@ The complete designer (design/) has its own applications:
 [`examples/basic`](../basic), [`sandbox`](../sandbox),
 [`multi-workspace`](../multi-workspace),
 [`sandbox-multi-workspace`](../sandbox-multi-workspace) and the
-[`@formivue-design/formivue-vue`](../../design/formivue-vue) playground.
+[`designer-playground`](../designer-playground/README.md).
 Docs: [`manager/vue/docs`](../../manager/vue/docs) (`pnpm demo:docs`).
 Version, repository and license: see [`package-meta.json`](../../package-meta.json).

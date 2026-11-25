@@ -13,6 +13,8 @@ custom `Field`/`Card` canvas components (via
 ## Getting started
 
 ```bash
+pnpm install --frozen-lockfile
+pnpm build
 pnpm start:basic   # http://127.0.0.1:3000
 ```
 

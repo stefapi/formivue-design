@@ -1,205 +1,31 @@
 ---
-title: Formivue-Stefapi unified front-end form solution
+title: Formivue form engine
 order: 10
-hero:
-  title: Core Library
-  desc: Stefapi Unified Form Solution
-  actions:
-    - text: Home Site
-      link: https://github.com/stefapi/formivue-design
-    - text: Document
-      link: /guide
-features:
-  - title: High Performance
-    desc: Efficient update, Demand rendering
-  - title: Excellent Reusability
-    desc: Independent side effects, Pluggable
-  - title: Elegant Linkage Writing
-    desc: Flexible, Complete, Elegant
-  - title: Complete domain model
-    desc: Pure Core, No UI, No Framework
-  - title: Friendly debugging
-    desc: Natural docking with Formivue DevTools
-  - title: Smart Tips
-    desc: Embrace Typescript
-footer: Open-source MIT Licensed | Copyright © 2019-present<br />Powered by self
 ---
 
-## Installation
+# Formivue form engine
+
+`@formivue/core` manages observable values, field state, validation and
+effects. Use it in a headless workflow or connect it to Vue with
+`@formivue/vue`.
 
 ```bash
-$ npm install --save @formivue/core
-
+npm install @formivue/core
 ```
 
-## Quick start
+## Headless form
 
-> The following case is to teach you step by step to implement a form from scratch
->
-> @formivue/core brings you the following capabilities:
->
-> 1. Responsive computing capabilities
-> 2. Verification capability, verification internationalization capability
-> 3. Value Management Ability
-> 4. Linkage management capabilities
-> 5. Development tool debugging capabilities, Formivue DevTools
+```ts
+import { createForm } from '@formivue/core'
 
-```tsx
-/**
- * defaultShowCode: true
- */
-import React, { createContext, useMemo, useContext, useEffect } from 'react'
-import { createForm, setValidateLanguage } from '@formivue/core'
-import { observer } from '@formivue/reactive-react'
+const form = createForm()
+form.createField({ name: 'email', required: true, validator: 'email' })
+form.setValuesIn('email', 'hello@example.com')
 
-//Create a context to facilitate Field consumption
-const FormContext = createContext()
-//Create a context to facilitate the consumption of FormItem
-const FieldContext = createContext()
-
-//State bridge component
-const Field = observer((props) => {
-  const form = useContext(FormContext)
-  //Create a field
-  const field = form.createField(props)
-  useEffect(() => {
-    //Mount field
-    field.onMount()
-    return () => {
-      //Unload field
-      field.onUnmount()
-    }
-  })
-  if (!field.visible || field.hidden) return null
-  //Render the field, associate the field state with the UI component
-  const component = React.createElement(field.component[0], {
-    ...field.component[1],
-    value: field.value,
-    onChange: field.onInput,
-  })
-
-  //Render field wrapper
-  const decorator = React.createElement(
-    field.decorator[0],
-    field.decorator[1],
-    component,
-  )
-
-  return (
-    <FieldContext.Provider value={field}>{decorator}</FieldContext.Provider>
-  )
-})
-
-// FormItem UI component
-const FormItem = observer(({ children }) => {
-  const field = useContext(FieldContext)
-  return (
-    <div>
-      <div style={{ height: 20 }}>{field.title}:</div>
-      {children}
-      <div style={{ height: 20, fontSize: 12, color: 'red' }}>
-        {field.selfErrors.join(',')}
-      </div>
-    </div>
-  )
-})
-
-// Input UI component
-const Input = (props) => {
-  return (
-    <input
-      {...props}
-      value={props.value || ''}
-      style={{
-        ...props.style,
-        border: '2px solid rgb(186 203 255)',
-        borderRadius: 6,
-        width: '100%',
-        height: 28,
-        padding: '0 5px',
-      }}
-    />
-  )
-}
-
-//Form management entrance
-const FormProvider = (props) => {
-  useEffect(() => {
-    //Mount form
-    props.form?.onMount()
-    return () => {
-      //Uninstall the form
-      props.form?.onUnmount()
-    }
-  })
-  return (
-    <FormContext.Provider value={props.form}>
-      {props.children}
-    </FormContext.Provider>
-  )
-}
-
-//Form response monitor
-const FormConsumer = observer((props) => {
-  const form = useContext(FormContext)
-  return <div>{props.children(form)}</div>
-})
-
-/*
- * The above logic has been implemented in @formivue/react or @formivue/vue, and there is no need to rewrite it in actual use
- */
-
-//Switch the built-in check internationalization copy to English
-setValidateLanguage('en')
-
-export default () => {
-  const form = useMemo(() => createForm({ validateFirst: true }))
-
-  const createPasswordEqualValidate = (equalName) => (field) => {
-    if (
-      form.values.confirm_password &&
-      field.value &&
-      form.values[equalName] !== field.value
-    ) {
-      field.selfErrors = ['Password does not match Confirm Password.']
-    } else {
-      field.selfErrors = []
-    }
-  }
-
-  return (
-    <FormProvider form={form}>
-      <Field
-        name="name"
-        title="Name"
-        required
-        decorator={[FormItem]}
-        component={[Input, { placeholder: 'Please Input' }]}
-      />
-      <Field
-        name="password"
-        title="Password"
-        required
-        decorator={[FormItem]}
-        component={[Input, { type: 'password', placeholder: 'Please Input' }]}
-        reactions={createPasswordEqualValidate('confirm_password')}
-      />
-      <Field
-        name="confirm_password"
-        title="Confirm Password"
-        required
-        decorator={[FormItem]}
-        component={[Input, { type: 'password', placeholder: 'Please Input' }]}
-        reactions={createPasswordEqualValidate('password')}
-      />
-      <code>
-        <pre>
-          <FormConsumer>
-            {(form) => JSON.stringify(form.values, null, 2)}
-          </FormConsumer>
-        </pre>
-      </code>
-    </FormProvider>
-  )
-}
+const values = await form.submit()
 ```
+
+See the [core guide](./guide/index.md) for the domain model and the
+[effects guide](../../vue/docs/guide/effects.md) for field and form hooks.
+The [Vue guide](../../vue/docs/guide/index.md) shows how to bind the form
+to components.

@@ -11,7 +11,9 @@ The core of FormPath in Formivue is to solve 2 types of problems:
 
 Path matching requires that the given path must be a valid path matching syntax, such as `*(aa,bb,cc)`.
 
-Data operation requires that the given path must be a legal data operation path, that is, it must be in the form of `a.b.c` and cannot carry `*`
+Data operations use concrete paths such as `a.b.c`, array indices or
+destructured paths. Accessors traverse own properties. Paths containing
+`__proto__`, `constructor` or `prototype` are skipped.
 
 ## Constructor
 

@@ -8,10 +8,10 @@ The properties panel of the Vue designer.
   `useLocales` (titles/tooltips/dataSource from `node.getMessage` +
   `GlobalRegistry`) and `useSnapshot` (1 s debounce →
   `operation.snapshot('update:node:props')`).
-- **`SchemaField`** — `createSchemaField` from the fork: this package's
-  editors + the real bindings of
-  [`@formivue-design/formivue-vue`](../../design/formivue-vue)
-  (`Materials` map).
+- **`SchemaField`** combines the settings editors and the component registry
+  supplied by the application. See the
+  [designer playground](../../examples/designer-playground/README.md) for
+  the standard wiring.
 - **Editors** — `SizeInput`/`ValueInput` (`createPolyInput`),
   `ColorInput`, `ImageInput`, `PositionInput`, `CornerInput`,
   `MonacoInput`, the style setters (`Box`, `Border`, `BorderRadius`,
@@ -28,14 +28,12 @@ The properties panel of the Vue designer.
 
 ## Styles
 
-No bundled CSS: the Tailwind 4 utility classes live in the source code —
-the consumer scans this package via `@source
-'@formivue-design/vue-settings-form'` (see
-[`@formivue-design/vue-ui`](../vue-ui)). The `dn-*` classes are kept as
-test hooks.
+Include `@source '../node_modules/@formivue-design/vue-settings-form/dist';`
+in the Tailwind entry alongside the shared
+[`vue-ui` theme](../vue-ui/README.md).
 
 ## Tests
 
 ```bash
-pnpm vitest run packages/vue-settings-form
+pnpm test design/vue-settings-form
 ```

@@ -44,6 +44,8 @@ The designer exports a `{ form, schema }` object. Pass the `Materials`
 registry from `@formivue-design/formivue-runtime` to `createSchemaField` so
 the application interprets the same component properties as the preview.
 Pass the root `form` properties to `Materials.FormLayout`.
+The example below uses an export bundled with the application and trusted by
+its maintainers.
 
 ```vue
 <script setup lang="ts">
@@ -67,10 +69,15 @@ const layout = rawExport.form as InstanceType<typeof FormLayout>['$props']
 </template>
 ```
 
-Include the layouts and controls in your Tailwind 4 styles by scanning
-the installed `@formivue-design/formivue-vue/dist` and
-`@formivue-design/vue-ui/dist` packages. Run `pnpm demo:playground`
-and open **Designer form** for a runnable workspace example.
+Import the standard runtime's Tailwind 4 sources and supply your application's
+theme tokens.
+
+```css
+@import 'tailwindcss';
+@import '@formivue-design/formivue-runtime/styles.css';
+```
+
+Run `pnpm demo:playground` and open **Designer form** for a runnable example.
 
 | Component                                 | Settings carried by the schema                                                                                                                                                                                                                                                                              |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -86,10 +93,30 @@ Tab and accordion keys are the names in the container's `properties`,
 or the explicit `x-component-props.key` on the tab or panel.
 The designer's reaction settings also stay in the export as `x-reactions`.
 
+## Import documents
+
+Use `@formivue-design/formivue-transformer` to import documents from users or
+external sources. For the separate `ui.json`, `data.schema.json` and
+`data.json` files, call `parseFormDocuments` and `createFormDocument`.
+Render the resulting session's `form`, `formProps`, `schema` and `scope` with
+`FormProvider`, `FormLayout` and `SchemaField`. Call `dispose()` when the
+session closes.
+
+Restricted rendering is the default at the import and compilation entry
+points. It accepts declarative bindings, rejects executable rendering metadata
+and filters component attributes. `transformToTreeNode({ form, schema })`
+applies this policy to combined exports brought into the canvas. Keep the
+source trust decision in the application. Pass `{ trusted: true }` only for
+content explicitly approved to run JavaScript in the renderer.
+
+The direct `SchemaField` API renders a schema supplied by the application.
+Route imported files through the restricted entry points before rendering them.
+
 ## Expressions
 
-Any string containing a double-curly expression (`&#123;&#123; ... &#125;&#125;`) is compiled against the scope (components
-registry + `scope` from `createSchemaField` / `ExpressionScope`):
+For trusted schemas, double-curly expressions
+(`&#123;&#123; ... &#125;&#125;`) are compiled against the scope supplied by
+`createSchemaField` or `ExpressionScope`.
 
 ::: v-pre
 

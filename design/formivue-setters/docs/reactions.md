@@ -1,12 +1,10 @@
 # Component reactions — internal reference (Vue designer)
 
-This document is the internal reference for **component reactions**
-(`x-reactions`) as implemented in this repository. It replaces the
-React/antd-era reference material: every example below targets the actual
-Vue stack of generation 2 — `@formivue/vue` bindings, headless
-**reka-ui + shadcn-vue + Tailwind 4** primitives (`@formivue-design/vue-ui`).
-The JSON Schema guide and the reaction implementation are listed in
-[References](#references).
+The examples use the Vue designer and the `@formivue/vue` bindings.
+JavaScript reactions belong in trusted schemas. Restricted document
+imports reject executable metadata, including `x-reactions`. See the
+[document import policy](../../formivue-transformer/README.md#separate-ui-schema-and-data-documents)
+and the implementation links in [References](#references).
 
 ## Where reactions are configured
 
@@ -127,7 +125,8 @@ boolean` replaces the antd `mode` prop. For dynamic options, drive
   port — use `labelWidth` in `decoratorProps` reactions.
 - **Registration by name** — components referenced by schemas are
   strings resolved through the `createSchemaField` components map (the
-  designer wires the `Materials` card of `@formivue-design/formivue-vue`).
+  designer supplies a locale-aware preview registry. Standalone forms use
+  `Materials` from `@formivue-design/formivue-runtime`).
 - **Monaco typings** — the form opens immediately while
   `initDeclaration` loads the Formivue types for autocompletion.
   The playground serves Monaco and those declarations from its own build.
