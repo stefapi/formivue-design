@@ -11,6 +11,8 @@ import {
   isJsonObject,
   jsonPointer,
   valueAt,
+  pointerSegments,
+  type DataSchemaValidationOptions,
   type DocumentIssue,
   type JsonValue,
 } from './document-data'
@@ -21,6 +23,22 @@ import {
 } from './document-schema-resources'
 
 const namespace = 'https://json-schema.org/draft/2020-12/vocab/'
+const dialectKeywords: Record<string, string> = {
+  'missing-dependency-error': 'dependentRequired',
+  'required-property-error': 'required',
+  'no-additional-properties-error': 'additionalProperties',
+  'additional-properties-error': 'additionalProperties',
+  'forbidden-property-error': 'additionalProperties',
+  'unevaluated-property-error': 'unevaluatedProperties',
+  'invalid-property-name-error': 'propertyNames',
+  'additional-items-error': 'items',
+  'contains-min-error': 'contains',
+  'contains-max-error': 'contains',
+  'multiple-one-of-error': 'oneOf',
+  'format-validation-error': 'format',
+  'min-length-one-error': 'minLength',
+  'min-items-one-error': 'minItems',
+}
 const vocabularies: Record<string, string[]> = {
   core: ['$ref', '$defs'],
   applicator: [
@@ -168,7 +186,10 @@ export function dialectValidator(
   schema: JsonDataSchema,
   resources: DataSchemaRegistry,
   assertFormats: boolean,
-  includeConstantValues: boolean,
+  {
+    includeConstantValues,
+    includeValidationDetails,
+  }: DataSchemaValidationOptions,
 ) {
   const drafts = Object.entries(resources).flatMap(([uri, meta]) => {
     if (!isJsonObject(meta) || !isJsonObject(meta.$vocabulary)) return []
@@ -241,8 +262,10 @@ export function dialectValidator(
           'pattern-error': () =>
             'must match pattern ' + JSON.stringify(data.pattern),
         }
+        const issuePath =
+          typeof key === 'string' ? path + jsonPointer([key]) : path
         return {
-          path: typeof key === 'string' ? path + jsonPointer([key]) : path,
+          path: issuePath,
           message:
             (typeof code === 'string' ? messages[code]?.() : undefined) ??
             message,
@@ -254,10 +277,62 @@ export function dialectValidator(
                 },
               }
             : {}),
+          ...(includeValidationDetails && typeof code === 'string'
+            ? {
+                validationDetails: dialectDetails(code, data, value, issuePath),
+              }
+            : {}),
         }
       })
     } catch (cause) {
       throw new DocumentValidationError([{ path: '', message: String(cause) }])
     }
+  }
+}
+
+function dialectDetails(
+  code: string,
+  data: Record<string, unknown>,
+  value: unknown,
+  path: string,
+) {
+  const keyword =
+    dialectKeywords[code] ??
+    code
+      .replace(/-error$/u, '')
+      .replace(/-([a-z])/gu, (_, letter: string) => letter.toUpperCase())
+  const schema = isJsonObject(data.schema) ? data.schema : {}
+  const propertyRule = schema.propertyNames
+  if (keyword === 'propertyNames' && isJsonObject(propertyRule)) {
+    if (Array.isArray(propertyRule.enum))
+      return {
+        keyword: 'enum',
+        expected: propertyRule.enum,
+        actual: data.property,
+      }
+    if (propertyRule.const !== undefined)
+      return {
+        keyword: 'const',
+        expected: propertyRule.const,
+        actual: data.property,
+      }
+  }
+  const expected =
+    keyword === 'contains'
+      ? {
+          minContains: schema.minContains ?? 1,
+          maxContains: schema.maxContains,
+          itemSchema: schema.contains,
+        }
+      : keyword === 'format'
+        ? data.format
+        : schema[keyword]
+  return {
+    keyword,
+    expected,
+    actual:
+      keyword === 'propertyNames'
+        ? data.property
+        : valueAt(value, pointerSegments(path)),
   }
 }

@@ -239,3 +239,63 @@ test.each(['standard', 'dialect'])(
     }
   },
 )
+
+test.each(['standard', 'dialect'])(
+  'explains rejected values and preserves their JSON types (%s)',
+  (mode) => {
+    const schema = {
+      type: 'object',
+      required: ['owner'],
+      properties: {
+        status: { if: true, then: { enum: ['draft', 2, false, null] } },
+        amount:
+          mode === 'dialect' ? { minimum: 10, multipleOf: 1 } : { minimum: 10 },
+        code: { minLength: 4 },
+        contact: { format: 'email' },
+        active: { type: ['boolean', 'number'] },
+        names: { type: 'object', propertyNames: { enum: ['preferred'] } },
+        tags: { type: 'array', contains: { const: 'green' }, minContains: 2 },
+      },
+    }
+    const validate = compileDataValidator(schema, {
+      includeValidationDetails: true,
+    })
+    const data = {
+      status: '2',
+      amount: 3,
+      code: 'ab',
+      contact: 'invalid',
+      active: 'yes',
+      names: { other: 42 },
+      tags: ['red'],
+    }
+    const messages = documentError(
+      new DocumentValidationError(validate(data)),
+    ).split('\n')
+    expect(messages).toHaveLength(8)
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        '/status: Current value "2". Allowed values: "draft", 2, false, null.',
+        '/amount: Must be at least 10. Current value 3.',
+        '/code: At least 4 characters expected. Current value "ab".',
+        '/contact: Must use the format "email". Current value "invalid".',
+        '/active: Expected a boolean / a number. Current value "yes".',
+        '/owner: This field is required. No value was entered.',
+        '/names/other: Current value "other". Allowed values: "preferred".',
+        '/tags: At least 2 matching items expected for the rule {"const":"green"}. Current value ["red"].',
+      ]),
+    )
+    expect(
+      validate({
+        status: 2,
+        amount: 10,
+        code: 'abcd',
+        contact: 'a@example.test',
+        active: true,
+        owner: 'example',
+        names: { preferred: 42 },
+        tags: ['green', 'green'],
+      }),
+    ).toEqual([])
+  },
+)
