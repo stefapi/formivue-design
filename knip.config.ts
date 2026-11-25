@@ -10,6 +10,10 @@ const config: KnipConfig = {
     'examples/*': {
       entry: ['src/{main,sandbox}.ts'],
     },
+    'examples/designer-playground': {
+      // Tailwind scans this package's dist through @source in src/styles.css.
+      ignoreDependencies: ['@formivue-design/data-schema-editor'],
+    },
     'design/formivue-setters': {
       // The Vitest mocks resolve the loader from the setters test files.
       ignoreDependencies: ['@monaco-editor/loader'],

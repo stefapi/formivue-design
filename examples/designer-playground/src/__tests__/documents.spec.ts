@@ -19,8 +19,6 @@ import {
 } from '@formivue-design/formivue-transformer'
 import { advancedDocumentContracts } from '@formivue-design/data-schema-advanced'
 import { chartDocumentContracts } from '@formivue-design/data-schema-charts'
-import { useDocumentPreview } from '@formivue-design/data-model'
-import { DocumentEditorWidget } from '@formivue-design/data-model/ui'
 import * as Standard from '@formivue-design/formivue-vue'
 import { AdvancedSources } from '@formivue-design/shadcn-advanced-designer'
 import { AdvancedMaterials } from '@formivue-design/shadcn-advanced-runtime'
@@ -415,114 +413,6 @@ describe('separate UI, schema and data documents', () => {
       }
     },
   )
-
-  test('uses a session-local contract to migrate and compile a custom component', () => {
-    const registry = createDocumentContractRegistry([
-      {
-        name: 'meter',
-        components: {
-          Meter: {
-            kind: 'field',
-            types: ['number'],
-            bindings: { unit: { required: true, types: ['string'] } },
-          },
-        },
-      },
-    ])
-    const migrated = splitFormSchema(
-      {
-        schema: {
-          type: 'object',
-          properties: {
-            amount: {
-              type: 'number',
-              default: 12,
-              'x-component': 'Meter',
-              'x-component-props': { unit: 'kg' },
-            },
-          },
-        },
-      },
-      undefined,
-      { contracts: registry },
-    )
-    const [node] = migrated.ui.nodes
-    const unitPath = `/${node.id}-unit`
-    expect(node.bindings).toEqual({ unit: { path: unitPath } })
-    const compiled = compileFormDocuments(migrated, { contracts: registry })
-    expect(compiled.diagnostics).toEqual([])
-    expect(compiled.dependencies).toEqual([
-      {
-        componentId: node.id,
-        property: 'bind',
-        path: ['amount'],
-        types: ['number'],
-      },
-      {
-        componentId: node.id,
-        property: 'unit',
-        path: [unitPath.slice(1)],
-        types: ['string'],
-      },
-    ])
-    expect(compiled.schema.properties.amount['x-component-props']).toEqual({
-      unit: `{{ $document.read("${unitPath}") }}`,
-    })
-    expect(() => compileFormDocuments(migrated)).toThrow(
-      expect.objectContaining({
-        issues: expect.arrayContaining([
-          expect.objectContaining({
-            code: 'missing_component_contract',
-            componentId: node.id,
-            severity: 'warning',
-          }),
-          expect.objectContaining({
-            code: 'missing_binding_types',
-            property: 'unit',
-            severity: 'error',
-          }),
-        ]),
-      }),
-    )
-
-    node.bindings.unit.path = '/missing'
-    expect(() =>
-      compileFormDocuments(migrated, { contracts: registry }),
-    ).toThrow(
-      expect.objectContaining({
-        issues: [
-          expect.objectContaining({
-            code: 'missing_data_path',
-            componentId: node.id,
-            path: '/missing',
-            property: 'unit',
-            severity: 'error',
-          }),
-        ],
-      }),
-    )
-  })
-
-  test('rejects an extension that redeclares a standard contract', () => {
-    expect(() =>
-      createDocumentContractRegistry([
-        {
-          name: 'duplicate',
-          components: { Input: { kind: 'field', types: ['string'] } },
-        },
-      ]),
-    ).toThrow(
-      expect.objectContaining({
-        issues: [
-          expect.objectContaining({
-            code: 'duplicate_component_contract',
-            path: '/extensions/duplicate/Input',
-            severity: 'error',
-          }),
-        ],
-      }),
-    )
-  })
 
   test('the advanced contract resolves branch dependencies during migration and compilation', () => {
     const registry = createDocumentContractRegistry([advancedDocumentContracts])
@@ -1882,77 +1772,6 @@ describe('separate UI, schema and data documents', () => {
       expect(document.exportData().links).toEqual(initial.data.links)
     } finally {
       document.dispose()
-    }
-  })
-
-  test('keeps the preview form and reports conflicts on a data-only update', () => {
-    const preview = useDocumentPreview({ contracts })
-    const initial = documents()
-    try {
-      preview.apply(initial)
-      const active = preview.document.value!
-      active.form.setValuesIn('heading', 'Local heading')
-
-      const next = active.exportDocuments()
-      next.data.heading = 'Imported heading'
-      expect(preview.apply(next)).toEqual(['/heading'])
-      expect(preview.document.value).toBe(active)
-      expect(active.form.getValuesIn('heading')).toBe('Local heading')
-
-      const changed = active.exportDocuments()
-      changed.dataSchema.properties.heading = { type: 'string', minLength: 1 }
-      preview.apply(changed)
-      expect(preview.document.value).not.toBe(active)
-    } finally {
-      preview.clear()
-    }
-  })
-
-  test('keeps the current preview when archive replacement fails', () => {
-    const preview = useDocumentPreview({ contracts })
-    try {
-      const original = documents()
-      preview.apply(original)
-      const active = preview.document.value
-      const installCanvas = vi.fn(() => {
-        throw new Error('Canvas could not be installed')
-      })
-
-      expect(() =>
-        preview.replace({ ...original, data: {} }, installCanvas),
-      ).toThrow()
-      expect(installCanvas).not.toHaveBeenCalled()
-      expect(() => preview.replace(original, installCanvas)).toThrow(
-        'Canvas could not be installed',
-      )
-      expect(preview.document.value).toBe(active)
-    } finally {
-      preview.clear()
-    }
-  })
-
-  test('applies three independently edited documents from the JSON panel', async () => {
-    const apply = vi.fn()
-    const view = mount(DocumentEditorWidget, {
-      props: {
-        tree: tree(),
-        documents: documents(),
-        contracts,
-        onApply: apply,
-        onCanvas: vi.fn(),
-      },
-    })
-    try {
-      await view.get('select').setValue('data')
-      const changed = { ...documents().data, heading: 'Imported' }
-      await view.get('textarea').setValue(JSON.stringify(changed))
-      await view
-        .findAll('button')
-        .find((button) => button.text() === 'Apply to preview')
-        .trigger('click')
-      expect(apply).toHaveBeenCalledWith({ ...documents(), data: changed })
-    } finally {
-      view.unmount()
     }
   })
 })

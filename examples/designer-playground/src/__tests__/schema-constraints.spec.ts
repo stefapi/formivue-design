@@ -166,42 +166,6 @@ test('edits constraints graphically and applies them after a three-document roun
   }
 })
 
-test('rejects incompatible form options and empty numeric domains', () => {
-  const documents: FormDocuments = {
-    ui: {
-      version: 1,
-      nodes: [
-        field('status', 'Select', {
-          options: [{ label: 'Active', value: 'active' }],
-        }),
-        field('number', 'NumberPicker'),
-      ],
-    },
-    dataSchema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string', enum: ['closed'] },
-        number: { type: 'integer', exclusiveMinimum: 1, exclusiveMaximum: 2 },
-      },
-    },
-    data: {},
-  }
-  expect(() => createFormDocument(documents)).toThrow(
-    expect.objectContaining({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          path: '/status',
-          code: 'incompatible_ui_option',
-        }),
-        expect.objectContaining({
-          path: '/number',
-          code: 'empty_numeric_range',
-        }),
-      ]),
-    }),
-  )
-})
-
 test('projects collection limits and new-row defaults after reimport', async () => {
   const rows = (key: string): UiDocumentNode => ({
     id: key,

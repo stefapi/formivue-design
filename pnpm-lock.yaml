@@ -197,6 +197,9 @@ importers:
         specifier: workspace:*
         version: link:../../manager/shared
     devDependencies:
+      '@formivue-design/data-schema-charts':
+        specifier: workspace:*
+        version: link:../data-schema-charts
       vue:
         specifier: ^3.5.46
         version: 3.5.46(typescript@6.0.3)

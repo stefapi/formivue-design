@@ -153,13 +153,15 @@ pnpm --filter @formivue/example-vite-usage test   # engine playground suite
 
 What `pnpm test` covers:
 
-| Suite                 | Content                                                         |
-| --------------------- | --------------------------------------------------------------- |
-| `manager/*`           | engine unit tests: reactive, core, validator, json-schema, vue… |
-| `design/*`            | widgets, settings panel, setters, transformer, a11y             |
-| `examples/vite-usage` | engine playground, validation bridges and a11y                  |
-| load/wiring           | load tests and wiring tests across the two roots                |
-| **a11y**              | `axe-core` gate — 0 violations tolerated on the repo's code     |
+| Suite                          | Content                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| `manager/*`                    | engine unit tests: reactive, core, validator, json-schema, vue…           |
+| `design/*`                     | widgets, settings panel, setters, transformer, a11y                       |
+| `design/data-model`            | project drafts, archives, reconciliation, JSON editor and preview session |
+| `examples/designer-playground` | designer integration with the canvas, preview, charts and tables          |
+| `examples/vite-usage`          | engine playground, validation bridges and a11y                            |
+| load/wiring                    | load tests and wiring tests across the two roots                          |
+| **a11y**                       | `axe-core` gate — 0 violations tolerated on the repo's code               |
 
 The a11y gates live inside the suites (`a11y.spec.ts`,
 `playground.spec.ts` of the Vite example): a component that introduces an
