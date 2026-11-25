@@ -49,8 +49,8 @@ A **self-contained** pnpm-workspaces repo
 
 | Folder      | Content                                             | Published      |
 | ----------- | --------------------------------------------------- | -------------- |
-| `manager/`  | the form engine `@formivue/*` (10 packages)         | yes (`npm`)    |
-| `design/`   | the designer `@formivue-design/*` (13 packages)     | yes (`npm`)    |
+| `manager/`  | the form engine `@formivue/*`                       | yes (`npm`)    |
+| `design/`   | the designer `@formivue-design/*`                   | yes (`npm`)    |
 | `examples/` | the Vite apps (basic, sandbox, engine playground…)  | no (`private`) |
 | `scripts/`  | project tooling, demo launcher and workspace checks | —              |
 
@@ -68,7 +68,7 @@ git clone https://github.com/stefapi/formivue-design.git && cd formivue-design
 pnpm install
 ```
 
-- `pnpm install` creates/honors `pnpm-lock.yaml` and **links the 23
+- `pnpm install` creates/honors `pnpm-lock.yaml` and **links the
   workspace packages** (`workspace:*`) — no local publishing needed to
   develop;
 - in CI (or to verify an up-to-date lockfile):
@@ -95,7 +95,7 @@ Every package builds as **pure ESM** with `tsdown` (`exports` fields,
 `.d.mts` types, `sideEffects: false`, artifacts under `dist/`).
 
 ```bash
-pnpm -r build    # builds the 23 packages + the Vite apps of examples/
+pnpm -r build    # builds the workspace libraries and example apps
 pnpm build       # same thing (root shortcut)
 ```
 
@@ -227,8 +227,8 @@ FORMIVUE_DEMO_PORT=6174 FORMIVUE_DOCS_PORT=6175 pnpm demo:all
 
 ## Version bumping
 
-The repo runs a **single version**: everyone (the 23 publishable
-packages, the root, the examples) shares the same version, declared
+The repo runs a **single version** across publishable
+packages, the root and the examples. The version is declared
 **once** in [`package-meta.json`](./package-meta.json) (single source:
 `version`, `repository`, `bugs`, `homepage`, `author`, `license`).
 
@@ -240,9 +240,9 @@ pnpm meta:check    # gate: fails if a package.json diverges (chained into pnpm l
 Versioning is driven by [changesets](https://github.com/changesets/changesets)
 ([`.changeset/`](./.changeset)):
 
-- **`fixed` group**: the 23 publishable packages (13 `@formivue-design/*` +
-  10 `@formivue/*`) version **together** — one changeset on any of them
-  bumps everyone, with the same changelog;
+- All published `@formivue-design/*` and `@formivue/*` libraries are in the
+  Changesets `fixed` group and version together. The architecture test
+  checks this against the workspace manifests.
 - the examples (private) are not versioned by changesets
   (`privatePackages.version: false`) — their version line is set by
   `meta:sync`;
@@ -268,7 +268,7 @@ Versioning is driven by [changesets](https://github.com/changesets/changesets)
    ```
 
 3. **Realign the single source** — `changeset version` has written the new
-   version into the 23 publishable `package.json` files:
+   version into the publishable `package.json` files:
 
    ```bash
    # edit package-meta.json → "version": "<new single version>"
@@ -284,7 +284,7 @@ Versioning is driven by [changesets](https://github.com/changesets/changesets)
 pnpm changeset:publish    # = changeset publish — publishes to npm (access: public)
 ```
 
-- publishes the 23 packages of the `fixed` group, each with its `dist/`
+- publishes the packages of the `fixed` group, each with its `dist/`
   (`files: ["dist"]`, `exports`, `.d.mts`);
 - requires an authenticated **npm token** (`NPM_TOKEN` — local login via
   `npm login`, or a secret in CI);

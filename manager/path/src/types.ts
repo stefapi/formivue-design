@@ -120,10 +120,6 @@ export const isDestructorExpression = isType<DestructorExpressionNode>(
 
 export const isObjectPattern = isType<ObjectPatternNode>('ObjectPattern')
 
-export const isObjectPatternProperty = isType<ObjectPatternPropertyNode>(
-  'ObjectPatternProperty',
-)
-
 export const isArrayPattern = isType<ArrayPatternNode>('ArrayPattern')
 
 export type KeyType = string | number | symbol

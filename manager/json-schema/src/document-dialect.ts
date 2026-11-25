@@ -12,10 +12,10 @@ import {
   jsonPointer,
   valueAt,
   pointerSegments,
-  type DataSchemaValidationOptions,
   type DocumentIssue,
   type JsonValue,
-} from './document-data'
+} from './document-json'
+import type { DataSchemaValidationOptions } from './document-data'
 import {
   dataSchemaLocations,
   type DataSchemaRegistry,

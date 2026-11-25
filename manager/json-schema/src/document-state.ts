@@ -10,6 +10,8 @@ import { isEqual } from '@formivue/shared'
 import {
   compileDataValidator,
   type DataSchemaValidationOptions,
+} from './document-data'
+import {
   copyJson,
   DocumentValidationError,
   isJsonObject,
@@ -20,7 +22,7 @@ import {
   type DocumentIssue,
   type JsonObject,
   type JsonValue,
-} from './document-data'
+} from './document-json'
 import { applyJsonPatch, type JsonPatchOperation } from './document-patch'
 
 export interface DocumentRowKey {

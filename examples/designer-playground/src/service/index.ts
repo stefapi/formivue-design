@@ -10,7 +10,7 @@ import {
   transformToTreeNode,
 } from '@formivue-design/formivue-transformer'
 
-export const STORAGE_KEY = 'formivue-vue-schema'
+const STORAGE_KEY = 'formivue-vue-schema'
 
 export const localProjectPersistence = (
   key: string,

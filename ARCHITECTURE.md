@@ -97,8 +97,10 @@ The versioned public contract uses `ui.json`, `data.schema.json` and
 the data schema for the existing renderer. The headless data document in
 `manager/json-schema` validates complete snapshots and JSON Patch results
 before publishing them. It reconciles editable rows by key and keeps local
-drafts when remote updates overlap. Applications own remote subscriptions and
-revisions. The combined `{ form, schema }` format remains available.
+drafts when remote updates overlap. Its JSON types, pointers and errors are
+shared by the validators and resource resolver through a dependency-free
+module. Applications own remote subscriptions and revisions. The combined
+`{ form, schema }` format remains available.
 
 Documents, project archives and legacy schema imports use restricted rendering
 by default. The transformer accepts declarative bindings and rejects executable
@@ -116,16 +118,18 @@ belongs to the application or session.
 
 `design/data-model` manages the designer's project session. It coordinates
 variants and drafts through the transformer, manages the preview document
-session and reads and writes versioned project archives. Its `ui` entry
-provides the model panel and the three-document JSON editor. The playground
-supplies local storage, language, canvas navigation, the preview renderer
-and the editor for the combined Formivue JSON format.
+session and reads and writes versioned project archives. Draft validation
+and draft migration are separate from the panel and project persistence.
+Its `ui` entry provides the model panel and the three-document JSON editor.
+The playground supplies local storage, language, canvas navigation, the
+preview renderer and the editor for the combined Formivue JSON format.
 
 ## Verification
 
 - `pnpm lint` checks static import boundaries. The
   [workspace architecture test](./scripts/__tests__/architecture.spec.ts)
-  checks declared dependencies and cycles in the published library graph.
+  checks declared dependencies, cycles in the published library graph and
+  the JSON Schema document modules, and membership in the fixed release group.
 - [The schema-flow test](./design/formivue-vue/src/__tests__/schema-flow.spec.ts)
   covers serializing an export, rendering it with `Materials`, running a reaction
   and submitting values. Layout tests should include child fields. Array tests

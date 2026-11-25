@@ -6,7 +6,7 @@ import {
   pointerSegments,
   valueAt,
   type JsonValue,
-} from './document-data'
+} from './document-json'
 
 export type JsonPatchOperation =
   | { op: 'add' | 'replace' | 'test'; path: string; value: JsonValue }

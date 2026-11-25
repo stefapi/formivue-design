@@ -1,6 +1,9 @@
 import { TreeNode } from '@formivue-design/core'
 import type { FormDocuments } from '@formivue-design/formivue-transformer'
-import { useDocumentPreview } from '@formivue-design/data-model'
+import {
+  hasSameFormDocumentDefinition,
+  useDocumentPreview,
+} from '@formivue-design/data-model'
 import { DocumentEditorWidget } from '@formivue-design/data-model/ui'
 import { mount } from '@vue/test-utils'
 import { expect, test, vi } from 'vitest'
@@ -47,6 +50,47 @@ test('keeps the preview form and reports conflicts on a data-only update', () =>
   } finally {
     preview.clear()
   }
+})
+
+test('preserves local input when the JSON object members are reordered', () => {
+  const preview = useDocumentPreview()
+  const original = documents()
+  try {
+    preview.apply(original)
+    const active = preview.document.value!
+    active.form.setValuesIn('heading', 'Unsaved heading')
+
+    preview.apply({
+      ...original,
+      ui: { nodes: original.ui.nodes, version: 1 },
+      dataSchema: {
+        properties: original.dataSchema.properties,
+        required: original.dataSchema.required,
+        type: 'object',
+      },
+    })
+
+    expect(preview.document.value).toBe(active)
+    expect(active.form.getValuesIn('heading')).toBe('Unsaved heading')
+  } finally {
+    preview.clear()
+  }
+})
+
+test('detects a change in array order in the form definition', () => {
+  const original = documents()
+  original.ui.nodes.push({
+    id: 'note',
+    key: 'note',
+    kind: 'void',
+    component: 'Text',
+  })
+  expect(
+    hasSameFormDocumentDefinition(original, {
+      ...original,
+      ui: { ...original.ui, nodes: [...original.ui.nodes].reverse() },
+    }),
+  ).toBe(false)
 })
 
 test('keeps the current preview when archive replacement fails', () => {

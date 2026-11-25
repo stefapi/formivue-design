@@ -3,7 +3,7 @@ import {
   jsonPointer,
   pointerSegments,
   valueAt,
-} from './document-data'
+} from './document-json'
 
 export const dataSchemaMaps = [
   'properties',

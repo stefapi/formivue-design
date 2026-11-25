@@ -1,5 +1,6 @@
 export * from './schema'
 export * from './types'
+export * from './document-json'
 export * from './document-data'
 export * from './document-patch'
 export * from './document-state'
