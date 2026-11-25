@@ -6,6 +6,11 @@ export interface ISubscriber<Payload = any> {
   (payload: Payload): void | boolean
 }
 
+export type Unsubscribe = {
+  (): void
+  [UNSUBSCRIBE_ID_SYMBOL]: number
+}
+
 export class Subscribable<ExtendsType = any> {
   private subscribers: {
     index?: number
@@ -27,7 +32,7 @@ export class Subscribable<ExtendsType = any> {
     return interrupted ? false : true
   }
 
-  subscribe(subscriber: ISubscriber) {
+  subscribe(subscriber: ISubscriber): Unsubscribe {
     let id: number
     if (isFn(subscriber)) {
       id = this.subscribers.index + 1

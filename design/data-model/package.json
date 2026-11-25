@@ -37,7 +37,13 @@
     "@formivue/shared": "workspace:*"
   },
   "peerDependencies": {
+    "@babel/types": "^7.29.11",
     "vue": "^3.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@babel/types": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@formivue-design/data-schema-charts": "workspace:*",

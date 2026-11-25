@@ -85,7 +85,7 @@ export const isDataField = (node: any): node is DataField => {
   return isField(node) || isArrayField(node) || isObjectField(node)
 }
 
-export const isDataFieldState = (node: any) => {
+export const isDataFieldState = (node: any): node is IFieldState => {
   return (
     isFieldState(node) || isObjectFieldState(node) || isArrayFieldState(node)
   )

@@ -1,5 +1,9 @@
 import { isArr, isFn, isWindow } from './types'
-import { Subscribable, ISubscriber } from './subscribable'
+import {
+  Subscribable,
+  type ISubscriber,
+  type Unsubscribe,
+} from './subscribable'
 import { globalThisPolyfill } from './globalThisPolyfill'
 
 const ATTACHED_SYMBOL = Symbol('ATTACHED_SYMBOL')
@@ -121,21 +125,23 @@ export class EventDriver<
     return this.engine.dispatch(event, this.context)
   }
 
-  subscribe<T extends ICustomEvent<any> = any>(subscriber: ISubscriber<T>) {
+  subscribe<T extends ICustomEvent<any> = any>(
+    subscriber: ISubscriber<T>,
+  ): Unsubscribe {
     return this.engine.subscribe(subscriber)
   }
 
   subscribeTo<T extends CustomEventClass>(
     type: T,
     subscriber: ISubscriber<InstanceType<T>>,
-  ) {
+  ): Unsubscribe {
     return this.engine.subscribeTo(type, subscriber)
   }
 
   subscribeWith<T extends ICustomEvent = ICustomEvent>(
     type: string | string[],
     subscriber: ISubscriber<T>,
-  ) {
+  ): Unsubscribe {
     return this.engine.subscribeWith(type, subscriber)
   }
 
@@ -301,7 +307,7 @@ export class Event extends Subscribable<ICustomEvent<any>> {
   subscribeTo<T extends CustomEventClass>(
     type: T,
     subscriber: ISubscriber<InstanceType<T>>,
-  ) {
+  ): Unsubscribe {
     return this.subscribe((event) => {
       if (type && event instanceof type) {
         return subscriber(event)
@@ -312,7 +318,7 @@ export class Event extends Subscribable<ICustomEvent<any>> {
   subscribeWith<T extends ICustomEvent = ICustomEvent>(
     type: string | string[],
     subscriber: ISubscriber<T>,
-  ) {
+  ): Unsubscribe {
     return this.subscribe((event) => {
       if (isArr(type)) {
         if (type.includes(event?.type)) {

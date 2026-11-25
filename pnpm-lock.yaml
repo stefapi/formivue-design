@@ -175,6 +175,9 @@ importers:
 
   design/data-model:
     dependencies:
+      '@babel/types':
+        specifier: ^7.29.11
+        version: 7.29.15
       '@formivue-design/core':
         specifier: workspace:*
         version: link:../core

@@ -33,6 +33,11 @@ the canvas, applied documents, drafts and any pending reconciliation choices.
 `parseDocumentProject` and `stringifyDocumentProject` provide independent
 access to the version 1 archive format.
 
+The package declares `vue` as a peer and `@babel/types` as an optional peer
+for type checking. Vue 3.5's compiler declarations reference Babel types.
+When checking dependency declarations with an isolated `node_modules`
+layout, add `@babel/types` to the consuming project alongside `vue`.
+
 ## Model panel
 
 Import `DataModelWidget` from `@formivue-design/data-model/ui` and include
