@@ -2,13 +2,22 @@
 // Workbench > StudioPanel > CompositePanel/WorkspacePanel/SettingsPanel),
 // wiring des drivers du moteur (drag souris synthétique, sélection au clic),
 // historique undo/redo via @formivue-design/core intact, locales.
-import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  onTestFinished,
+  test,
+  vi,
+} from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import {
   CompositePanel,
   ComponentTreeWidget,
   Designer,
+  DesignerEngineContext,
   DesignerToolsWidget,
   OutlineTreeWidget,
   ResourceWidget,
@@ -384,4 +393,51 @@ describe('@formivue-design/vue — studio (intégration)', () => {
     wrapper.unmount()
     engine.unmount()
   })
+
+  test.each(['idle', 'frame'])(
+    'workbench cancels the pending preview %s callback on unmount',
+    (phase) => {
+      const requestIdle = vi
+        .spyOn(window, 'requestIdleCallback')
+        .mockReturnValue(1)
+      const cancelIdle = vi
+        .spyOn(window, 'cancelIdleCallback')
+        .mockImplementation(() => {})
+      const requestFrame = vi
+        .spyOn(globalThis, 'requestAnimationFrame')
+        .mockReturnValue(2)
+      const cancelFrame = vi
+        .spyOn(globalThis, 'cancelAnimationFrame')
+        .mockImplementation(() => {})
+      onTestFinished(() => vi.restoreAllMocks())
+
+      const engine = createDesigner()
+      const wrapper = mount(ViewPanel, {
+        props: { type: 'PREVIEW' },
+        global: { provide: { [DesignerEngineContext]: engine } },
+        slots: { default: () => 'Preview content' },
+      })
+
+      try {
+        engine.workbench.setWorkbenchType('PREVIEW')
+        expect(requestIdle).toHaveBeenCalledTimes(1)
+        if (phase === 'frame') {
+          requestIdle.mock.calls[0][0]({
+            didTimeout: false,
+            timeRemaining: () => 10,
+          })
+          expect(requestFrame).toHaveBeenCalledTimes(1)
+        }
+      } finally {
+        wrapper.unmount()
+      }
+
+      if (phase === 'idle') {
+        expect(cancelIdle).toHaveBeenCalledWith(1)
+        expect(requestFrame).not.toHaveBeenCalled()
+      } else {
+        expect(cancelFrame).toHaveBeenCalledWith(2)
+      }
+    },
+  )
 })

@@ -1,9 +1,9 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue'
-import { requestIdle } from '@formivue-design/shared'
 import { autorun } from '@formivue/reactive'
 import { observer } from '@formivue/reactive-vue'
 import { TextWidget, IconWidget } from '../widgets'
 import { usePrefix, useWorkbench } from '../hooks'
+import { useIdleAnimationFrame } from '../hooks/useIdleAnimationFrame'
 import cls from 'classnames'
 
 export interface ISettingPanelProps {
@@ -24,17 +24,15 @@ export const SettingsPanel = observer(
       const innerVisible = ref(true)
       const pinning = ref(false)
       const visible = ref(true)
+      const reveal = useIdleAnimationFrame(() => {
+        innerVisible.value = true
+      })
 
       const syncInnerVisible = () => {
         if (visible.value || workbench?.type === 'FORMIVUEDESIGN') {
-          if (!innerVisible.value) {
-            requestIdle(() => {
-              requestAnimationFrame(() => {
-                innerVisible.value = true
-              })
-            })
-          }
+          if (!innerVisible.value) reveal.schedule()
         } else {
+          reveal.cancel()
           innerVisible.value = false
         }
       }

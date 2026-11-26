@@ -3,8 +3,8 @@ import { ITreeNode, WorkbenchTypes } from '@formivue-design/core'
 import { observer } from '@formivue/reactive-vue'
 import { autorun } from '@formivue/reactive'
 import { useTree, useWorkbench } from '../hooks'
+import { useIdleAnimationFrame } from '../hooks/useIdleAnimationFrame'
 import { Viewport } from '../containers'
-import { requestIdle } from '@formivue-design/shared'
 
 export interface IViewPanelProps {
   type: WorkbenchTypes
@@ -29,17 +29,17 @@ export const ViewPanel = observer(
       const visible = ref(true)
       const workbench = useWorkbench()
       const tree = useTree()
+      const reveal = useIdleAnimationFrame(() => {
+        visible.value = true
+      })
 
       onMounted(() => {
         const disposer = autorun(() => {
-          if (workbench?.type === props.type) {
-            requestIdle(() => {
-              requestAnimationFrame(() => {
-                visible.value = true
-              })
-            })
-          } else {
+          if (workbench?.type !== props.type) {
+            reveal.cancel()
             visible.value = false
+          } else if (props.type !== 'FORMIVUEDESIGN' && !visible.value) {
+            reveal.schedule()
           }
         })
         onBeforeUnmount(() => disposer())
